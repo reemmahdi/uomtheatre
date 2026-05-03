@@ -1,0 +1,103 @@
+/**
+ * SweetAlert2 Custom Styles - UOMTheatre
+ * Midnight Ocean Palette + Cairo/Tajawal fonts
+ */
+
+.swal-rtl {
+    direction: rtl;
+    font-family: 'Tajawal', 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+}
+
+.swal-rtl .swal2-title {
+    font-family: 'Cairo', 'Tajawal', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    color: #0C4A6E;
+}
+
+.swal-rtl .swal2-html-container {
+    font-family: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
+    color: #495057;
+    font-size: 16px;
+}
+
+/* Buttons */
+.swal-rtl .swal2-confirm,
+.swal-rtl .swal2-cancel {
+    font-family: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    padding: 10px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.swal-rtl .swal2-confirm:hover,
+.swal-rtl .swal2-cancel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(12, 74, 110, 0.3);
+}
+
+/* Main popup */
+.swal-rtl.swal2-popup {
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    box-shadow: 0 20px 60px rgba(12, 74, 110, 0.25);
+    border-top: 4px solid #E4C05E;
+}
+
+/* Toast */
+.swal-toast-custom {
+    border-radius: 12px !important;
+    font-family: 'Tajawal', 'Cairo', sans-serif !important;
+    box-shadow: 0 8px 24px rgba(12, 74, 110, 0.15) !important;
+    border-right: 3px solid #0C4A6E !important;
+}
+
+.swal-toast-custom .swal2-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 0 0.5rem !important;
+}
+
+/* Icons */
+.swal-rtl .swal2-icon.swal2-success {
+    border-color: #0C4A6E !important;
+    color: #0C4A6E !important;
+}
+
+.swal-rtl .swal2-icon.swal2-error {
+    border-color: #DC2626 !important;
+    color: #DC2626 !important;
+}
+
+.swal-rtl .swal2-icon.swal2-warning {
+    border-color: #E4C05E !important;
+    color: #C9A445 !important;
+}
+
+.swal-rtl .swal2-icon.swal2-info {
+    border-color: #0369A1 !important;
+    color: #0369A1 !important;
+}
+
+/* Animation */
+.swal2-show {
+    animation: swalFadeIn 0.3s ease-out !important;
+}
+
+@keyframes swalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Timer progress bar */
+.swal-rtl .swal2-timer-progress-bar {
+    background: linear-gradient(90deg, #0C4A6E, #E4C05E) !important;
+    height: 4px !important;
+}

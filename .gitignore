@@ -1,0 +1,70 @@
+# ═══════════════════════════════════════════════════════
+# Laravel - الملفات والمجلدات المستبعدة من Git
+# ═══════════════════════════════════════════════════════
+
+# Composer & Dependencies
+/vendor
+composer.phar
+
+# Node.js
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# Environment Files (حسّاسة جداً!)
+.env
+.env.backup
+.env.production
+.env.staging
+.env.local
+.env.*.local
+
+# Laravel Storage & Cache
+/storage/*.key
+/storage/pail
+/storage/logs/*.log
+/public/storage
+/public/hot
+/public/build
+
+# Laravel Specific
+.phpunit.result.cache
+/.phpunit.cache
+Homestead.json
+Homestead.yaml
+auth.json
+/auth.json
+.phpstorm.meta.php
+_ide_helper.php
+_ide_helper_models.php
+
+# IDE & Editors
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+/.history
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Backup & Temporary
+*.backup
+*.bak
+*.tmp
+*.swp
+*.swo
+~$*
+
+# Logs
+*.log
+debug.log
+error.log
