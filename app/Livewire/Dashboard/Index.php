@@ -42,17 +42,20 @@ class Index extends BaseComponent
                 'recentUsers'   => User::with('role')->orderBy('created_at','desc')->take(5)->get(),
             ];
         } elseif ($roleName === 'theater_manager') {
-            $draftStatus = Status::where('name','draft')->first();
+            $draftStatus     = Status::where('name', 'draft')->first();
+            $publishedStatusTm = Status::where('name', 'published')->first();
+            $cancelledStatus = Status::where('name', 'cancelled')->first();
+
             $data += [
-                'myEvents'    => Event::with('status')->where('created_by',$userId)->orderBy('created_at','desc')->take(10)->get(),
-                'totalEvents' => Event::where('created_by',$userId)->count(),
-                'draftEvents' => $draftStatus ? Event::where('created_by',$userId)->where('status_id',$draftStatus->id)->count() : 0,
+                'totalEvents'     => Event::where('created_by', $userId)->count(),
+                'publishedEvents' => $publishedStatusTm ? Event::where('created_by', $userId)->where('status_id', $publishedStatusTm->id)->count() : 0,
+                'draftEvents'     => $draftStatus ? Event::where('created_by', $userId)->where('status_id', $draftStatus->id)->count() : 0,
+                'cancelledEvents' => $cancelledStatus ? Event::where('created_by', $userId)->where('status_id', $cancelledStatus->id)->count() : 0,
             ];
         } elseif ($roleName === 'event_manager') {
             $underReview = Status::where('name','under_review')->first();
             $data += [
                 'pendingReview' => $underReview ? Event::where('status_id',$underReview->id)->count() : 0,
-                'allEvents'     => Event::with(['status','creator'])->orderBy('created_at','desc')->take(10)->get(),
             ];
         } elseif ($roleName === 'receptionist') {
             $data['checkedInToday'] = Reservation::where('status','checked_in')->whereDate('checked_in_at',today())->count();

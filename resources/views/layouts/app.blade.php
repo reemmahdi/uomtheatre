@@ -36,15 +36,6 @@
             <i class="bi bi-x-lg"></i>
         </button>
 
-        {{-- زر طي السايدبار - فقط على الكمبيوتر --}}
-        <button class="sidebar-toggle d-none d-md-flex" id="sidebarToggle" title="طي/فتح القائمة" aria-label="طي/فتح القائمة">
-            <span class="hamburger-box">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </span>
-        </button>
-
         <div class="logo">
             <img src="{{ asset('images/logo.png') }}" alt="شعار"
                  onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
@@ -71,18 +62,18 @@
             @endif
 
             @if(in_array($roleName, ['super_admin', 'theater_manager', 'event_manager']))
-            <a href="{{ route('dashboard.events') }}" data-title="الفعاليات" class="nav-link {{ request()->routeIs('dashboard.events') ? 'active' : '' }}">
-                <i class="bi bi-calendar-event"></i><span class="nav-text">الفعاليات</span>
+            <a href="{{ route('dashboard.events') }}" data-title="إدارة الفعاليات" class="nav-link {{ request()->routeIs('dashboard.events') ? 'active' : '' }}">
+                <i class="bi bi-calendar-event"></i><span class="nav-text">إدارة الفعاليات</span>
             </a>
             @endif
 
             @if(in_array($roleName, ['super_admin', 'event_manager']))
-            <a href="{{ route('dashboard.vip-events') }}" data-title="مقاعد الوفود" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
-                <i class="bi bi-star-fill"></i><span class="nav-text">مقاعد الوفود ({{ config('theatre.vip_seats') }})</span>
+            <a href="{{ route('dashboard.vip-events') }}" data-title="حجز مقاعد الوفود" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
+                <i class="bi bi-star-fill"></i><span class="nav-text">حجز مقاعد الوفود</span>
             </a>
             @endif
 
-            @if(in_array($roleName, ['super_admin', 'receptionist', 'event_manager']))
+            @if(in_array($roleName, ['super_admin', 'receptionist', 'theater_manager']))
             <a href="{{ route('dashboard.seats-display') }}" data-title="شاشة العرض" class="nav-link {{ request()->routeIs('dashboard.seats-display') ? 'active' : '' }}">
                 <i class="bi bi-display"></i><span class="nav-text">شاشة العرض المباشر</span>
             </a>
@@ -120,7 +111,16 @@
                         <span class="hamburger-line"></span>
                     </span>
                 </button>
-                <h5 class="mb-0">{{ $title ?? 'لوحة التحكم' }}</h5>
+                <h5 class="mb-0">
+                    @php
+                        // ✨ عنوان مخصص لمدير الإعلام بالصفحة الرئيسية
+                        $pageTitle = $title ?? 'لوحة التحكم';
+                        if (request()->routeIs('dashboard') && $roleName === 'event_manager') {
+                            $pageTitle = 'الفعاليات';
+                        }
+                    @endphp
+                    {{ $pageTitle }}
+                </h5>
             </div>
             <span class="text-muted topbar-user-info">
                 <i class="bi bi-person-circle" style="color: var(--primary);"></i>
@@ -142,7 +142,6 @@
         (function() {
             const sidebar = document.getElementById('mainSidebar');
             const mainContent = document.getElementById('mainContent');
-            const sidebarToggle = document.getElementById('sidebarToggle');
             const topbarToggle = document.getElementById('topbarToggle');
             const mobileCloseBtn = document.getElementById('mobileCloseBtn');
             const mobileOverlay = document.getElementById('mobileOverlay');
@@ -156,14 +155,12 @@
             if (isCollapsed && !isMobile()) {
                 sidebar.classList.add('collapsed');
                 mainContent.classList.add('expanded');
-                if (sidebarToggle) sidebarToggle.classList.add('is-active');
                 if (topbarToggle) topbarToggle.classList.add('is-active');
             }
 
             function toggleDesktopSidebar() {
                 sidebar.classList.toggle('collapsed');
                 mainContent.classList.toggle('expanded');
-                if (sidebarToggle) sidebarToggle.classList.toggle('is-active');
                 if (topbarToggle) topbarToggle.classList.toggle('is-active');
                 localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
             }
@@ -182,12 +179,6 @@
             }
 
             // ═══ Event Listeners ═══
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', () => {
-                    if (!isMobile()) toggleDesktopSidebar();
-                });
-            }
-
             if (topbarToggle) {
                 topbarToggle.addEventListener('click', () => {
                     if (isMobile()) {

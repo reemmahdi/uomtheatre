@@ -41,6 +41,20 @@ class Events extends BaseComponent
 
     public array $showEvent = [];
 
+    // ==================== ✨ Search & Filter Properties ====================
+    public string $searchTitle = '';
+    public string $filterStatus = '';
+    public string $filterDateFrom = '';
+    public string $filterDateTo = '';
+
+    /**
+     * إعادة تعيين كل الفلاتر
+     */
+    public function resetFilters(): void
+    {
+        $this->reset(['searchTitle', 'filterStatus', 'filterDateFrom', 'filterDateTo']);
+    }
+
     // ==================== Helper: دمج التاريخ والوقت ====================
     private function combineDateTime(string $date, string $time): string
     {
@@ -129,6 +143,9 @@ class Events extends BaseComponent
     // ==================== إنشاء فعالية ====================
     public function createEvent()
     {
+        // 🛡️ التحقق من الصلاحية
+        $this->authorize('create', Event::class);
+
         $this->validate([
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -219,6 +236,10 @@ class Events extends BaseComponent
     public function openEdit(int $id)
     {
         $event = Event::findOrFail($id);
+
+        // 🛡️ التحقق من صلاحية التعديل
+        $this->authorize('update', $event);
+
         $this->editId          = $event->id;
         $this->editTitle       = $event->title;
         $this->editDescription = $event->description ?? '';
@@ -232,6 +253,10 @@ class Events extends BaseComponent
     // ==================== تحديث فعالية ====================
     public function updateEvent()
     {
+        // 🛡️ التحقق من صلاحية التعديل
+        $event = Event::findOrFail($this->editId);
+        $this->authorize('update', $event);
+
         $this->validate([
             'editTitle'       => 'required|string|max:255',
             'editStartDate'   => 'required|date',
@@ -279,6 +304,9 @@ class Events extends BaseComponent
     {
         $event = Event::with('status')->findOrFail($eventId);
 
+        // 🛡️ التحقق من صلاحية الإلغاء
+        $this->authorize('cancel', $event);
+
         $this->cancelEventId    = $event->id;
         $this->cancelEventTitle = $event->title;
         $this->cancelReason     = '';
@@ -301,6 +329,10 @@ class Events extends BaseComponent
 
         try {
             $event       = Event::findOrFail($this->cancelEventId);
+
+            // 🛡️ التحقق من صلاحية الإلغاء
+            $this->authorize('cancel', $event);
+
             $oldStatusId = $event->status_id;
             $cancelledStatus = Status::where('name', 'cancelled')->first();
 
@@ -334,12 +366,10 @@ class Events extends BaseComponent
     // ==================== طلب تأكيد إيقاف الحجز ====================
     public function requestPauseBooking(int $eventId)
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            $this->swalError('ليس لديك صلاحية لإيقاف الحجز');
-            return;
-        }
-
         $event = Event::findOrFail($eventId);
+
+        // 🛡️ التحقق من صلاحية إيقاف الحجز
+        $this->authorize('pauseBooking', $event);
 
         $this->swalConfirm(
             message: "سيتم إيقاف الحجوزات الجديدة للفعالية \"{$event->title}\" مؤقتاً.\nالحجوزات السابقة ستبقى محفوظة.\nيمكن استئناف الحجز في أي وقت.",
@@ -360,13 +390,11 @@ class Events extends BaseComponent
             return;
         }
 
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            $this->swalError('ليس لديك صلاحية لإيقاف الحجز');
-            return;
-        }
-
         try {
             $event = Event::findOrFail($eventId);
+
+            // 🛡️ التحقق من صلاحية إيقاف الحجز
+            $this->authorize('pauseBooking', $event);
 
             $event->update([
                 'is_booking_paused' => true,
@@ -382,12 +410,10 @@ class Events extends BaseComponent
     // ==================== طلب تأكيد استئناف الحجز ====================
     public function requestResumeBooking(int $eventId)
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            $this->swalError('ليس لديك صلاحية لاستئناف الحجز');
-            return;
-        }
-
         $event = Event::findOrFail($eventId);
+
+        // 🛡️ التحقق من صلاحية استئناف الحجز
+        $this->authorize('resumeBooking', $event);
 
         $this->swalConfirm(
             message: "سيتم استئناف الحجوزات الجديدة للفعالية \"{$event->title}\".\nسيتمكن المستخدمون من الحجز مرة أخرى.",
@@ -408,13 +434,11 @@ class Events extends BaseComponent
             return;
         }
 
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            $this->swalError('ليس لديك صلاحية لاستئناف الحجز');
-            return;
-        }
-
         try {
             $event = Event::findOrFail($eventId);
+
+            // 🛡️ التحقق من صلاحية استئناف الحجز
+            $this->authorize('resumeBooking', $event);
 
             $event->update([
                 'is_booking_paused' => false,
@@ -524,6 +548,10 @@ class Events extends BaseComponent
     {
         try {
             $event = Event::findOrFail($id);
+
+            // 🛡️ التحقق من صلاحية الحذف
+            $this->authorize('delete', $event);
+
             $title = $event->title;
             $event->delete();
             $this->swalSuccess('تم حذف الفعالية "' . $title . '"');
@@ -535,20 +563,49 @@ class Events extends BaseComponent
     // ==================== Render ====================
     public function render()
     {
+        // 🛡️ التحقق من صلاحية عرض القائمة
+        $this->authorize('viewAny', Event::class);
+
         $roleName = Auth::user()->role->name;
-        $allowed  = ['super_admin', 'theater_manager', 'event_manager'];
-        if (!in_array($roleName, $allowed)) return redirect()->route('dashboard');
 
         // ✨ 🆕 الفحص التلقائي قبل عرض القائمة
         $this->autoEndExpiredEvents();
 
-        $events = Event::with(['status', 'creator'])
-            ->orderBy('start_datetime', 'desc')
-            ->get();
+        // ✨ بناء الاستعلام مع الفلاتر
+        $query = Event::with(['status', 'creator']);
+
+        // البحث بالعنوان
+        if (!empty($this->searchTitle)) {
+            $query->where('title', 'like', '%' . $this->searchTitle . '%');
+        }
+
+        // الفلتر بالحالة
+        if (!empty($this->filterStatus)) {
+            $statusObj = Status::where('name', $this->filterStatus)->first();
+            if ($statusObj) {
+                $query->where('status_id', $statusObj->id);
+            }
+        }
+
+        // الفلتر بتاريخ البدء (من)
+        if (!empty($this->filterDateFrom)) {
+            $query->whereDate('start_datetime', '>=', $this->filterDateFrom);
+        }
+
+        // الفلتر بتاريخ الانتهاء (إلى)
+        if (!empty($this->filterDateTo)) {
+            $query->whereDate('start_datetime', '<=', $this->filterDateTo);
+        }
+
+        $events = $query->orderBy('start_datetime', 'desc')->get();
+
+        // ✨ كل الحالات للـ dropdown
+        $allStatuses = Status::orderBy('id')->get();
 
         return view('livewire.dashboard.events', [
-            'events'   => $events,
-            'roleName' => $roleName,
+            'events'      => $events,
+            'roleName'    => $roleName,
+            'allStatuses' => $allStatuses,
         ]);
     }
 }

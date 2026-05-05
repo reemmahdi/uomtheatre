@@ -142,12 +142,13 @@
 {{-- ══════════════════════════════════════════════ --}}
 @elseif($roleName === 'theater_manager')
 <div class="row g-4 mb-4">
-    <div class="col-md-4">
+    {{-- 1. كل الفعاليات --}}
+    <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #0C4A6E;">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="number" style="color:#0C4A6E;">{{ $totalEvents }}</div>
-                    <div class="label">فعالياتي</div>
+                    <div class="label">كل الفعاليات</div>
                 </div>
                 <div class="icon" style="background:rgba(12, 74, 110, 0.1);color:#0C4A6E;">
                     <i class="bi bi-calendar-event-fill"></i>
@@ -155,12 +156,14 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+
+    {{-- 2. الفعاليات المنشورة --}}
+    <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #0369A1;">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="number" style="color:#0369A1;">{{ $publishedEvents }}</div>
-                    <div class="label">منشورة</div>
+                    <div class="label">الفعاليات المنشورة</div>
                 </div>
                 <div class="icon" style="background:rgba(3, 105, 161, 0.12);color:#0369A1;">
                     <i class="bi bi-megaphone-fill"></i>
@@ -168,48 +171,41 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="stat-card" style="border-bottom:3px solid #E4C05E;">
+
+    {{-- 3. الفعاليات المسوّدة --}}
+    <div class="col-md-3">
+        <div class="stat-card" style="border-bottom:3px solid #94A3B8;">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="number" style="color:#8a6d1a;">{{ $draftEvents }}</div>
-                    <div class="label">مسودات</div>
+                    <div class="number" style="color:#475569;">{{ $draftEvents }}</div>
+                    <div class="label">الفعاليات المسوّدة</div>
                 </div>
-                <div class="icon" style="background:rgba(228, 192, 94, 0.2);color:#8a6d1a;">
+                <div class="icon" style="background:rgba(148, 163, 184, 0.18);color:#475569;">
                     <i class="bi bi-file-earmark-text-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- 4. الفعاليات الملغاة (المحذوفة) --}}
+    <div class="col-md-3">
+        <div class="stat-card" style="border-bottom:3px solid #B91C1C;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="number" style="color:#B91C1C;">{{ $cancelledEvents }}</div>
+                    <div class="label">الفعاليات الملغاة</div>
+                </div>
+                <div class="icon" style="background:rgba(185, 28, 28, 0.1);color:#B91C1C;">
+                    <i class="bi bi-x-octagon-fill"></i>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card-custom p-4">
-    <h6 class="mb-3"><i class="bi bi-calendar-event"></i> آخر فعالياتي</h6>
-    @if($myEvents->count() > 0)
-    <table class="table table-hover mb-0">
-        <thead><tr><th>#</th><th>العنوان</th><th>التاريخ</th><th>الحالة</th></tr></thead>
-        <tbody>
-        @foreach($myEvents as $event)
-        <tr>
-            <td>{{ $event->id }}</td>
-            <td><strong>{{ $event->title }}</strong></td>
-            <td>{{ $event->start_datetime->format('Y-m-d H:i') }}</td>
-            <td><span class="badge bg-primary">{{ $event->status->display_name }}</span></td>
-        </tr>
-        @endforeach
-        </tbody>
-    </table>
-    @else
-    <p class="text-muted text-center py-4">
-        <i class="bi bi-inbox" style="font-size:40px;color:#0369A1;"></i><br>
-        لا توجد فعاليات بعد
-    </p>
-    @endif
-</div>
-
 <div class="card-custom p-4 mt-4">
     <h6><i class="bi bi-info-circle"></i> دورك</h6>
-    <p class="text-muted mb-0">أنت مسؤول عن إنشاء الفعاليات. بعد الإنشاء، مدير الإعلام يراجعها ويحجز مقاعد الوفود وينشرها.</p>
+    <p class="text-muted mb-0">بصفتك مدير قاعة الدكتور محمود الجليلي، مهمتك إنشاء الفعاليات والتأكد من صحة بياناتها، ثم إحالتها إلى مدير الإعلام. وتبقى إمكانية التعديل متاحة ما دامت الفعالية في حالة "مسودة".</p>
 </div>
 
 {{-- ══════════════════════════════════════════════ --}}
@@ -269,31 +265,6 @@
             </div>
         </div>
     </div>
-</div>
-
-<div class="card-custom p-4">
-    <h6 class="mb-3"><i class="bi bi-calendar-event"></i> الفعاليات</h6>
-    @if($allEvents->count() > 0)
-    <table class="table table-hover mb-0">
-        <thead><tr><th>#</th><th>العنوان</th><th>التاريخ</th><th>الحالة</th><th>أنشأها</th></tr></thead>
-        <tbody>
-        @foreach($allEvents as $event)
-        <tr>
-            <td>{{ $event->id }}</td>
-            <td><strong>{{ $event->title }}</strong></td>
-            <td>{{ $event->start_datetime->format('Y-m-d H:i') }}</td>
-            <td><span class="badge bg-primary">{{ $event->status->display_name }}</span></td>
-            <td>{{ $event->creator->name }}</td>
-        </tr>
-        @endforeach
-        </tbody>
-    </table>
-    @else
-    <p class="text-muted text-center py-4">
-        <i class="bi bi-inbox" style="font-size:40px;color:#0369A1;"></i><br>
-        لا توجد فعاليات
-    </p>
-    @endif
 </div>
 
 <div class="card-custom p-4 mt-4">

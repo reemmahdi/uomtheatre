@@ -1,8 +1,13 @@
 <div>
 
-<div class="card-custom p-3 mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <span class="text-muted">إجمالي الفعاليات: <strong>{{ $events->count() }}</strong></span>
+<div class="card-custom p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="text-muted">
+            إجمالي الفعاليات: <strong>{{ $events->count() }}</strong>
+            @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
+            <span class="badge bg-info ms-2"><i class="bi bi-funnel-fill"></i> فلاتر مُفعَّلة</span>
+            @endif
+        </span>
         @if(in_array($roleName, ['super_admin', 'theater_manager']))
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
             <i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة
@@ -11,18 +16,77 @@
     </div>
 </div>
 
+{{-- ══════════════════════════════════════════════ --}}
+{{--  ✨ شريط البحث والفلاتر                        --}}
+{{-- ══════════════════════════════════════════════ --}}
+<div class="card-custom p-3 mb-4 filters-bar">
+    <div class="row g-2 align-items-end">
+        {{-- بحث بالعنوان --}}
+        <div class="col-md-4">
+            <label class="form-label small fw-bold mb-1">
+                <i class="bi bi-search"></i> البحث باسم الفعالية
+            </label>
+            <input type="text"
+                   wire:model.live.debounce.400ms="searchTitle"
+                   class="form-control form-control-sm"
+                   placeholder="اكتب جزءاً من عنوان الفعالية...">
+        </div>
+
+        {{-- فلتر الحالة --}}
+        <div class="col-md-3">
+            <label class="form-label small fw-bold mb-1">
+                <i class="bi bi-flag"></i> الحالة
+            </label>
+            <select wire:model.live="filterStatus" class="form-select form-select-sm">
+                <option value="">— كل الحالات —</option>
+                @foreach($allStatuses as $st)
+                <option value="{{ $st->name }}">{{ $st->display_name ?? $st->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- من تاريخ --}}
+        <div class="col-md-2">
+            <label class="form-label small fw-bold mb-1">
+                <i class="bi bi-calendar-event"></i> من تاريخ
+            </label>
+            <input type="date"
+                   wire:model.live="filterDateFrom"
+                   class="form-control form-control-sm">
+        </div>
+
+        {{-- إلى تاريخ --}}
+        <div class="col-md-2">
+            <label class="form-label small fw-bold mb-1">
+                <i class="bi bi-calendar-check"></i> إلى تاريخ
+            </label>
+            <input type="date"
+                   wire:model.live="filterDateTo"
+                   class="form-control form-control-sm">
+        </div>
+
+        {{-- زر مسح الفلاتر --}}
+        <div class="col-md-1">
+            <button wire:click="resetFilters"
+                    class="btn btn-sm btn-outline-secondary w-100"
+                    title="مسح كل الفلاتر">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="card-custom p-4">
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover align-middle">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>العنوان</th>
-                    <th>البدء</th>
-                    <th>الانتهاء</th>
-                    <th>الحالة</th>
-                    <th>أنشأها</th>
-                    <th>الإجراءات</th>
+                    <th>عنوان الفعالية </th>
+                    <th>موعد الانطلاق</th>
+                    <th>موعد الاختتام</th>
+                    <th class="status-col">الحالة</th>
+                    <th class="actions-col">الإجراءات</th>
                 </tr>
             </thead>
             <tbody>
@@ -34,7 +98,7 @@
                     $sColor = $statusColors[$sName] ?? '#6B7280';
                     $sLabel = $statusNames[$sName] ?? $sName;
                     $isCancelled = ($sName === 'cancelled');
-                    $isPaused = $event->is_booking_paused;  // ✨ جديد
+                    $isPaused = $event->is_booking_paused;
                 @endphp
                 {{-- ✨ تمييز بصري: وردي للملغاة، أصفر فاتح للموقوفة --}}
                 <tr @if($isCancelled) style="background-color: #fef2f2;" @elseif($isPaused) style="background-color: #fffbeb;" @endif>
@@ -80,106 +144,144 @@
                             <i class="bi bi-clock"></i> {{ $event->end_datetime->format('H:i') }}
                         </div>
                     </td>
-                    <td>
-                        <div class="d-flex flex-column gap-1">
-                            <span class="badge-role" style="background:{{ $sColor }}20;color:{{ $sColor }};border:1px solid {{ $sColor }}40;">
+                    <td class="status-cell">
+                        <div class="status-stack">
+                            <span class="status-badge status-badge-{{ $sName }}">
                                 @if($isCancelled) <i class="bi bi-x-octagon-fill"></i> @endif
                                 {{ $sLabel }}
                             </span>
                             {{-- ✨ Badge للإيقاف المؤقت --}}
                             @if($isPaused && !$isCancelled)
-                            <span class="badge-role" style="background:#FEF3C720;color:#D97706;border:1px solid #F59E0B40;">
+                            <span class="status-badge status-badge-paused">
                                 <i class="bi bi-pause-circle-fill"></i> الحجز موقوف
                             </span>
                             @endif
                         </div>
                     </td>
-                    <td>{{ $event->creator->name }}</td>
-                    <td>
-                        <div class="d-flex gap-1 flex-wrap">
-                            <button class="btn btn-sm btn-outline-secondary" wire:click="viewEvent({{ $event->id }})" data-bs-toggle="modal" data-bs-target="#viewEventModal" title="عرض">
+                    {{-- ══════════════════════════════════════════════ --}}
+                    {{--  ✨ خلية الإجراءات المنظّمة (مجموعتين)            --}}
+                    {{-- ══════════════════════════════════════════════ --}}
+                    <td class="actions-cell">
+                        {{-- مجموعة 1: العرض + إجراءات الحالة --}}
+                        <div class="actions-group">
+                            {{-- 1. عرض التفاصيل (دائماً) --}}
+                            <button class="btn-action btn-action-view"
+                                    wire:click="viewEvent({{ $event->id }})"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#viewEventModal"
+                                    title="عرض التفاصيل">
                                 <i class="bi bi-eye"></i>
                             </button>
 
+                            {{-- 2. مدير المسرح: تعديل + إرسال (للمسودات) --}}
                             @if(in_array($roleName, ['super_admin', 'theater_manager']))
                                 @if($sName === 'draft')
-                                <button class="btn btn-sm btn-outline-primary" wire:click="openEdit({{ $event->id }})" data-bs-toggle="modal" data-bs-target="#editEventModal" title="تعديل"><i class="bi bi-pencil"></i></button>
-                                <button class="btn btn-sm btn-outline-info" wire:click="requestChangeStatus({{ $event->id }}, 'added')" title="إرسال"><i class="bi bi-send"></i></button>
+                                <button class="btn-action btn-action-edit"
+                                        wire:click="openEdit({{ $event->id }})"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editEventModal"
+                                        title="تعديل">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn-action btn-action-send"
+                                        wire:click="requestChangeStatus({{ $event->id }}, 'added')"
+                                        title="إرسال للمراجعة">
+                                    <i class="bi bi-send"></i>
+                                </button>
                                 @endif
                             @endif
 
+                            {{-- 3. مدير الإعلام: مراجعة / قبول / نشر / إغلاق / وفود --}}
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
                                 @if($sName === 'added')
-                                <button class="btn btn-sm btn-outline-warning" wire:click="requestChangeStatus({{ $event->id }}, 'under_review')"><i class="bi bi-search"></i> مراجعة</button>
+                                <button class="btn-action btn-action-review"
+                                        wire:click="requestChangeStatus({{ $event->id }}, 'under_review')"
+                                        title="بدء المراجعة">
+                                    <i class="bi bi-search"></i>
+                                </button>
                                 @endif
-                                @if($sName === 'under_review')
-                                <button class="btn btn-sm btn-outline-success" wire:click="requestChangeStatus({{ $event->id }}, 'active')"><i class="bi bi-check-lg"></i> قبول</button>
-                                @endif
-                                @if(in_array($sName, ['active', 'under_review']))
-                                <a href="{{ route('dashboard.vip-booking', $event->id) }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-star"></i> وفود</a>
-                                @endif
-                                @if($sName === 'active')
-                                <button class="btn btn-sm btn-success" wire:click="requestChangeStatus({{ $event->id }}, 'published')"><i class="bi bi-megaphone"></i> نشر</button>
-                                @endif
-                                @if($sName === 'published')
-                                <button class="btn btn-sm btn-outline-secondary" wire:click="requestChangeStatus({{ $event->id }}, 'closed')" title="إغلاق"><i class="bi bi-lock"></i></button>
-                                <a href="{{ route('dashboard.vip-booking', $event->id) }}" class="btn btn-sm btn-outline-danger" title="وفود"><i class="bi bi-star"></i></a>
 
-                                {{-- ✨ 🆕 زر الإيقاف/الاستئناف --}}
+                                @if($sName === 'under_review')
+                                <button class="btn-action btn-action-approve"
+                                        wire:click="requestChangeStatus({{ $event->id }}, 'active')"
+                                        title="قبول الفعالية">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                @endif
+
+                                @if(in_array($sName, ['active', 'under_review', 'published']))
+                                <a href="{{ route('dashboard.vip-booking', $event->id) }}"
+                                   class="btn-action btn-action-vip"
+                                   title="إدارة مقاعد الوفود">
+                                    <i class="bi bi-star-fill"></i>
+                                </a>
+                                @endif
+
+                                @if($sName === 'active')
+                                <button class="btn-action btn-action-publish"
+                                        wire:click="requestChangeStatus({{ $event->id }}, 'published')"
+                                        title="نشر الفعالية">
+                                    <i class="bi bi-megaphone-fill"></i>
+                                </button>
+                                @endif
+
+                                @if($sName === 'published')
+                                <button class="btn-action btn-action-close"
+                                        wire:click="requestChangeStatus({{ $event->id }}, 'closed')"
+                                        title="إغلاق الفعالية">
+                                    <i class="bi bi-lock-fill"></i>
+                                </button>
+
+                                {{-- ✨ زر الإيقاف/الاستئناف --}}
                                 @if(!$isPaused)
-                                {{-- زر الإيقاف (أصفر) --}}
-                                <button class="btn btn-sm btn-outline-warning"
+                                <button class="btn-action btn-action-pause"
                                         wire:click="requestPauseBooking({{ $event->id }})"
                                         title="إيقاف الحجز مؤقتاً">
-                                    <i class="bi bi-pause-circle"></i>
+                                    <i class="bi bi-pause-circle-fill"></i>
                                 </button>
                                 @else
-                                {{-- زر الاستئناف (أخضر) --}}
-                                <button class="btn btn-sm btn-success"
+                                <button class="btn-action btn-action-resume"
                                         wire:click="requestResumeBooking({{ $event->id }})"
                                         title="استئناف الحجز">
-                                    <i class="bi bi-play-circle-fill"></i> استئناف
+                                    <i class="bi bi-play-circle-fill"></i>
                                 </button>
                                 @endif
                                 @endif
                             @endif
 
-                            {{-- زر الإلغاء --}}
+                            {{-- زر الإلغاء (داخل نفس المجموعة لتدفق موحّد) --}}
                             @if(!in_array($sName, ['cancelled', 'end', 'closed']))
-                            <button class="btn btn-sm btn-outline-danger"
+                            <button class="btn-action btn-action-cancel"
                                     wire:click="openCancelModal({{ $event->id }})"
                                     data-bs-toggle="modal"
                                     data-bs-target="#cancelEventModal"
-                                    title="إلغاء">
-                                <i class="bi bi-x-circle"></i>
+                                    title="إلغاء الفعالية">
+                                <i class="bi bi-x-circle-fill"></i>
                             </button>
                             @endif
                         </div>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-calendar-x" style="font-size:40px;color:#c39bd3;"></i><p class="mt-2">لا توجد فعاليات</p></td></tr>
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="bi bi-calendar-x" style="font-size:40px;color:#c39bd3;"></i>
+                        @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
+                        <p class="mt-2">لا توجد فعاليات مطابقة لمعايير البحث</p>
+                        <button wire:click="resetFilters" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-arrow-counterclockwise"></i> مسح الفلاتر
+                        </button>
+                        @else
+                        <p class="mt-2">لا توجد فعاليات</p>
+                        @endif
+                    </td>
+                </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card-custom p-3 mt-4">
-    <h6 class="mb-2"><i class="bi bi-info-circle"></i> تدفق حالات الفعالية</h6>
-    <div class="d-flex flex-wrap gap-2 align-items-center small">
-        <span class="badge" style="background:#6B7280;">مسودة</span><i class="bi bi-arrow-left"></i>
-        <span class="badge" style="background:#3B82F6;">مضافة</span><i class="bi bi-arrow-left"></i>
-        <span class="badge" style="background:#F59E0B;">قيد المراجعة</span><i class="bi bi-arrow-left"></i>
-        <span class="badge" style="background:#8B5CF6;">نشطة</span><i class="bi bi-arrow-left"></i>
-        <span class="badge" style="background:#10B981;">منشورة</span><i class="bi bi-arrow-left"></i>
-        <span class="badge" style="background:#EF4444;">مغلقة</span>
-    </div>
-</div>
-
-{{-- ══════════════════════════════════════════════ --}}
-{{--                  النوافذ                        --}}
-{{-- ══════════════════════════════════════════════ --}}
 
 {{-- نافذة عرض التفاصيل --}}
 <div class="modal fade" id="viewEventModal" tabindex="-1" wire:ignore.self>
@@ -209,7 +311,7 @@
                 @if(!empty($showEvent['is_booking_paused']))
                 <div class="alert alert-warning border-warning mb-3">
                     <h6 class="alert-heading mb-2">
-                        <i class="bi bi-pause-circle-fill"></i> الحجز موقوف مؤقتاً
+                        <i class="bi bi-pause-circle-fill"></i>الحجز غير متاح حاليا 
                     </h6>
                     <p class="mb-2 small">الحجوزات الجديدة موقوفة، لكن الحجوزات السابقة محفوظة.</p>
                     @if(!empty($showEvent['paused_at']))

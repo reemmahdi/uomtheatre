@@ -13,7 +13,7 @@ class SeatsDisplay extends BaseComponent
 {
     public function mount()
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'receptionist', 'event_manager'])) {
+        if (!in_array(Auth::user()->role->name, ['super_admin', 'receptionist', 'theater_manager'])) {
             return redirect()->route('dashboard');
         }
 
