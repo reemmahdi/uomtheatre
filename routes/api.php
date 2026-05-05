@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\CheckInController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SeatsApiController;
 
 // ============================================
 // روابط عامة (بدون تسجيل دخول)
@@ -19,6 +20,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // الفعاليات المنشورة (للجمهور)
 Route::get('/events', [EventController::class, 'publicIndex']);
 Route::get('/events/{id}', [EventController::class, 'show']);
+Route::get('/seats/{eventId}', [SeatsApiController::class, 'show']);
 
 // ============================================
 // روابط تحتاج تسجيل دخول
@@ -28,7 +30,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // المصادقة
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
-
+Route::get('/seats/{eventId}', [SeatsApiController::class, 'show'])
+    ->name('api.seats.show');
     // خريطة المقاعد
     Route::get('/events/{eventId}/seat-map', [SeatMapController::class, 'getSeatMap']);
 

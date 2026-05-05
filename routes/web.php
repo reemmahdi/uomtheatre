@@ -56,3 +56,9 @@ Route::middleware('admin.web')->group(function () {
 });
 
 Route::get('/', fn() => redirect('/login'));
+
+
+// خارطة المقاعد - للعرض
+Route::get('/seats-map', function () {
+    return view('seats-map');
+})->name('seats-map');
