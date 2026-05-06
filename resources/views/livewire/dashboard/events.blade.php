@@ -486,21 +486,21 @@
                                     if ($h12 === 0) $h12 = 12;
                                 }
                             @endphp
-                            <div class="d-flex gap-2">
-                                <select wire:model.live="start_hour" class="form-select" style="background: #fff;">
+                            <div class="d-flex gap-2 align-items-center">
+                                <select wire:model.live="start_hour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
                                     @for($i = 1; $i <= 12; $i++)
                                         <option value="{{ $i }}" {{ $h12 == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
                                     @endfor
                                 </select>
-                                <span class="align-self-center fw-bold" style="color: #0C4A6E;">:</span>
-                                <select wire:model.live="start_minute" class="form-select" style="background: #fff;">
+                                <span class="fw-bold" style="color: #0C4A6E; font-size: 18px;">:</span>
+                                <select wire:model.live="start_minute" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">دقيقة</option>
                                     @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
                                         <option value="{{ $m }}" {{ $mm === $m ? 'selected' : '' }}>{{ $m }}</option>
                                     @endforeach
                                 </select>
-                                <select wire:model.live="start_period" class="form-select" style="background: #fff;">
+                                <select wire:model.live="start_period" class="form-select" style="background: #fff; flex: 1.2; min-width: 90px;">
                                     <option value="">الفترة</option>
                                     <option value="AM" {{ $period === 'AM' ? 'selected' : '' }}>صباحاً</option>
                                     <option value="PM" {{ $period === 'PM' ? 'selected' : '' }}>مساءً</option>
@@ -535,21 +535,21 @@
                                     if ($h12e === 0) $h12e = 12;
                                 }
                             @endphp
-                            <div class="d-flex gap-2">
-                                <select wire:model.live="end_hour" class="form-select" style="background: #fff;">
+                            <div class="d-flex gap-2 align-items-center">
+                                <select wire:model.live="end_hour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
                                     @for($i = 1; $i <= 12; $i++)
                                         <option value="{{ $i }}" {{ $h12e == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
                                     @endfor
                                 </select>
-                                <span class="align-self-center fw-bold" style="color: #15803D;">:</span>
-                                <select wire:model.live="end_minute" class="form-select" style="background: #fff;">
+                                <span class="fw-bold" style="color: #15803D; font-size: 18px;">:</span>
+                                <select wire:model.live="end_minute" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">دقيقة</option>
                                     @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
                                         <option value="{{ $m }}" {{ $mme === $m ? 'selected' : '' }}>{{ $m }}</option>
                                     @endforeach
                                 </select>
-                                <select wire:model.live="end_period" class="form-select" style="background: #fff;">
+                                <select wire:model.live="end_period" class="form-select" style="background: #fff; flex: 1.2; min-width: 90px;">
                                     <option value="">الفترة</option>
                                     <option value="AM" {{ $periode === 'AM' ? 'selected' : '' }}>صباحاً</option>
                                     <option value="PM" {{ $periode === 'PM' ? 'selected' : '' }}>مساءً</option>
@@ -622,21 +622,21 @@
                                     if ($eh12 === 0) $eh12 = 12;
                                 }
                             @endphp
-                            <div class="d-flex gap-2">
-                                <select wire:model.live="editStartHour" class="form-select" style="background: #fff;">
+                            <div class="d-flex gap-2 align-items-center">
+                                <select wire:model.live="editStartHour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
                                     @for($i = 1; $i <= 12; $i++)
                                         <option value="{{ $i }}" {{ $eh12 == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
                                     @endfor
                                 </select>
-                                <span class="align-self-center fw-bold" style="color: #0C4A6E;">:</span>
-                                <select wire:model.live="editStartMinute" class="form-select" style="background: #fff;">
+                                <span class="fw-bold" style="color: #0C4A6E; font-size: 18px;">:</span>
+                                <select wire:model.live="editStartMinute" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">دقيقة</option>
                                     @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
                                         <option value="{{ $m }}" {{ $emm === $m ? 'selected' : '' }}>{{ $m }}</option>
                                     @endforeach
                                 </select>
-                                <select wire:model.live="editStartPeriod" class="form-select" style="background: #fff;">
+                                <select wire:model.live="editStartPeriod" class="form-select" style="background: #fff; flex: 1.2; min-width: 90px;">
                                     <option value="">الفترة</option>
                                     <option value="AM" {{ $eperiod === 'AM' ? 'selected' : '' }}>صباحاً</option>
                                     <option value="PM" {{ $eperiod === 'PM' ? 'selected' : '' }}>مساءً</option>
@@ -666,21 +666,21 @@
                                     if ($eeh12 === 0) $eeh12 = 12;
                                 }
                             @endphp
-                            <div class="d-flex gap-2">
-                                <select wire:model.live="editEndHour" class="form-select" style="background: #fff;">
+                            <div class="d-flex gap-2 align-items-center">
+                                <select wire:model.live="editEndHour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
                                     @for($i = 1; $i <= 12; $i++)
                                         <option value="{{ $i }}" {{ $eeh12 == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
                                     @endfor
                                 </select>
-                                <span class="align-self-center fw-bold" style="color: #15803D;">:</span>
-                                <select wire:model.live="editEndMinute" class="form-select" style="background: #fff;">
+                                <span class="fw-bold" style="color: #15803D; font-size: 18px;">:</span>
+                                <select wire:model.live="editEndMinute" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">دقيقة</option>
                                     @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
                                         <option value="{{ $m }}" {{ $eemm === $m ? 'selected' : '' }}>{{ $m }}</option>
                                     @endforeach
                                 </select>
-                                <select wire:model.live="editEndPeriod" class="form-select" style="background: #fff;">
+                                <select wire:model.live="editEndPeriod" class="form-select" style="background: #fff; flex: 1.2; min-width: 90px;">
                                     <option value="">الفترة</option>
                                     <option value="AM" {{ $eeperiod === 'AM' ? 'selected' : '' }}>صباحاً</option>
                                     <option value="PM" {{ $eeperiod === 'PM' ? 'selected' : '' }}>مساءً</option>
