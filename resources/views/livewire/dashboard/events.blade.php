@@ -190,17 +190,27 @@
 
                     {{-- ✨ موعد الانطلاق --}}
                     <td class="text-center">
+                        @php
+                            $startHour12 = $event->start_datetime->format('g');
+                            $startMin    = $event->start_datetime->format('i');
+                            $startPeriod = $event->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+                        @endphp
                         <div class="date-cell">
                             <div class="date-day" dir="ltr">{{ $event->start_datetime->format('Y-m-d') }}</div>
-                            <div class="date-time" dir="ltr">{{ $event->start_datetime->format('H:i') }}</div>
+                            <div class="date-time">{{ $startHour12 }}:{{ $startMin }} {{ $startPeriod }}</div>
                         </div>
                     </td>
 
                     {{-- ✨ موعد الاختتام --}}
                     <td class="text-center">
+                        @php
+                            $endHour12 = $event->end_datetime->format('g');
+                            $endMin    = $event->end_datetime->format('i');
+                            $endPeriod = $event->end_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+                        @endphp
                         <div class="date-cell">
                             <div class="date-day" dir="ltr">{{ $event->end_datetime->format('Y-m-d') }}</div>
-                            <div class="date-time" dir="ltr">{{ $event->end_datetime->format('H:i') }}</div>
+                            <div class="date-time">{{ $endHour12 }}:{{ $endMin }} {{ $endPeriod }}</div>
                         </div>
                     </td>
 
@@ -462,12 +472,40 @@
                                    placeholder="اختر التاريخ"
                                    value="{{ $start_date }}">
                         </div>
-                        <div class="col-md-5 mb-2" wire:ignore>
+                        <div class="col-md-5 mb-2">
                             <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
-                            <input type="text" id="start_time_input"
-                                   class="form-control flatpickr-time"
-                                   placeholder="اختر الوقت"
-                                   value="{{ $start_time }}">
+                            @php
+                                // تقسيم الوقت الحالي إلى ساعة/دقيقة/فترة
+                                $currentTime = $start_time ?? '';
+                                $h24 = $currentTime ? (int)substr($currentTime, 0, 2) : null;
+                                $mm  = $currentTime ? substr($currentTime, 3, 2) : '';
+                                $h12 = null; $period = '';
+                                if ($h24 !== null) {
+                                    $period = $h24 >= 12 ? 'PM' : 'AM';
+                                    $h12 = $h24 % 12;
+                                    if ($h12 === 0) $h12 = 12;
+                                }
+                            @endphp
+                            <div class="d-flex gap-2">
+                                <select wire:model.live="start_hour" class="form-select" style="background: #fff;">
+                                    <option value="">ساعة</option>
+                                    @for($i = 1; $i <= 12; $i++)
+                                        <option value="{{ $i }}" {{ $h12 == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                    @endfor
+                                </select>
+                                <span class="align-self-center fw-bold" style="color: #0C4A6E;">:</span>
+                                <select wire:model.live="start_minute" class="form-select" style="background: #fff;">
+                                    <option value="">دقيقة</option>
+                                    @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
+                                        <option value="{{ $m }}" {{ $mm === $m ? 'selected' : '' }}>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model.live="start_period" class="form-select" style="background: #fff;">
+                                    <option value="">الفترة</option>
+                                    <option value="AM" {{ $period === 'AM' ? 'selected' : '' }}>صباحاً</option>
+                                    <option value="PM" {{ $period === 'PM' ? 'selected' : '' }}>مساءً</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -484,12 +522,39 @@
                                    placeholder="اختر التاريخ"
                                    value="{{ $end_date }}">
                         </div>
-                        <div class="col-md-5 mb-2" wire:ignore>
+                        <div class="col-md-5 mb-2">
                             <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
-                            <input type="text" id="end_time_input"
-                                   class="form-control flatpickr-time"
-                                   placeholder="اختر الوقت"
-                                   value="{{ $end_time }}">
+                            @php
+                                $currentEndTime = $end_time ?? '';
+                                $h24e = $currentEndTime ? (int)substr($currentEndTime, 0, 2) : null;
+                                $mme  = $currentEndTime ? substr($currentEndTime, 3, 2) : '';
+                                $h12e = null; $periode = '';
+                                if ($h24e !== null) {
+                                    $periode = $h24e >= 12 ? 'PM' : 'AM';
+                                    $h12e = $h24e % 12;
+                                    if ($h12e === 0) $h12e = 12;
+                                }
+                            @endphp
+                            <div class="d-flex gap-2">
+                                <select wire:model.live="end_hour" class="form-select" style="background: #fff;">
+                                    <option value="">ساعة</option>
+                                    @for($i = 1; $i <= 12; $i++)
+                                        <option value="{{ $i }}" {{ $h12e == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                    @endfor
+                                </select>
+                                <span class="align-self-center fw-bold" style="color: #15803D;">:</span>
+                                <select wire:model.live="end_minute" class="form-select" style="background: #fff;">
+                                    <option value="">دقيقة</option>
+                                    @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
+                                        <option value="{{ $m }}" {{ $mme === $m ? 'selected' : '' }}>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model.live="end_period" class="form-select" style="background: #fff;">
+                                    <option value="">الفترة</option>
+                                    <option value="AM" {{ $periode === 'AM' ? 'selected' : '' }}>صباحاً</option>
+                                    <option value="PM" {{ $periode === 'PM' ? 'selected' : '' }}>مساءً</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -544,7 +609,39 @@
                         </div>
                         <div class="col-md-5 mb-2" wire:ignore>
                             <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت</label>
-                            <input type="text" id="edit_start_time_input" class="form-control flatpickr-time" placeholder="اختر الوقت" value="{{ $editStartTime }}">
+                        <div class="col-md-5 mb-2">
+                            <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
+                            @php
+                                $currentEditStartTime = $editStartTime ?? '';
+                                $eh24 = $currentEditStartTime ? (int)substr($currentEditStartTime, 0, 2) : null;
+                                $emm  = $currentEditStartTime ? substr($currentEditStartTime, 3, 2) : '';
+                                $eh12 = null; $eperiod = '';
+                                if ($eh24 !== null) {
+                                    $eperiod = $eh24 >= 12 ? 'PM' : 'AM';
+                                    $eh12 = $eh24 % 12;
+                                    if ($eh12 === 0) $eh12 = 12;
+                                }
+                            @endphp
+                            <div class="d-flex gap-2">
+                                <select wire:model.live="editStartHour" class="form-select" style="background: #fff;">
+                                    <option value="">ساعة</option>
+                                    @for($i = 1; $i <= 12; $i++)
+                                        <option value="{{ $i }}" {{ $eh12 == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                    @endfor
+                                </select>
+                                <span class="align-self-center fw-bold" style="color: #0C4A6E;">:</span>
+                                <select wire:model.live="editStartMinute" class="form-select" style="background: #fff;">
+                                    <option value="">دقيقة</option>
+                                    @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
+                                        <option value="{{ $m }}" {{ $emm === $m ? 'selected' : '' }}>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model.live="editStartPeriod" class="form-select" style="background: #fff;">
+                                    <option value="">الفترة</option>
+                                    <option value="AM" {{ $eperiod === 'AM' ? 'selected' : '' }}>صباحاً</option>
+                                    <option value="PM" {{ $eperiod === 'PM' ? 'selected' : '' }}>مساءً</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -556,9 +653,39 @@
                             <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-calendar3"></i> التاريخ</label>
                             <input type="text" id="edit_end_date_input" class="form-control flatpickr-date" placeholder="اختر التاريخ" value="{{ $editEndDate }}">
                         </div>
-                        <div class="col-md-5 mb-2" wire:ignore>
-                            <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-clock"></i> الوقت</label>
-                            <input type="text" id="edit_end_time_input" class="form-control flatpickr-time" placeholder="اختر الوقت" value="{{ $editEndTime }}">
+                        <div class="col-md-5 mb-2">
+                            <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
+                            @php
+                                $currentEditEndTime = $editEndTime ?? '';
+                                $eeh24 = $currentEditEndTime ? (int)substr($currentEditEndTime, 0, 2) : null;
+                                $eemm  = $currentEditEndTime ? substr($currentEditEndTime, 3, 2) : '';
+                                $eeh12 = null; $eeperiod = '';
+                                if ($eeh24 !== null) {
+                                    $eeperiod = $eeh24 >= 12 ? 'PM' : 'AM';
+                                    $eeh12 = $eeh24 % 12;
+                                    if ($eeh12 === 0) $eeh12 = 12;
+                                }
+                            @endphp
+                            <div class="d-flex gap-2">
+                                <select wire:model.live="editEndHour" class="form-select" style="background: #fff;">
+                                    <option value="">ساعة</option>
+                                    @for($i = 1; $i <= 12; $i++)
+                                        <option value="{{ $i }}" {{ $eeh12 == $i ? 'selected' : '' }}>{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                    @endfor
+                                </select>
+                                <span class="align-self-center fw-bold" style="color: #15803D;">:</span>
+                                <select wire:model.live="editEndMinute" class="form-select" style="background: #fff;">
+                                    <option value="">دقيقة</option>
+                                    @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
+                                        <option value="{{ $m }}" {{ $eemm === $m ? 'selected' : '' }}>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model.live="editEndPeriod" class="form-select" style="background: #fff;">
+                                    <option value="">الفترة</option>
+                                    <option value="AM" {{ $eeperiod === 'AM' ? 'selected' : '' }}>صباحاً</option>
+                                    <option value="PM" {{ $eeperiod === 'PM' ? 'selected' : '' }}>مساءً</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>

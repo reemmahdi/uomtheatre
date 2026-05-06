@@ -28,6 +28,14 @@ class Events extends BaseComponent
     public string $end_date = '';
     public string $end_time = '';
 
+    // ✨ حقول الوقت المنفصلة (للإنشاء) - 12 ساعة
+    public string $start_hour = '';      // 1-12
+    public string $start_minute = '';    // 00, 05, 10, ..., 55
+    public string $start_period = '';    // AM/PM
+    public string $end_hour = '';
+    public string $end_minute = '';
+    public string $end_period = '';
+
     // ==================== Edit Properties ====================
     public int $editId = 0;
     public string $editTitle = '';
@@ -36,6 +44,14 @@ class Events extends BaseComponent
     public string $editStartTime = '';
     public string $editEndDate = '';
     public string $editEndTime = '';
+
+    // ✨ حقول الوقت المنفصلة (للتعديل) - 12 ساعة
+    public string $editStartHour = '';
+    public string $editStartMinute = '';
+    public string $editStartPeriod = '';
+    public string $editEndHour = '';
+    public string $editEndMinute = '';
+    public string $editEndPeriod = '';
 
     // ==================== Cancel Properties ====================
     public int $cancelEventId = 0;
@@ -120,6 +136,56 @@ class Events extends BaseComponent
             $time .= ':00';
         }
         return $date . ' ' . $time;
+    }
+
+    // ==================== ✨ دمج الساعة/الدقيقة/الفترة → وقت 24 ساعة ====================
+    private function buildTime24(string $hour, string $minute, string $period): string
+    {
+        if (empty($hour) || empty($minute) || empty($period)) {
+            return '';
+        }
+        $h = (int) $hour;
+        // تحويل من 12 إلى 24
+        if ($period === 'AM') {
+            if ($h === 12) $h = 0;
+        } else { // PM
+            if ($h !== 12) $h += 12;
+        }
+        return str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . $minute;
+    }
+
+    // ✨ تحديث start_time عند تغيير أي من الحقول الثلاثة (إنشاء)
+    public function updatedStartHour(): void   { $this->syncStartTime(); }
+    public function updatedStartMinute(): void { $this->syncStartTime(); }
+    public function updatedStartPeriod(): void { $this->syncStartTime(); }
+    public function updatedEndHour(): void     { $this->syncEndTime(); }
+    public function updatedEndMinute(): void   { $this->syncEndTime(); }
+    public function updatedEndPeriod(): void   { $this->syncEndTime(); }
+
+    private function syncStartTime(): void
+    {
+        $this->start_time = $this->buildTime24($this->start_hour, $this->start_minute, $this->start_period);
+    }
+    private function syncEndTime(): void
+    {
+        $this->end_time = $this->buildTime24($this->end_hour, $this->end_minute, $this->end_period);
+    }
+
+    // ✨ تحديث editStartTime/editEndTime (تعديل)
+    public function updatedEditStartHour(): void   { $this->syncEditStartTime(); }
+    public function updatedEditStartMinute(): void { $this->syncEditStartTime(); }
+    public function updatedEditStartPeriod(): void { $this->syncEditStartTime(); }
+    public function updatedEditEndHour(): void     { $this->syncEditEndTime(); }
+    public function updatedEditEndMinute(): void   { $this->syncEditEndTime(); }
+    public function updatedEditEndPeriod(): void   { $this->syncEditEndTime(); }
+
+    private function syncEditStartTime(): void
+    {
+        $this->editStartTime = $this->buildTime24($this->editStartHour, $this->editStartMinute, $this->editStartPeriod);
+    }
+    private function syncEditEndTime(): void
+    {
+        $this->editEndTime = $this->buildTime24($this->editEndHour, $this->editEndMinute, $this->editEndPeriod);
     }
 
     // ==================== إنهاء تلقائي للفعاليات المنتهية ====================
@@ -232,7 +298,9 @@ class Events extends BaseComponent
             ]);
 
             $this->swalSuccess('تم إنشاء الفعالية "' . $this->title . '" بنجاح');
-            $this->reset(['title', 'description', 'start_date', 'start_time', 'end_date', 'end_time']);
+            $this->reset(['title', 'description', 'start_date', 'start_time', 'end_date', 'end_time',
+                          'start_hour', 'start_minute', 'start_period',
+                          'end_hour', 'end_minute', 'end_period']);
             $this->dispatch('close-modal');
         } catch (\Exception $e) {
             $this->swalError('فشل إنشاء الفعالية: ' . $e->getMessage());
@@ -252,21 +320,30 @@ class Events extends BaseComponent
         if ($minutes > 0) $durationText .= "{$minutes} دقيقة";
         if (empty($durationText)) $durationText = 'غير محدد';
 
+        // ✨ تنسيق التاريخ والوقت بنظام 12 ساعة عربي
+        $formatArabic12 = function ($dt) {
+            if (!$dt) return null;
+            $h12 = $dt->format('g');
+            $min = $dt->format('i');
+            $period = $dt->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+            return $dt->format('Y-m-d') . ' - ' . $h12 . ':' . $min . ' ' . $period;
+        };
+
         $this->showEvent = [
             'title'               => $event->title,
             'description'         => $event->description ?? 'لا يوجد وصف',
-            'start_datetime'      => $event->start_datetime->format('Y-m-d H:i'),
-            'end_datetime'        => $event->end_datetime->format('Y-m-d H:i'),
+            'start_datetime'      => $formatArabic12($event->start_datetime),
+            'end_datetime'        => $formatArabic12($event->end_datetime),
             'duration'            => $durationText,
             'status'              => $event->status->display_name,
             'status_name'         => $event->status->name,
             'created_by'          => $event->creator->name,
-            'created_at'          => $event->created_at->format('Y-m-d H:i'),
-            'published_at'        => $event->published_at ? $event->published_at->format('Y-m-d H:i') : 'لم تنشر بعد',
+            'created_at'          => $formatArabic12($event->created_at),
+            'published_at'        => $event->published_at ? $formatArabic12($event->published_at) : 'لم تنشر بعد',
             'cancellation_reason' => $event->cancellation_reason,
-            'cancelled_at'        => $event->cancelled_at ? $event->cancelled_at->format('Y-m-d H:i') : null,
+            'cancelled_at'        => $event->cancelled_at ? $formatArabic12($event->cancelled_at) : null,
             'is_booking_paused'   => $event->is_booking_paused,
-            'paused_at'           => $event->paused_at ? $event->paused_at->format('Y-m-d H:i') : null,
+            'paused_at'           => $event->paused_at ? $formatArabic12($event->paused_at) : null,
         ];
 
         // ✨ فتح الـ modal بعد ما البيانات جاهزة (لا race condition)
@@ -288,8 +365,27 @@ class Events extends BaseComponent
         $this->editEndDate   = $event->end_datetime->format('Y-m-d');
         $this->editEndTime   = $event->end_datetime->format('H:i');
 
+        // ✨ تقسيم الوقت إلى ساعة/دقيقة/فترة لعرضها في القوائم المنسدلة
+        $this->splitTime12($event->start_datetime, 'editStart');
+        $this->splitTime12($event->end_datetime, 'editEnd');
+
         // ✨ فتح الـ modal بعد ما البيانات جاهزة (لا race condition)
         $this->dispatch('open-edit-modal');
+    }
+
+    // ✨ تقسيم datetime إلى ساعة/دقيقة/فترة (12 ساعة)
+    private function splitTime12($datetime, string $prefix): void
+    {
+        if (!$datetime) return;
+        $h24 = (int) $datetime->format('H');
+        $min = $datetime->format('i');
+        $period = $h24 >= 12 ? 'PM' : 'AM';
+        $h12 = $h24 % 12;
+        if ($h12 === 0) $h12 = 12;
+
+        $this->{$prefix . 'Hour'}   = (string) $h12;
+        $this->{$prefix . 'Minute'} = $min;
+        $this->{$prefix . 'Period'} = $period;
     }
 
     // ==================== تحديث فعالية ====================

@@ -2,8 +2,9 @@
     use App\Models\Event;
     use App\Models\Status;
     
-    // جلب الفعاليات المتاحة للحجز
-    $availableStatusIds = Status::whereIn('name', ['active', 'published', 'under_review'])->pluck('id');
+    // ✨ جلب الفعاليات المتاحة للعرض في الخارطة
+    // الحالات: مضافة، نشطة، منشورة (بعد حذف under_review)
+    $availableStatusIds = Status::whereIn('name', ['added', 'active', 'published'])->pluck('id');
     $events = Event::whereIn('status_id', $availableStatusIds)
         ->orderBy('start_datetime', 'desc')
         ->get();
@@ -847,11 +848,19 @@
   <select id="eventSelect" onchange="if(this.value) window.location.href='?event_id='+this.value;">
     <option value="">-- اختر فعالية --</option>
     @foreach($events as $evt)
+      @php
+        $evtDt = $evt->start_datetime ? \Carbon\Carbon::parse($evt->start_datetime) : null;
+        $evtTimeText = '';
+        if ($evtDt) {
+            $evtHour12 = $evtDt->format('g');
+            $evtMin    = $evtDt->format('i');
+            $evtPeriod = $evtDt->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+            $evtDate   = $evtDt->format('Y-m-d');
+            $evtTimeText = " ({$evtDate} - {$evtHour12}:{$evtMin} {$evtPeriod})";
+        }
+      @endphp
       <option value="{{ $evt->id }}" {{ $selectedEventId == $evt->id ? 'selected' : '' }}>
-        {{ $evt->title }}
-        @if($evt->start_datetime)
-          ({{ \Carbon\Carbon::parse($evt->start_datetime)->format('Y-m-d') }})
-        @endif
+        {{ $evt->title }}{{ $evtTimeText }}
       </option>
     @endforeach
   </select>
