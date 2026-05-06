@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Auth;
 // ═══════════════════════════════════════════════════════════
 
 // صفحة الدعوة الإلكترونية للوفود (Livewire Full-Page Component)
-// الـ Layout محدّد في #[Layout('layouts.invitation')] داخل InvitationView.php
 Route::get('/invitation/{qrCode}', \App\Livewire\InvitationView::class)
     ->name('invitation.show');
 
@@ -50,18 +49,31 @@ Route::middleware('admin.web')->group(function () {
         Route::get('/dashboard/events', fn() => view('pages.events'))->name('dashboard.events');
     });
 
+    // ──────────────────────────────────────────────────────
+    // ✨ 🛡️ UUID-based Event Routes (حماية ضد IDOR)
+    // ──────────────────────────────────────────────────────
+    // الـ {eventUuid} يستقبل UUID بدل ID رقمي
+    // مثال: /dashboard/events/9f1d2c4a-3b5e-4f78-9c12-abcd1234ef56/vip-booking
+    // ──────────────────────────────────────────────────────
+
     // ── حجز مقاعد الوفود: مدير النظام + مدير الإعلام فقط ──
     Route::middleware('role:super_admin,event_manager')->group(function () {
         Route::get('/dashboard/vip-events', fn() => view('pages.vip-events'))
             ->name('dashboard.vip-events');
 
-        Route::get('/dashboard/events/{eventId}/vip-booking',
-            fn($eventId) => view('pages.vip-booking', ['eventId' => $eventId])
-        )->name('dashboard.vip-booking');
+        // ✨ UUID بدل ID رقمي
+        Route::get('/dashboard/events/{eventUuid}/vip-booking',
+            fn($eventUuid) => view('pages.vip-booking', ['eventUuid' => $eventUuid])
+        )
+        ->where('eventUuid', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
+        ->name('dashboard.vip-booking');
 
-        Route::get('/dashboard/events/{eventId}/cancellation-notices',
-            fn($eventId) => view('pages.event-cancellation-notices', ['eventId' => $eventId])
-        )->name('dashboard.event-cancellation-notices');
+        // ✨ UUID بدل ID رقمي
+        Route::get('/dashboard/events/{eventUuid}/cancellation-notices',
+            fn($eventUuid) => view('pages.event-cancellation-notices', ['eventUuid' => $eventUuid])
+        )
+        ->where('eventUuid', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
+        ->name('dashboard.event-cancellation-notices');
     });
 
     // ── تسجيل الحضور: مدير النظام + موظف الاستقبال فقط ──
