@@ -1,13 +1,7 @@
 <div>
 
 <div class="card-custom p-3 mb-3">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span class="text-muted">
-            إجمالي الفعاليات: <strong>{{ $events->total() }}</strong>
-            @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
-            <span class="badge bg-info ms-2"><i class="bi bi-funnel-fill"></i> فلاتر مُفعَّلة</span>
-            @endif
-        </span>
+    <div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
         @if(in_array($roleName, ['super_admin', 'theater_manager']))
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
             <i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة
@@ -86,7 +80,8 @@
                 <i class="bi bi-calendar-event"></i> من تاريخ
             </label>
             <input type="date"
-                   wire:model.live="filterDateFrom"
+                   wire:model.live.debounce.300ms="filterDateFrom"
+                   wire:change="$refresh"
                    class="form-control form-control-sm">
         </div>
 
@@ -96,7 +91,8 @@
                 <i class="bi bi-calendar-check"></i> إلى تاريخ
             </label>
             <input type="date"
-                   wire:model.live="filterDateTo"
+                   wire:model.live.debounce.300ms="filterDateTo"
+                   wire:change="$refresh"
                    class="form-control form-control-sm">
         </div>
 
@@ -108,6 +104,25 @@
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
         </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════ --}}
+{{--  ✨ شريط نتائج البحث                              --}}
+{{-- ══════════════════════════════════════════════ --}}
+<div class="d-flex justify-content-between align-items-center mb-3 px-2">
+    <div class="text-muted">
+        @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
+            <i class="bi bi-search" style="color: #0C4A6E;"></i>
+            <strong>نتائج البحث:</strong>
+            <span style="color: #0C4A6E; font-weight: 700;">{{ $events->total() }}</span>
+            {{ $events->total() == 1 ? 'فعالية' : 'فعاليات' }}
+            <span class="badge bg-info ms-2"><i class="bi bi-funnel-fill"></i> فلاتر مُفعَّلة</span>
+        @else
+            <i class="bi bi-list-ul" style="color: #0C4A6E;"></i>
+            <strong>إجمالي الفعاليات:</strong>
+            <span style="color: #0C4A6E; font-weight: 700;">{{ $events->total() }}</span>
+        @endif
     </div>
 </div>
 
@@ -138,7 +153,7 @@
                     $isCancelled = ($sName === 'cancelled');
                     $isPaused = $event->is_booking_paused;
                 @endphp
-                <tr class="@if($isCancelled) row-cancelled @elseif($isPaused) row-paused @endif">
+                <tr wire:key="event-{{ $event->id }}" class="@if($isCancelled) row-cancelled @elseif($isPaused) row-paused @endif">
                     {{-- # --}}
                     <td class="text-center">
                         <strong class="row-number">{{ $events->firstItem() + $loop->index }}</strong>

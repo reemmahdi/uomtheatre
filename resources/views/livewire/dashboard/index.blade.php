@@ -157,16 +157,25 @@
         </div>
     </div>
 
-    {{-- 2. الفعاليات المنشورة --}}
+    {{-- 2. الفعاليات المرسلة للإعلام (لمدير المسرح) / المنشورة (للآخرين) --}}
     <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #0369A1;">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="number" style="color:#0369A1;">{{ $publishedEvents }}</div>
-                    <div class="label">الفعاليات المنشورة</div>
+                    @if($roleName === 'theater_manager')
+                        <div class="number" style="color:#0369A1;">{{ $sentToMediaEvents }}</div>
+                        <div class="label">الفعاليات المرسلة للإعلام</div>
+                    @else
+                        <div class="number" style="color:#0369A1;">{{ $publishedEvents }}</div>
+                        <div class="label">الفعاليات المنشورة</div>
+                    @endif
                 </div>
                 <div class="icon" style="background:rgba(3, 105, 161, 0.12);color:#0369A1;">
-                    <i class="bi bi-megaphone-fill"></i>
+                    @if($roleName === 'theater_manager')
+                        <i class="bi bi-send-fill"></i>
+                    @else
+                        <i class="bi bi-megaphone-fill"></i>
+                    @endif
                 </div>
             </div>
         </div>

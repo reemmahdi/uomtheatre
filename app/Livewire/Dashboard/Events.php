@@ -75,6 +75,9 @@ class Events extends BaseComponent
         $this->reset(['searchTitle', 'filterStatus', 'filterDateFrom', 'filterDateTo']);
         $this->showSuggestions = false;
         $this->resetPage();
+
+        // ✨ إطلاق حدث لمسح Flatpickr في الـ JavaScript
+        $this->dispatch('filters-reset');
     }
 
     public function selectSuggestion(string $title): void
@@ -481,19 +484,19 @@ class Events extends BaseComponent
 
     // ==================== طلب تأكيد تغيير الحالة ====================
     /**
-     * ✨ مُحدَّث: حذف under_review من messages وtitles
+     * ✨ مُحدَّث: رسائل تأكيد أكثر وضوحاً وتحذيرية
      */
     public function requestChangeStatus(int $eventId, string $newStatusName)
     {
         $messages = [
-            'added'        => 'إرسال الفعالية للمراجعة؟',
+            'added'        => 'هل أنت متأكد من معلومات الفعالية؟ لن يمكنك التعديل عليها إذا تم الإرسال إلى مدير الإعلام',
             'active'       => 'قبول الفعالية؟',
             'published'    => 'نشر الفعالية للجمهور؟',
             'closed'       => 'إغلاق الفعالية؟',
         ];
 
         $titles = [
-            'added'        => 'تأكيد الإرسال',
+            'added'        => 'تأكيد الإرسال إلى مدير الإعلام',
             'active'       => 'تأكيد القبول',
             'published'    => 'تأكيد النشر',
             'closed'       => 'تأكيد الإغلاق',
@@ -629,12 +632,18 @@ class Events extends BaseComponent
             }
         }
 
-        // الفلتر بتاريخ البدء (من)
+        // ════════════════════════════════════════════════════════════
+        // ✨ 🆕 فلترة بالتاريخ (محسّنة)
+        // المنطق: إذا كان نطاق الفعالية يتقاطع مع نطاق الفلترة المختار
+        // ════════════════════════════════════════════════════════════
+
+        // الفلتر بتاريخ البدء (من): الفعالية تبدأ في أو بعد هذا التاريخ
         if (!empty($this->filterDateFrom)) {
             $query->whereDate('start_datetime', '>=', $this->filterDateFrom);
         }
 
-        // الفلتر بتاريخ الانتهاء (إلى)
+        // الفلتر بتاريخ الانتهاء (إلى): الفعالية تبدأ في أو قبل هذا التاريخ
+        // (يمكن أن تنتهي بعده، لكن المهم أن تبدأ ضمن النطاق)
         if (!empty($this->filterDateTo)) {
             $query->whereDate('start_datetime', '<=', $this->filterDateTo);
         }

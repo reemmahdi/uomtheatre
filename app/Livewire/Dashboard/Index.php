@@ -43,14 +43,14 @@ class Index extends BaseComponent
             ];
         } elseif ($roleName === 'theater_manager') {
             $draftStatus     = Status::where('name', 'draft')->first();
-            $publishedStatusTm = Status::where('name', 'published')->first();
+            $addedStatusTm   = Status::where('name', 'added')->first();
             $cancelledStatus = Status::where('name', 'cancelled')->first();
 
             $data += [
-                'totalEvents'     => Event::where('created_by', $userId)->count(),
-                'publishedEvents' => $publishedStatusTm ? Event::where('created_by', $userId)->where('status_id', $publishedStatusTm->id)->count() : 0,
-                'draftEvents'     => $draftStatus ? Event::where('created_by', $userId)->where('status_id', $draftStatus->id)->count() : 0,
-                'cancelledEvents' => $cancelledStatus ? Event::where('created_by', $userId)->where('status_id', $cancelledStatus->id)->count() : 0,
+                'totalEvents'        => Event::where('created_by', $userId)->count(),
+                'sentToMediaEvents'  => $addedStatusTm ? Event::where('created_by', $userId)->where('status_id', $addedStatusTm->id)->count() : 0,
+                'draftEvents'        => $draftStatus ? Event::where('created_by', $userId)->where('status_id', $draftStatus->id)->count() : 0,
+                'cancelledEvents'    => $cancelledStatus ? Event::where('created_by', $userId)->where('status_id', $cancelledStatus->id)->count() : 0,
             ];
         } elseif ($roleName === 'event_manager') {
             $addedStatus  = Status::where('name','added')->first();
