@@ -83,7 +83,7 @@
                         </span>
                     </td>
                     <td style="text-align: center;">
-                        <a href="{{ route('dashboard.vip-booking', $event->id) }}"
+                        <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
                            class="btn btn-sm"
                            style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; font-weight: 600; padding: 6px 14px;">
                             @if($event->vip_booked == 0)
