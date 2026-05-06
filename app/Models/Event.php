@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model
 {
+    use HasUuid;  // ✨ جديد: توليد UUID تلقائياً + Route Model Binding
+
     protected $fillable = [
+        'uuid',  // ✨ جديد: للحماية ضد IDOR
         'title',
         'description',
         'start_datetime',
@@ -17,8 +21,8 @@ class Event extends Model
         'closed_at',
         'cancellation_reason',
         'cancelled_at',
-        'is_booking_paused',  // ✨ جديد
-        'paused_at',           // ✨ جديد
+        'is_booking_paused',
+        'paused_at',
     ];
 
     protected $casts = [
@@ -27,8 +31,8 @@ class Event extends Model
         'published_at'      => 'datetime',
         'closed_at'         => 'datetime',
         'cancelled_at'      => 'datetime',
-        'paused_at'         => 'datetime',  // ✨ جديد
-        'is_booking_paused' => 'boolean',   // ✨ جديد
+        'paused_at'         => 'datetime',
+        'is_booking_paused' => 'boolean',
     ];
 
     // ==================== Relationships ====================

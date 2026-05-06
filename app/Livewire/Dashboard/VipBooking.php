@@ -16,6 +16,7 @@ use Livewire\Attributes\On;
 class VipBooking extends BaseComponent
 {
     public int $eventId;
+    public string $eventUuid = '';  // ✨ جديد: للحماية ضد IDOR
 
     // ==================== حقول الحجز الجديد ====================
     public string $guestName = '';
@@ -30,9 +31,24 @@ class VipBooking extends BaseComponent
     // ==================== ✨ حقول العرض ====================
     public ?array $viewBooking = null;
 
-    public function mount(int $id)
+    /**
+     * ✨ تعديل: يستقبل UUID بدل ID رقمي (حماية ضد IDOR)
+     *
+     * URL: /dashboard/events/{eventUuid}/vip-booking
+     * مثال: /dashboard/events/9f1d2c4a-3b5e-4f78-9c12-abcd1234ef56/vip-booking
+     */
+    public function mount(string $eventUuid)
     {
-        $this->eventId = $id;
+        // 🛡️ التحقق من شكل UUID صحيح (احتياطي - الـ Route يفلتره أيضاً)
+        if (!preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $eventUuid)) {
+            abort(404, 'معرّف الفعالية غير صحيح');
+        }
+
+        // 🛡️ البحث عن الفعالية بـ UUID (لو غير موجودة، 404)
+        $event = Event::where('uuid', $eventUuid)->firstOrFail();
+
+        $this->eventUuid = $eventUuid;
+        $this->eventId = $event->id;  // الـ ID الرقمي يبقى داخلياً للأداء
     }
 
     // ==================== اختيار مقعد ====================

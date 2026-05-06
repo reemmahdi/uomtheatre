@@ -249,7 +249,7 @@
                                 @endif
 
                                 @if(in_array($sName, ['active', 'published']))
-                                <a href="{{ route('dashboard.vip-booking', $event->id) }}"
+                                <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
                                    class="btn-action btn-action-vip"
                                    title="إدارة مقاعد الوفود">
                                     <i class="bi bi-star-fill"></i>

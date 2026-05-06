@@ -14,10 +14,23 @@ use Livewire\Attributes\Title;
 class EventCancellationNotices extends BaseComponent
 {
     public int $eventId;
+    public string $eventUuid = '';  // ✨ جديد: للحماية ضد IDOR
 
-    public function mount(int $id)
+    /**
+     * ✨ تعديل: يستقبل UUID بدل ID رقمي (حماية ضد IDOR)
+     */
+    public function mount(string $eventUuid)
     {
-        $this->eventId = $id;
+        // 🛡️ التحقق من شكل UUID صحيح
+        if (!preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $eventUuid)) {
+            abort(404, 'معرّف الفعالية غير صحيح');
+        }
+
+        // 🛡️ البحث عن الفعالية بـ UUID
+        $event = Event::where('uuid', $eventUuid)->firstOrFail();
+
+        $this->eventUuid = $eventUuid;
+        $this->eventId = $event->id;
     }
 
     /**
