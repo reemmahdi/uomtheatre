@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 // ═══════════════════════════════════════════════════════════
 // ✨ Routes العامة (بدون تسجيل دخول)
@@ -87,9 +88,11 @@ Route::get('/', fn() => redirect('/login'));
 Route::get('/seats-map', function () {
     return view('seats-map');
 })->name('seats-map');
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 
+// ═══════════════════════════════════════════════════════════
+// ⚠️ TEMPORARY ADMIN ROUTE - DELETE AFTER USE!
+// Route مؤقت لحذف بيانات الفعاليات على Cloud
+// ═══════════════════════════════════════════════════════════
 Route::get('/admin-reset-events-2026', function () {
     // 🛡️ حماية: فقط super_admin
     if (!Auth::check() || Auth::user()->role->name !== 'super_admin') {
@@ -104,7 +107,7 @@ Route::get('/admin-reset-events-2026', function () {
         DB::table('reservations')->delete();
         DB::table('events')->delete();
 
-        // PostgreSQL sequences reset
+        // إعادة ضبط العدّادات (متوافق مع MySQL و PostgreSQL)
         $driver = DB::connection()->getDriverName();
         if ($driver === 'pgsql') {
             DB::statement('ALTER SEQUENCE events_id_seq RESTART WITH 1');
