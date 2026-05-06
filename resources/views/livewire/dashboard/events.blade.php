@@ -607,8 +607,6 @@
                             <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-calendar3"></i> التاريخ</label>
                             <input type="text" id="edit_start_date_input" class="form-control flatpickr-date" placeholder="اختر التاريخ" value="{{ $editStartDate }}">
                         </div>
-                        <div class="col-md-5 mb-2" wire:ignore>
-                            <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت</label>
                         <div class="col-md-5 mb-2">
                             <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
                             @php
