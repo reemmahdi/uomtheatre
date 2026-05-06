@@ -9,7 +9,7 @@
                     <i class="bi bi-x-octagon-fill"></i> فعالية ملغاة
                 </span>
             </div>
-            <h4 class="mb-1" style="color: #DC2626; text-decoration: line-through;">
+            <h4 class="mb-1" style="color: #DC2626;">
                 {{ $event->title }}
             </h4>
             @if($event->description)
@@ -81,19 +81,28 @@
                 <i class="bi bi-send-fill"></i> إرسال جماعي للوفود
             </h5>
             <p class="mb-0 small text-muted">
-                ستُفتح <strong>{{ $vipBookings->count() }}</strong> تابات واتساب - اضغط Enter في كل تاب لإرسال الرسالة
+                ستُفتح <strong>{{ $vipBookings->count() }}</strong> نافذة واتساب — اضغط Enter في كل نافذة لإرسال الرسالة
             </p>
         </div>
-        <button id="sendAllBtn"
-                class="btn btn-lg"
-                style="background: #25D366; color: #fff; font-weight: 700;"
-                onclick="sendAllNotifications()">
-            <i class="bi bi-whatsapp"></i> إرسال للكل ({{ $vipBookings->count() }})
-        </button>
+        <div class="d-flex gap-2 align-items-center">
+            <span id="cancel-progress" class="text-muted small" style="display:none;">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                جارٍ الفتح: <span id="cancel-progress-current">0</span>/<span id="cancel-progress-total">0</span>
+            </span>
+            <button id="sendAllBtn"
+                    type="button"
+                    class="btn btn-lg"
+                    style="background: #25D366; color: #fff; font-weight: 700;"
+                    onclick="sendAllCancellationNotifications()">
+                <i class="bi bi-whatsapp"></i> إرسال للكل ({{ $vipBookings->count() }})
+            </button>
+        </div>
     </div>
     <div class="alert alert-info mt-3 mb-0 small">
         <i class="bi bi-info-circle"></i>
-        <strong>نصيحة:</strong> قبل الضغط، تأكد أن واتساب ويب مسجّل دخوله في متصفحك لتسريع العملية.
+        <strong>نصيحة:</strong> قبل الضغط، تأكد أن
+        <a href="https://web.whatsapp.com" target="_blank" style="color: #075985; text-decoration: underline;">واتساب ويب</a>
+        مسجّل دخوله في متصفحك لتسريع العملية.
     </div>
 </div>
 @endif
@@ -111,27 +120,29 @@
                     <th>رقم الجوال</th>
                     <th>المقعد</th>
                     <th>القسم</th>
-                    <th>إرسال فردي</th>
+                    <th style="width: 180px; text-align: center;">إرسال فردي</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($vipBookings as $booking)
+                @php $cancelLink = $this->getCancellationWhatsAppLink($booking->id); @endphp
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td><strong>{{ $booking->guest_name }}</strong></td>
                     <td dir="ltr">{{ $booking->guest_phone }}</td>
                     <td>
-                        <span class="badge" style="background: linear-gradient(135deg, #E4C05E, #C9A445); color: #5a4500;">
+                        <span class="badge" style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; padding: 6px 12px;">
                             {{ $booking->seat->label }}
                         </span>
                     </td>
                     <td>القسم {{ $booking->seat->section->name }}</td>
-                    <td>
-                        <a href="{{ $this->getCancellationWhatsAppLink($booking->id) }}"
+                    <td style="text-align: center;">
+                        <a href="{{ $cancelLink }}"
                            target="_blank"
+                           rel="noopener"
                            class="btn btn-sm wa-cancel-link"
-                           style="background: #25D366; color: #fff;"
-                           data-link="{{ $this->getCancellationWhatsAppLink($booking->id) }}">
+                           style="background: #25D366; color: #fff; font-weight: 600;"
+                           data-link="{{ $cancelLink }}">
                             <i class="bi bi-whatsapp"></i> إرسال إشعار
                         </a>
                     </td>
@@ -190,38 +201,45 @@
 @endif
 
 {{-- JavaScript للإرسال الجماعي --}}
-@script
 <script>
-    function sendAllNotifications() {
-        const links = document.querySelectorAll('.wa-cancel-link');
+function sendAllCancellationNotifications() {
+    const links = document.querySelectorAll('.wa-cancel-link');
+    const total = links.length;
 
-        if (links.length === 0) {
-            alert('لا يوجد وفود لإرسال إشعارات لهم');
-            return;
-        }
-
-        // تأكيد قبل فتح كل التابات
-        const confirmed = confirm(
-            'سيتم فتح ' + links.length + ' تاب واتساب.\n' +
-            'بعد فتحها، اضغط Enter في كل تاب لإرسال الرسالة.\n\n' +
-            'هل تريد المتابعة؟'
-        );
-
-        if (!confirmed) return;
-
-        // فتح كل التابات بفاصل صغير لتفادي حجب popup
-        links.forEach((link, index) => {
-            setTimeout(() => {
-                window.open(link.dataset.link, '_blank');
-            }, index * 300);
-        });
-
-        // عرض رسالة نجاح
-        setTimeout(() => {
-            alert('تم فتح ' + links.length + ' تاب واتساب\nاضغط Enter في كل تاب لإرسال الرسالة');
-        }, links.length * 300 + 500);
+    if (total === 0) {
+        alert('لا يوجد وفود لإرسال إشعارات لهم');
+        return;
     }
+
+    if (!confirm('سيتم فتح ' + total + ' نافذة واتساب بالتتابع.\nبعد فتحها، اضغط Enter في كل نافذة لإرسال الرسالة.\n\nهل تريد المتابعة؟')) {
+        return;
+    }
+
+    const progressEl = document.getElementById('cancel-progress');
+    const currentEl = document.getElementById('cancel-progress-current');
+    const totalEl = document.getElementById('cancel-progress-total');
+    const btn = document.getElementById('sendAllBtn');
+
+    totalEl.textContent = total;
+    currentEl.textContent = 0;
+    progressEl.style.display = 'inline-block';
+    btn.disabled = true;
+
+    links.forEach((link, index) => {
+        setTimeout(() => {
+            window.open(link.dataset.link, '_blank');
+            currentEl.textContent = index + 1;
+
+            if (index === total - 1) {
+                setTimeout(() => {
+                    progressEl.style.display = 'none';
+                    btn.disabled = false;
+                    alert('تم فتح ' + total + ' نافذة واتساب بنجاح\nاضغط Enter في كل نافذة لإرسال الرسالة');
+                }, 500);
+            }
+        }, index * 800);
+    });
+}
 </script>
-@endscript
 
 </div>

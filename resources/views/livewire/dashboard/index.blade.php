@@ -256,11 +256,11 @@
         <div class="stat-card" style="border-bottom:3px solid #E4C05E;">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="number" style="color:#8a6d1a;">{{ config('theatre.vip_seats') }}</div>
-                    <div class="label">مقاعد الوفود</div>
+                    <div class="number" style="color:#8a6d1a;">{{ $activeEvents ?? 0 }}</div>
+                    <div class="label">فعاليات نشطة</div>
                 </div>
                 <div class="icon" style="background:rgba(228, 192, 94, 0.25);color:#8a6d1a;">
-                    <i class="bi bi-star-fill"></i>
+                    <i class="bi bi-lightning-charge-fill"></i>
                 </div>
             </div>
         </div>

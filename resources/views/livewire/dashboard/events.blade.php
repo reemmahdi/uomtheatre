@@ -54,15 +54,28 @@
             @endif
         </div>
 
-        {{-- فلتر الحالة --}}
+        {{-- فلتر الحالة (✨ أسماء عربية ثابتة - بدون under_review) --}}
         <div class="col-md-3">
             <label class="form-label small fw-bold mb-1">
                 <i class="bi bi-flag"></i> الحالة
             </label>
             <select wire:model.live="filterStatus" class="form-select form-select-sm">
                 <option value="">— كل الحالات —</option>
+                @php
+                    $statusLabels = [
+                        'draft'     => 'مسودة',
+                        'added'     => 'مضافة',
+                        'active'    => 'نشطة',
+                        'published' => 'منشورة',
+                        'closed'    => 'مغلقة',
+                        'cancelled' => 'ملغاة',
+                        'end'       => 'منتهية',
+                    ];
+                @endphp
                 @foreach($allStatuses as $st)
-                <option value="{{ $st->name }}">{{ $st->display_name ?? $st->name }}</option>
+                    @if(isset($statusLabels[$st->name]))
+                    <option value="{{ $st->name }}">{{ $statusLabels[$st->name] }}</option>
+                    @endif
                 @endforeach
             </select>
         </div>
@@ -98,114 +111,125 @@
     </div>
 </div>
 
-<div class="card-custom p-4">
+{{-- ══════════════════════════════════════════════ --}}
+{{--  ✨ الجدول الجديد - 6 أعمدة منظمة             --}}
+{{-- ══════════════════════════════════════════════ --}}
+<div class="card-custom p-0">
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle mb-0 events-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>عنوان الفعالية </th>
-                    <th>موعد الانطلاق</th>
-                    <th>موعد الاختتام</th>
-                    <th class="status-col">الحالة</th>
-                    <th class="actions-col">الإجراءات</th>
+                    <th style="width: 50px;" class="text-center">#</th>
+                    <th>عنوان الفعالية</th>
+                    <th style="width: 150px;" class="text-center">موعد الانطلاق</th>
+                    <th style="width: 150px;" class="text-center">موعد الاختتام</th>
+                    <th style="width: 130px;" class="text-center">الحالة</th>
+                    <th style="width: 220px;" class="text-center">الإجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($events as $event)
                 @php
-                    $statusColors = ['draft'=>'#6B7280','added'=>'#3B82F6','under_review'=>'#F59E0B','active'=>'#8B5CF6','published'=>'#10B981','closed'=>'#EF4444','cancelled'=>'#DC2626','end'=>'#9CA3AF'];
-                    $statusNames = ['draft'=>'مسودة','added'=>'مضافة','under_review'=>'قيد المراجعة','active'=>'نشطة','published'=>'منشورة','closed'=>'مغلقة','cancelled'=>'ملغاة','end'=>'منتهية'];
+                    $statusColors = ['draft'=>'#6B7280','added'=>'#3B82F6','active'=>'#8B5CF6','published'=>'#10B981','closed'=>'#EF4444','cancelled'=>'#DC2626','end'=>'#9CA3AF'];
+                    $statusNames = ['draft'=>'مسودة','added'=>'مضافة','active'=>'نشطة','published'=>'منشورة','closed'=>'مغلقة','cancelled'=>'ملغاة','end'=>'منتهية'];
                     $sName = $event->status->name;
                     $sColor = $statusColors[$sName] ?? '#6B7280';
                     $sLabel = $statusNames[$sName] ?? $sName;
                     $isCancelled = ($sName === 'cancelled');
                     $isPaused = $event->is_booking_paused;
                 @endphp
-                {{-- ✨ تمييز بصري: وردي للملغاة، أصفر فاتح للموقوفة --}}
-                <tr @if($isCancelled) style="background-color: #fef2f2;" @elseif($isPaused) style="background-color: #fffbeb;" @endif>
-                    <td>{{ $events->firstItem() + $loop->index }}</td>
+                <tr class="@if($isCancelled) row-cancelled @elseif($isPaused) row-paused @endif">
+                    {{-- # --}}
+                    <td class="text-center">
+                        <strong class="row-number">{{ $events->firstItem() + $loop->index }}</strong>
+                    </td>
+
+                    {{-- عنوان الفعالية --}}
                     <td>
-                        <strong @if($isCancelled) style="color: #64748b;" @endif>
-                            @if($isCancelled) <i class="bi bi-x-octagon-fill text-danger"></i> @endif
-                            @if($isPaused && !$isCancelled) <i class="bi bi-pause-circle-fill text-warning"></i> @endif
-                            {{ $event->title }}
-                        </strong>
-                        @if($event->description)
-                        <br><small class="text-muted">{{ \Illuminate\Support\Str::limit($event->description, 50) }}</small>
-                        @endif
-                        {{-- سبب الإلغاء --}}
-                        @if($isCancelled && $event->cancellation_reason)
-                        <br><small class="text-muted fst-italic">
-                            <i class="bi bi-info-circle"></i> سبب الإلغاء: {{ \Illuminate\Support\Str::limit($event->cancellation_reason, 60) }}
-                        </small>
-                        @endif
-                        {{-- ✨ تنبيه الإيقاف المؤقت --}}
-                        @if($isPaused && !$isCancelled)
-                        <br><small class="text-warning fst-italic">
-                            <i class="bi bi-pause-fill"></i> الحجز موقوف مؤقتاً
-                            @if($event->paused_at)
-                                — منذ {{ $event->paused_at->format('Y-m-d H:i') }}
+                        <div class="event-title-cell">
+                            <strong class="event-title-text @if($isCancelled) cancelled-title @endif">
+                                @if($isCancelled) <i class="bi bi-x-octagon-fill text-danger"></i> @endif
+                                @if($isPaused && !$isCancelled) <i class="bi bi-pause-circle-fill text-warning"></i> @endif
+                                {{ $event->title }}
+                            </strong>
+                            @if($event->description)
+                            <small class="text-muted d-block mt-1">{{ \Illuminate\Support\Str::limit($event->description, 60) }}</small>
                             @endif
-                        </small>
-                        @endif
-                    </td>
-                    <td>
-                        <div class="small">
-                            <i class="bi bi-calendar3 text-muted"></i> {{ $event->start_datetime->format('Y-m-d') }}
-                        </div>
-                        <div class="small text-muted">
-                            <i class="bi bi-clock"></i> {{ $event->start_datetime->format('H:i') }}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="small">
-                            <i class="bi bi-calendar3 text-muted"></i> {{ $event->end_datetime->format('Y-m-d') }}
-                        </div>
-                        <div class="small text-muted">
-                            <i class="bi bi-clock"></i> {{ $event->end_datetime->format('H:i') }}
+                            {{-- سبب الإلغاء --}}
+                            @if($isCancelled && $event->cancellation_reason)
+                            <small class="text-muted fst-italic d-block mt-1">
+                                <i class="bi bi-info-circle"></i> سبب الإلغاء: {{ \Illuminate\Support\Str::limit($event->cancellation_reason, 60) }}
+                            </small>
+                            @endif
+                            {{-- تنبيه الإيقاف المؤقت --}}
+                            @if($isPaused && !$isCancelled)
+                            <small class="text-warning fst-italic d-block mt-1">
+                                <i class="bi bi-pause-fill"></i> الحجز متوقف مؤقتاً
+                                @if($event->paused_at)
+                                    — منذ {{ $event->paused_at->format('Y-m-d H:i') }}
+                                @endif
+                            </small>
+                            @endif
                         </div>
                     </td>
-                    <td class="status-cell">
+
+                    {{-- ✨ موعد الانطلاق --}}
+                    <td class="text-center">
+                        <div class="date-cell">
+                            <div class="date-day" dir="ltr">{{ $event->start_datetime->format('Y-m-d') }}</div>
+                            <div class="date-time" dir="ltr">{{ $event->start_datetime->format('H:i') }}</div>
+                        </div>
+                    </td>
+
+                    {{-- ✨ موعد الاختتام --}}
+                    <td class="text-center">
+                        <div class="date-cell">
+                            <div class="date-day" dir="ltr">{{ $event->end_datetime->format('Y-m-d') }}</div>
+                            <div class="date-time" dir="ltr">{{ $event->end_datetime->format('H:i') }}</div>
+                        </div>
+                    </td>
+
+                    {{-- الحالة --}}
+                    <td class="text-center">
                         <div class="status-stack">
                             <span class="status-badge status-badge-{{ $sName }}">
                                 @if($isCancelled) <i class="bi bi-x-octagon-fill"></i> @endif
                                 {{ $sLabel }}
                             </span>
-                            {{-- ✨ Badge للإيقاف المؤقت --}}
                             @if($isPaused && !$isCancelled)
                             <span class="status-badge status-badge-paused">
-                                <i class="bi bi-pause-circle-fill"></i> الحجز موقوف
+                                <i class="bi bi-pause-circle-fill"></i> متوقفة
                             </span>
                             @endif
                         </div>
                     </td>
+
                     {{-- ══════════════════════════════════════════════ --}}
-                    {{--  ✨ خلية الإجراءات المنظّمة (مجموعتين)            --}}
+                    {{--  ✨ خلية الإجراءات                              --}}
                     {{-- ══════════════════════════════════════════════ --}}
-                    <td class="actions-cell">
-                        {{-- مجموعة 1: العرض + إجراءات الحالة --}}
+                    <td class="text-center">
                         <div class="actions-group">
                             {{-- 1. عرض التفاصيل (دائماً) --}}
-                            <button class="btn-action btn-action-view"
+                            <button type="button"
+                                    class="btn-action btn-action-view"
                                     wire:click="viewEvent({{ $event->id }})"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#viewEventModal"
                                     title="عرض التفاصيل">
                                 <i class="bi bi-eye"></i>
                             </button>
 
-                            {{-- 2. مدير المسرح: تعديل + إرسال (للمسودات) --}}
+                            {{-- 2. مدير المسرح: تعديل + إرسال للمراجعة (للمسودات فقط) --}}
                             @if(in_array($roleName, ['super_admin', 'theater_manager']))
                                 @if($sName === 'draft')
-                                <button class="btn-action btn-action-edit"
+                                <button type="button"
+                                        class="btn-action btn-action-edit"
                                         wire:click="openEdit({{ $event->id }})"
                                         data-bs-toggle="modal"
                                         data-bs-target="#editEventModal"
                                         title="تعديل">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button class="btn-action btn-action-send"
+                                <button type="button"
+                                        class="btn-action btn-action-send"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'added')"
                                         title="إرسال للمراجعة">
                                     <i class="bi bi-send"></i>
@@ -213,25 +237,18 @@
                                 @endif
                             @endif
 
-                            {{-- 3. مدير الإعلام: مراجعة / قبول / نشر / إغلاق / وفود --}}
+                            {{-- 3. مدير الإعلام: قبول / نشر / إغلاق / وفود --}}
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
                                 @if($sName === 'added')
-                                <button class="btn-action btn-action-review"
-                                        wire:click="requestChangeStatus({{ $event->id }}, 'under_review')"
-                                        title="بدء المراجعة">
-                                    <i class="bi bi-search"></i>
-                                </button>
-                                @endif
-
-                                @if($sName === 'under_review')
-                                <button class="btn-action btn-action-approve"
+                                <button type="button"
+                                        class="btn-action btn-action-approve"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'active')"
                                         title="قبول الفعالية">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
                                 @endif
 
-                                @if(in_array($sName, ['active', 'under_review', 'published']))
+                                @if(in_array($sName, ['active', 'published']))
                                 <a href="{{ route('dashboard.vip-booking', $event->id) }}"
                                    class="btn-action btn-action-vip"
                                    title="إدارة مقاعد الوفود">
@@ -240,7 +257,8 @@
                                 @endif
 
                                 @if($sName === 'active')
-                                <button class="btn-action btn-action-publish"
+                                <button type="button"
+                                        class="btn-action btn-action-publish"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'published')"
                                         title="نشر الفعالية">
                                     <i class="bi bi-megaphone-fill"></i>
@@ -248,21 +266,24 @@
                                 @endif
 
                                 @if($sName === 'published')
-                                <button class="btn-action btn-action-close"
+                                <button type="button"
+                                        class="btn-action btn-action-close"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'closed')"
                                         title="إغلاق الفعالية">
                                     <i class="bi bi-lock-fill"></i>
                                 </button>
 
-                                {{-- ✨ زر الإيقاف/الاستئناف --}}
+                                {{-- زر الإيقاف/الاستئناف --}}
                                 @if(!$isPaused)
-                                <button class="btn-action btn-action-pause"
+                                <button type="button"
+                                        class="btn-action btn-action-pause"
                                         wire:click="requestPauseBooking({{ $event->id }})"
                                         title="إيقاف الحجز مؤقتاً">
                                     <i class="bi bi-pause-circle-fill"></i>
                                 </button>
                                 @else
-                                <button class="btn-action btn-action-resume"
+                                <button type="button"
+                                        class="btn-action btn-action-resume"
                                         wire:click="requestResumeBooking({{ $event->id }})"
                                         title="استئناف الحجز">
                                     <i class="bi bi-play-circle-fill"></i>
@@ -271,9 +292,10 @@
                                 @endif
                             @endif
 
-                            {{-- زر الإلغاء (داخل نفس المجموعة لتدفق موحّد) --}}
+                            {{-- زر الإلغاء --}}
                             @if(!in_array($sName, ['cancelled', 'end', 'closed']))
-                            <button class="btn-action btn-action-cancel"
+                            <button type="button"
+                                    class="btn-action btn-action-cancel"
                                     wire:click="openCancelModal({{ $event->id }})"
                                     data-bs-toggle="modal"
                                     data-bs-target="#cancelEventModal"
@@ -286,15 +308,15 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        <i class="bi bi-calendar-x" style="font-size:40px;color:#c39bd3;"></i>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="bi bi-calendar-x" style="font-size:50px; color:#cbd5e1;"></i>
                         @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
-                        <p class="mt-2">لا توجد فعاليات مطابقة لمعايير البحث</p>
+                        <p class="mt-3 mb-2">لا توجد فعاليات مطابقة لمعايير البحث</p>
                         <button wire:click="resetFilters" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-arrow-counterclockwise"></i> مسح الفلاتر
                         </button>
                         @else
-                        <p class="mt-2">لا توجد فعاليات</p>
+                        <p class="mt-3">لا توجد فعاليات</p>
                         @endif
                     </td>
                 </tr>
@@ -303,9 +325,9 @@
         </table>
     </div>
 
-    {{-- ✨ روابط التصفّح (Pagination) --}}
+    {{-- ✨ روابط التصفّح --}}
     @if($events->hasPages())
-    <div class="pagination-wrapper mt-3">
+    <div class="pagination-wrapper p-3 border-top">
         <div class="pagination-links-only d-flex justify-content-center">
             {{ $events->onEachSide(1)->links() }}
         </div>
@@ -314,20 +336,27 @@
 </div>
 
 
+{{-- ══════════════════════════════════════════════ --}}
+{{--  Modals                                         --}}
+{{-- ══════════════════════════════════════════════ --}}
+
 {{-- نافذة عرض التفاصيل --}}
 <div class="modal fade" id="viewEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-eye"></i> تفاصيل الفعالية</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-eye"></i> تفاصيل الفعالية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 @if(!empty($showEvent))
 
-                {{-- ✨ عنوان الفعالية أولاً (دائماً) --}}
-                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #fdf2f8, #f5f0ff);">
-                    <h5 style="color: #7b2d8e; font-weight: 700; margin: 0;">{{ $showEvent['title'] }}</h5>
+                {{-- عنوان الفعالية أولاً --}}
+                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #e0f2fe, #f0f9ff); border-right: 4px solid #0C4A6E;">
+                    <h5 style="color: #0C4A6E; font-weight: 700; margin: 0;">{{ $showEvent['title'] }}</h5>
                 </div>
 
-                {{-- تنبيه الإلغاء (بعد العنوان) --}}
+                {{-- تنبيه الإلغاء --}}
                 @if(($showEvent['status_name'] ?? '') === 'cancelled')
                 <div class="alert alert-danger border-danger mb-3">
                     <h6 class="alert-heading mb-2">
@@ -343,13 +372,13 @@
                 </div>
                 @endif
 
-                {{-- ✨ تنبيه الإيقاف المؤقت --}}
+                {{-- تنبيه الإيقاف --}}
                 @if(!empty($showEvent['is_booking_paused']))
                 <div class="alert alert-warning border-warning mb-3">
                     <h6 class="alert-heading mb-2">
-                        <i class="bi bi-pause-circle-fill"></i>الحجز غير متاح حاليا 
+                        <i class="bi bi-pause-circle-fill"></i> الحجز غير متاح حالياً
                     </h6>
-                    <p class="mb-2 small">الحجوزات الجديدة موقوفة، لكن الحجوزات السابقة محفوظة.</p>
+                    <p class="mb-2 small">الحجوزات الجديدة متوقفة، لكن الحجوزات السابقة محفوظة.</p>
                     @if(!empty($showEvent['paused_at']))
                     <small class="text-muted"><i class="bi bi-clock-history"></i> تاريخ الإيقاف: {{ $showEvent['paused_at'] }}</small>
                     @endif
@@ -379,7 +408,10 @@
 <div class="modal fade" id="createEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 @error('title')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('description')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
@@ -449,7 +481,6 @@
                     </div>
                 </div>
             </div>
-            {{-- ✨ ترتيب موحّد: الإنشاء أولاً (يمين)، الإلغاء ثانياً (يسار) - بالوسط --}}
             <div class="modal-footer modal-footer-uniform">
                 <button wire:click="createEvent" class="btn btn-primary modal-btn-action" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="createEvent"><i class="bi bi-plus-circle"></i> إنشاء</span>
@@ -465,7 +496,10 @@
 <div class="modal fade" id="editEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-pencil"></i> تعديل الفعالية</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> تعديل الفعالية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 @error('editTitle')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('editDescription')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
@@ -526,7 +560,7 @@
     </div>
 </div>
 
-{{-- نافذة إلغاء الفعالية مع السبب --}}
+{{-- نافذة إلغاء الفعالية --}}
 <div class="modal fade" id="cancelEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -593,103 +627,439 @@
     </div>
 </div>
 
-@script
+
+{{-- ══════════════════════════════════════════════ --}}
+{{--  ✨ تنسيقات الجدول - باليتة Midnight Ocean    --}}
+{{-- ══════════════════════════════════════════════ --}}
+<style>
+    /* ════════ متغيرات اللوحة الرئيسية ════════ */
+    .events-table {
+        --c-primary: #0C4A6E;
+        --c-primary-light: #075985;
+        --c-primary-lighter: #0369A1;
+        --c-primary-soft: #e0f2fe;
+        --c-primary-softer: #f0f9ff;
+        --c-danger: #DC2626;
+        --c-danger-soft: #fef2f2;
+        --c-text: #1e293b;
+        --c-text-muted: #64748b;
+        --c-border: #e2e8f0;
+        --c-border-light: #f1f5f9;
+        font-size: 14px;
+    }
+
+    /* ════════ رأس الجدول ════════ */
+    .events-table thead {
+        background: var(--c-primary);
+    }
+
+    .events-table thead th {
+        color: #fff;
+        font-weight: 700;
+        font-size: 13px;
+        padding: 14px 12px;
+        border: none;
+        white-space: nowrap;
+        letter-spacing: 0.5px;
+    }
+
+    /* ════════ خلايا الجدول ════════ */
+    .events-table tbody td {
+        padding: 14px 12px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--c-border-light);
+        color: var(--c-text);
+    }
+
+    .events-table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    .events-table tbody tr:hover {
+        background-color: var(--c-primary-softer) !important;
+    }
+
+    /* ════════ الصفوف الخاصة ════════ */
+    .events-table tr.row-cancelled {
+        background-color: #fafafa;
+    }
+
+    .events-table tr.row-cancelled:hover {
+        background-color: #f4f4f5 !important;
+    }
+
+    .events-table tr.row-paused {
+        background-color: var(--c-primary-softer);
+    }
+
+    /* ════════ الترقيم ════════ */
+    .row-number {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        line-height: 28px;
+        background: #fff;
+        border: 2px solid var(--c-primary);
+        border-radius: 50%;
+        color: var(--c-primary);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    /* ════════ خلية العنوان ════════ */
+    .event-title-cell {
+        max-width: 380px;
+    }
+
+    .event-title-text {
+        color: var(--c-primary);
+        font-size: 15px;
+        line-height: 1.5;
+    }
+
+    .event-title-text.cancelled-title {
+        color: var(--c-text-muted);
+    }
+
+    /* ════════ خلية المواعيد (بسيطة - بدون ألوان أو زخرفة) ════════ */
+    .date-cell {
+        display: inline-block;
+        white-space: nowrap;
+        line-height: 1.5;
+    }
+
+    .date-day {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--c-text);
+        letter-spacing: 0.3px;
+    }
+
+    .date-time {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--c-text-muted);
+        margin-top: 2px;
+    }
+
+    /* ════════ Status Badges (Dark Solid - باليتة موحّدة) ════════ */
+    .status-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 6px 14px;
+        border-radius: 14px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        border: none;
+        color: #fff !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 2px 4px rgba(12, 74, 110, 0.15);
+        min-width: 80px;
+    }
+
+    /* الحالات الإيجابية: تدرّج من نفس اللون الأساسي */
+    .status-badge-draft {
+        background: #94a3b8;
+    }
+
+    .status-badge-added {
+        background: #075985;
+    }
+
+    .status-badge-active {
+        background: #0369A1;
+    }
+
+    .status-badge-published {
+        background: #0C4A6E;
+    }
+
+    .status-badge-closed {
+        background: #475569;
+    }
+
+    /* الحالات السلبية: لون أحمر/رمادي فقط */
+    .status-badge-cancelled {
+        background: #DC2626;
+    }
+
+    .status-badge-end {
+        background: #6b7280;
+    }
+
+    .status-badge-paused {
+        background: #92400E;
+    }
+
+    /* ════════ مجموعة الإجراءات ════════ */
+    .events-table .actions-group {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .events-table .btn-action {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
+        border: 1.5px solid !important;
+        background: #fff !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        text-decoration: none !important;
+        line-height: 1 !important;
+        font-size: 16px !important;
+    }
+
+    .events-table .btn-action i,
+    .events-table .btn-action [class^="bi-"],
+    .events-table .btn-action [class*=" bi-"] {
+        font-size: 16px !important;
+        line-height: 1 !important;
+        display: inline-block !important;
+        vertical-align: middle !important;
+        font-style: normal !important;
+        font-weight: normal !important;
+        color: inherit !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .events-table .btn-action:hover {
+        transform: translateY(-2px);
+        text-decoration: none !important;
+        box-shadow: 0 4px 8px rgba(12, 74, 110, 0.18);
+    }
+
+    /* ════════ ألوان الأزرار - باليتة موحّدة (3 ألوان فقط) ════════ */
+    /* الأزرار الإيجابية (عرض، تعديل، إرسال، قبول، نشر، استئناف، وفود، إغلاق): أزرق داكن */
+    .events-table .btn-action.btn-action-view,
+    .events-table .btn-action.btn-action-edit,
+    .events-table .btn-action.btn-action-send,
+    .events-table .btn-action.btn-action-approve,
+    .events-table .btn-action.btn-action-vip,
+    .events-table .btn-action.btn-action-publish,
+    .events-table .btn-action.btn-action-close,
+    .events-table .btn-action.btn-action-resume {
+        color: var(--c-primary) !important;
+        border-color: var(--c-primary) !important;
+    }
+
+    .events-table .btn-action.btn-action-view:hover,
+    .events-table .btn-action.btn-action-edit:hover,
+    .events-table .btn-action.btn-action-send:hover,
+    .events-table .btn-action.btn-action-approve:hover,
+    .events-table .btn-action.btn-action-vip:hover,
+    .events-table .btn-action.btn-action-publish:hover,
+    .events-table .btn-action.btn-action-close:hover,
+    .events-table .btn-action.btn-action-resume:hover {
+        background: var(--c-primary) !important;
+        color: #fff !important;
+    }
+
+    /* زر الإيقاف: لون متوسط من نفس الباليتة */
+    .events-table .btn-action.btn-action-pause {
+        color: var(--c-primary-lighter) !important;
+        border-color: var(--c-primary-lighter) !important;
+    }
+    .events-table .btn-action.btn-action-pause:hover {
+        background: var(--c-primary-lighter) !important;
+        color: #fff !important;
+    }
+
+    /* زر الإلغاء: أحمر (الوحيد المتميّز - للخطر فقط) */
+    .events-table .btn-action.btn-action-cancel {
+        color: var(--c-danger) !important;
+        border-color: var(--c-danger) !important;
+    }
+    .events-table .btn-action.btn-action-cancel:hover {
+        background: var(--c-danger) !important;
+        color: #fff !important;
+    }
+
+    /* ════════ Responsive ════════ */
+    @media (max-width: 992px) {
+        .events-table {
+            font-size: 13px;
+        }
+
+        .event-title-cell {
+            max-width: 240px;
+        }
+
+        .events-table .btn-action {
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            font-size: 14px !important;
+        }
+
+        .events-table .btn-action i,
+        .events-table .btn-action [class^="bi-"] {
+            font-size: 14px !important;
+        }
+
+        /* تصغير خلية المواعيد على الشاشات الصغيرة */
+        .date-day {
+            font-size: 12px;
+        }
+
+        .date-time {
+            font-size: 11px;
+        }
+    }
+</style>
+
+
 <script>
-    $wire.on('close-modal', () => {
-        document.querySelectorAll('.modal').forEach(m => bootstrap.Modal.getInstance(m)?.hide());
+document.addEventListener('livewire:initialized', () => {
+    // عند إطلاق حدث close-modal، أغلق كل الـ modals
+    Livewire.on('close-modal', () => {
+        document.querySelectorAll('.modal').forEach(m => {
+            const inst = bootstrap.Modal.getInstance(m);
+            if (inst) inst.hide();
+        });
     });
 
-    // ═══════════════════════════════════════════════════
-    // ✨ تهيئة Flatpickr - بسيطة وموثوقة
-    // ═══════════════════════════════════════════════════
-    let flatpickrInstances = {};
-
-    function destroyFlatpickr() {
-        Object.keys(flatpickrInstances).forEach(key => {
-            try {
-                flatpickrInstances[key].destroy();
-            } catch (e) {}
-        });
-        flatpickrInstances = {};
-    }
-
-    function initFlatpickr() {
-        if (typeof flatpickr === 'undefined') return;
-
-        const arabicLocale = (flatpickr.l10ns && flatpickr.l10ns.ar) ? flatpickr.l10ns.ar : 'default';
-
-        // قائمة الحقول والـ properties المرتبطة بها بـ Livewire
-        const dateFields = [
-            { id: 'start_date_input', wireProp: 'start_date' },
-            { id: 'end_date_input', wireProp: 'end_date' },
-            { id: 'edit_start_date_input', wireProp: 'editStartDate' },
-            { id: 'edit_end_date_input', wireProp: 'editEndDate' }
-        ];
-
-        const timeFields = [
-            { id: 'start_time_input', wireProp: 'start_time' },
-            { id: 'end_time_input', wireProp: 'end_time' },
-            { id: 'edit_start_time_input', wireProp: 'editStartTime' },
-            { id: 'edit_end_time_input', wireProp: 'editEndTime' }
-        ];
-
-        // تهيئة حقول التاريخ
-        dateFields.forEach(field => {
-            const el = document.getElementById(field.id);
-            if (!el || flatpickrInstances[field.id]) return;
-
-            flatpickrInstances[field.id] = flatpickr(el, {
-                dateFormat: 'Y-m-d',
-                minDate: 'today',
-                locale: arabicLocale,
-                disableMobile: true,
-                allowInput: false,
-                defaultDate: el.value || null,
-                onChange: function(selectedDates, dateStr) {
-                    // تحديث Livewire property مباشرة
-                    $wire.set(field.wireProp, dateStr);
-                }
-            });
-        });
-
-        // تهيئة حقول الوقت (12 ساعة)
-        timeFields.forEach(field => {
-            const el = document.getElementById(field.id);
-            if (!el || flatpickrInstances[field.id]) return;
-
-            flatpickrInstances[field.id] = flatpickr(el, {
-                enableTime: true,
-                noCalendar: true,
-                dateFormat: 'H:i',
-                altInput: true,
-                altFormat: 'h:i K',
-                time_24hr: false,
-                locale: arabicLocale,
-                disableMobile: true,
-                allowInput: false,
-                minuteIncrement: 5,
-                defaultDate: el.value || null,
-                onChange: function(selectedDates, dateStr) {
-                    $wire.set(field.wireProp, dateStr);
-                }
-            });
-        });
-    }
-
-    // عند فتح المودال: تهيئة
-    document.addEventListener('shown.bs.modal', (e) => {
-        if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
-            setTimeout(initFlatpickr, 50);
+    // ✨ عند إطلاق حدث open-view-modal، افتح modal التفاصيل
+    Livewire.on('open-view-modal', () => {
+        const modalEl = document.getElementById('viewEventModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
         }
     });
+});
 
-    // عند إغلاق المودال: تنظيف
-    document.addEventListener('hidden.bs.modal', (e) => {
-        if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
-            destroyFlatpickr();
-        }
+// ═══════════════════════════════════════════════════
+// ✨ تهيئة Flatpickr
+// ═══════════════════════════════════════════════════
+let flatpickrInstances = {};
+
+function destroyFlatpickr() {
+    Object.keys(flatpickrInstances).forEach(key => {
+        try {
+            flatpickrInstances[key].destroy();
+        } catch (e) {}
     });
+    flatpickrInstances = {};
+}
+
+function initFlatpickr() {
+    if (typeof flatpickr === 'undefined') return;
+
+    const arabicLocale = (flatpickr.l10ns && flatpickr.l10ns.ar) ? flatpickr.l10ns.ar : 'default';
+
+    const dateFields = [
+        { id: 'start_date_input', wireProp: 'start_date' },
+        { id: 'end_date_input', wireProp: 'end_date' },
+        { id: 'edit_start_date_input', wireProp: 'editStartDate' },
+        { id: 'edit_end_date_input', wireProp: 'editEndDate' }
+    ];
+
+    const timeFields = [
+        { id: 'start_time_input', wireProp: 'start_time' },
+        { id: 'end_time_input', wireProp: 'end_time' },
+        { id: 'edit_start_time_input', wireProp: 'editStartTime' },
+        { id: 'edit_end_time_input', wireProp: 'editEndTime' }
+    ];
+
+    // ✨ تهيئة حقول التاريخ
+    dateFields.forEach(field => {
+        const el = document.getElementById(field.id);
+        if (!el || flatpickrInstances[field.id]) return;
+
+        const initialValue = (el.value && el.value.trim() !== '') ? el.value : null;
+
+        flatpickrInstances[field.id] = flatpickr(el, {
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            locale: arabicLocale,
+            disableMobile: true,
+            allowInput: true,
+            defaultDate: initialValue,
+            onChange: function(selectedDates, dateStr) {
+                if (window.Livewire) {
+                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    if (wire) wire.set(field.wireProp, dateStr);
+                }
+            },
+            onClose: function(selectedDates, dateStr) {
+                if (dateStr && window.Livewire) {
+                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    if (wire) wire.set(field.wireProp, dateStr);
+                }
+            }
+        });
+    });
+
+    // ✨ تهيئة حقول الوقت (12 ساعة - بدون وقت افتراضي 00:00)
+    timeFields.forEach(field => {
+        const el = document.getElementById(field.id);
+        if (!el || flatpickrInstances[field.id]) return;
+
+        const rawValue = el.value ? el.value.trim() : '';
+        const initialValue = (rawValue !== '' && rawValue !== '00:00') ? rawValue : null;
+
+        flatpickrInstances[field.id] = flatpickr(el, {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: 'H:i',
+            altInput: true,
+            altFormat: 'h:i K',
+            time_24hr: false,
+            locale: arabicLocale,
+            disableMobile: true,
+            allowInput: true,
+            minuteIncrement: 5,
+            defaultDate: initialValue,
+            onChange: function(selectedDates, dateStr) {
+                if (dateStr && selectedDates.length > 0 && window.Livewire) {
+                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    if (wire) wire.set(field.wireProp, dateStr);
+                }
+            },
+            onClose: function(selectedDates, dateStr) {
+                if (dateStr && selectedDates.length > 0 && window.Livewire) {
+                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    if (wire) wire.set(field.wireProp, dateStr);
+                }
+            }
+        });
+    });
+}
+
+// تهيئة Flatpickr عند فتح modal الإنشاء أو التعديل
+document.addEventListener('shown.bs.modal', function(e) {
+    if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
+        setTimeout(initFlatpickr, 50);
+    }
+});
+
+// تنظيف Flatpickr عند إغلاق الـ modal
+document.addEventListener('hidden.bs.modal', function(e) {
+    if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
+        destroyFlatpickr();
+    }
+});
 </script>
-@endscript
 
 </div>

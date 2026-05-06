@@ -18,7 +18,6 @@ class Events extends BaseComponent
 {
     use WithPagination;
 
-    // ✨ استعمال Bootstrap للـ pagination
     protected $paginationTheme = 'bootstrap';
 
     // ==================== Create Properties ====================
@@ -47,12 +46,26 @@ class Events extends BaseComponent
 
     public array $showEvent = [];
 
-    // ==================== ✨ Search & Filter Properties ====================
+    // ==================== Search & Filter Properties ====================
     public string $searchTitle = '';
     public string $filterStatus = '';
     public string $filterDateFrom = '';
     public string $filterDateTo = '';
     public bool $showSuggestions = false;
+
+    /**
+     * ✨ الحالات المعروضة في الفلتر (بعد حذف under_review)
+     * هذه القائمة مرتبة حسب workflow الفعاليات
+     */
+    private const VISIBLE_STATUSES = [
+        'draft',      // مسودة
+        'added',      // مضافة
+        'active',     // نشطة
+        'published',  // منشورة
+        'closed',     // مغلقة
+        'cancelled',  // ملغاة
+        'end',        // منتهية
+    ];
 
     /**
      * إعادة تعيين كل الفلاتر
@@ -64,9 +77,6 @@ class Events extends BaseComponent
         $this->resetPage();
     }
 
-    /**
-     * ✨ اختيار اقتراح من القائمة المنسدلة
-     */
     public function selectSuggestion(string $title): void
     {
         $this->searchTitle = $title;
@@ -74,20 +84,13 @@ class Events extends BaseComponent
         $this->resetPage();
     }
 
-    /**
-     * ✨ إخفاء قائمة الاقتراحات
-     */
     public function hideSuggestions(): void
     {
         $this->showSuggestions = false;
     }
 
-    /**
-     * ✨ عند تغيير أي فلتر، نرجع للصفحة 1 تلقائياً
-     */
     public function updatedSearchTitle(): void
     {
-        // إظهار الاقتراحات لو فيه نص
         $this->showSuggestions = !empty($this->searchTitle);
         $this->resetPage();
     }
@@ -116,29 +119,19 @@ class Events extends BaseComponent
         return $date . ' ' . $time;
     }
 
-    // ==================== ✨ 🆕 إنهاء تلقائي للفعاليات المنتهية ====================
+    // ==================== إنهاء تلقائي للفعاليات المنتهية ====================
     /**
      * يحوّل الفعاليات النشطة/المنشورة التي تجاوز end_datetime الوقت الحالي
      * إلى حالة "end" تلقائياً.
-     *
-     * يُستدعى في كل مرة تُفتح فيها صفحة الفعاليات (في render).
-     * خفيف جداً: استعلام واحد UPDATE مع WHERE conditions.
-     *
-     * المنطق:
-     * - فقط الحالات (active, published) تتحوّل
-     *   (لأن draft/under_review قد يكون لها تاريخ قديم لم يُجدول بعد)
-     * - الفعاليات الملغاة/المغلقة لا تُمس
-     * - is_booking_paused تُمسح عند الانتهاء (لا معنى للإيقاف بعد الانتهاء)
      */
     private function autoEndExpiredEvents(): void
     {
         try {
             $endStatus = Status::where('name', 'end')->first();
             if (!$endStatus) {
-                return; // إذا لم تكن حالة 'end' موجودة، نتجاهل بصمت
+                return;
             }
 
-            // الفعاليات التي ستتحوّل (لتسجيلها في EventLog)
             $expiredEvents = Event::where('end_datetime', '<', now())
                 ->whereHas('status', fn($q) => $q->whereIn('name', ['active', 'published']))
                 ->get(['id', 'status_id']);
@@ -147,7 +140,6 @@ class Events extends BaseComponent
                 return;
             }
 
-            // التحديث الجماعي
             $expiredIds = $expiredEvents->pluck('id')->toArray();
             Event::whereIn('id', $expiredIds)->update([
                 'status_id'         => $endStatus->id,
@@ -155,7 +147,6 @@ class Events extends BaseComponent
                 'paused_at'         => null,
             ]);
 
-            // تسجيل في EventLog لكل فعالية (للتدقيق)
             foreach ($expiredEvents as $event) {
                 EventLog::create([
                     'event_id'      => $event->id,
@@ -165,26 +156,19 @@ class Events extends BaseComponent
                 ]);
             }
         } catch (\Exception $e) {
-            // فشل صامت: لا نريد كسر الصفحة بسبب خطأ في الفحص التلقائي
             \Log::error('autoEndExpiredEvents failed: ' . $e->getMessage());
         }
     }
 
-    // ==================== ✨ 🆕 التحقق من منطقية التاريخ ====================
-    /**
-     * يتحقق أن وقت الانتهاء لم يمر بعد.
-     * يرجع رسالة خطأ إن كان غير منطقي، أو null إن كان سليماً.
-     */
+    // ==================== التحقق من منطقية التاريخ ====================
     private function validateDatetimeLogic(string $startDatetime, string $endDatetime): ?string
     {
         $now = now();
 
-        // الانتهاء يجب أن يكون بعد البدء
         if (strtotime($endDatetime) <= strtotime($startDatetime)) {
             return 'وقت الانتهاء يجب أن يكون بعد وقت البدء';
         }
 
-        // ✨ الانتهاء يجب أن يكون في المستقبل (المنطق الجديد)
         if (strtotime($endDatetime) <= $now->timestamp) {
             return 'لا يمكن إنشاء/تعديل فعالية انتهت بالفعل. يجب أن يكون وقت الانتهاء في المستقبل.';
         }
@@ -195,7 +179,6 @@ class Events extends BaseComponent
     // ==================== إنشاء فعالية ====================
     public function createEvent()
     {
-        // 🛡️ التحقق من الصلاحية
         $this->authorize('create', Event::class);
 
         $this->validate([
@@ -221,7 +204,6 @@ class Events extends BaseComponent
         $startDatetime = $this->combineDateTime($this->start_date, $this->start_time);
         $endDatetime   = $this->combineDateTime($this->end_date, $this->end_time);
 
-        // ✨ التحقق من منطقية التاريخ (جديد)
         $logicError = $this->validateDatetimeLogic($startDatetime, $endDatetime);
         if ($logicError) {
             $this->addError('end_time', $logicError);
@@ -283,14 +265,15 @@ class Events extends BaseComponent
             'is_booking_paused'   => $event->is_booking_paused,
             'paused_at'           => $event->paused_at ? $event->paused_at->format('Y-m-d H:i') : null,
         ];
+
+        // ✨ فتح الـ modal بعد ما البيانات جاهزة (لا race condition)
+        $this->dispatch('open-view-modal');
     }
 
     // ==================== فتح نافذة التعديل ====================
     public function openEdit(int $id)
     {
         $event = Event::findOrFail($id);
-
-        // 🛡️ التحقق من صلاحية التعديل
         $this->authorize('update', $event);
 
         $this->editId          = $event->id;
@@ -306,7 +289,6 @@ class Events extends BaseComponent
     // ==================== تحديث فعالية ====================
     public function updateEvent()
     {
-        // 🛡️ التحقق من صلاحية التعديل
         $event = Event::findOrFail($this->editId);
         $this->authorize('update', $event);
 
@@ -333,7 +315,6 @@ class Events extends BaseComponent
         $startDatetime = $this->combineDateTime($this->editStartDate, $this->editStartTime);
         $endDatetime   = $this->combineDateTime($this->editEndDate, $this->editEndTime);
 
-        // ✨ التحقق من منطقية التاريخ (جديد)
         $logicError = $this->validateDatetimeLogic($startDatetime, $endDatetime);
         if ($logicError) {
             $this->addError('editEndTime', $logicError);
@@ -359,8 +340,6 @@ class Events extends BaseComponent
     public function openCancelModal(int $eventId)
     {
         $event = Event::with('status')->findOrFail($eventId);
-
-        // 🛡️ التحقق من صلاحية الإلغاء
         $this->authorize('cancel', $event);
 
         $this->cancelEventId    = $event->id;
@@ -385,8 +364,6 @@ class Events extends BaseComponent
 
         try {
             $event       = Event::findOrFail($this->cancelEventId);
-
-            // 🛡️ التحقق من صلاحية الإلغاء
             $this->authorize('cancel', $event);
 
             $oldStatusId = $event->status_id;
@@ -423,8 +400,6 @@ class Events extends BaseComponent
     public function requestPauseBooking(int $eventId)
     {
         $event = Event::findOrFail($eventId);
-
-        // 🛡️ التحقق من صلاحية إيقاف الحجز
         $this->authorize('pauseBooking', $event);
 
         $this->swalConfirm(
@@ -448,8 +423,6 @@ class Events extends BaseComponent
 
         try {
             $event = Event::findOrFail($eventId);
-
-            // 🛡️ التحقق من صلاحية إيقاف الحجز
             $this->authorize('pauseBooking', $event);
 
             $event->update([
@@ -467,8 +440,6 @@ class Events extends BaseComponent
     public function requestResumeBooking(int $eventId)
     {
         $event = Event::findOrFail($eventId);
-
-        // 🛡️ التحقق من صلاحية استئناف الحجز
         $this->authorize('resumeBooking', $event);
 
         $this->swalConfirm(
@@ -492,8 +463,6 @@ class Events extends BaseComponent
 
         try {
             $event = Event::findOrFail($eventId);
-
-            // 🛡️ التحقق من صلاحية استئناف الحجز
             $this->authorize('resumeBooking', $event);
 
             $event->update([
@@ -508,11 +477,13 @@ class Events extends BaseComponent
     }
 
     // ==================== طلب تأكيد تغيير الحالة ====================
+    /**
+     * ✨ مُحدَّث: حذف under_review من messages وtitles
+     */
     public function requestChangeStatus(int $eventId, string $newStatusName)
     {
         $messages = [
             'added'        => 'إرسال الفعالية للمراجعة؟',
-            'under_review' => 'بدء مراجعة هذه الفعالية؟',
             'active'       => 'قبول الفعالية؟',
             'published'    => 'نشر الفعالية للجمهور؟',
             'closed'       => 'إغلاق الفعالية؟',
@@ -520,7 +491,6 @@ class Events extends BaseComponent
 
         $titles = [
             'added'        => 'تأكيد الإرسال',
-            'under_review' => 'تأكيد المراجعة',
             'active'       => 'تأكيد القبول',
             'published'    => 'تأكيد النشر',
             'closed'       => 'تأكيد الإغلاق',
@@ -564,7 +534,7 @@ class Events extends BaseComponent
                 return;
             }
 
-            // ✨ منع نشر فعالية انتهى وقتها
+            // منع نشر فعالية انتهى وقتها
             if ($newStatusName === 'published' && $event->end_datetime->isPast()) {
                 $this->swalError('لا يمكن نشر فعالية انتهى وقتها');
                 return;
@@ -582,10 +552,10 @@ class Events extends BaseComponent
                 'new_status_id' => $newStatus->id,
             ]);
 
+            // ✨ مُحدَّث: حذف under_review
             $names = [
                 'draft'        => 'مسودة',
                 'added'        => 'مضافة',
-                'under_review' => 'قيد المراجعة',
                 'active'       => 'نشطة',
                 'published'    => 'منشورة',
                 'closed'       => 'مغلقة',
@@ -604,8 +574,6 @@ class Events extends BaseComponent
     {
         try {
             $event = Event::findOrFail($id);
-
-            // 🛡️ التحقق من صلاحية الحذف
             $this->authorize('delete', $event);
 
             $title = $event->title;
@@ -619,16 +587,20 @@ class Events extends BaseComponent
     // ==================== Render ====================
     public function render()
     {
-        // 🛡️ التحقق من صلاحية عرض القائمة
         $this->authorize('viewAny', Event::class);
 
         $roleName = Auth::user()->role->name;
 
-        // ✨ 🆕 الفحص التلقائي قبل عرض القائمة
+        // الفحص التلقائي قبل عرض القائمة
         $this->autoEndExpiredEvents();
 
         // ✨ بناء الاستعلام مع الفلاتر
         $query = Event::with(['status', 'creator']);
+
+        // ✨ 🆕 فلترة بالدور: مدير المسرح يشوف فعالياته فقط
+        if ($roleName === 'theater_manager') {
+            $query->where('created_by', Auth::id());
+        }
 
         // البحث بالعنوان
         if (!empty($this->searchTitle)) {
@@ -653,17 +625,25 @@ class Events extends BaseComponent
             $query->whereDate('start_datetime', '<=', $this->filterDateTo);
         }
 
-        // ✨ ترتيب من الأحدث إلى الأقدم (حسب تاريخ الإنشاء) + Pagination
+        // ترتيب من الأحدث إلى الأقدم + Pagination
         $events = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        // ✨ كل الحالات للـ dropdown
-        $allStatuses = Status::orderBy('id')->get();
+        // ✨ 🆕 الحالات المعروضة في الفلتر (بعد حذف under_review)
+        $allStatuses = Status::whereIn('name', self::VISIBLE_STATUSES)
+            ->orderByRaw("FIELD(name, '" . implode("','", self::VISIBLE_STATUSES) . "')")
+            ->get();
 
-        // ✨ اقتراحات Autocomplete (أسماء الفعاليات المتطابقة)
+        // ✨ اقتراحات Autocomplete (مع فلترة الدور)
         $suggestions = [];
         if ($this->showSuggestions && !empty($this->searchTitle)) {
-            $suggestions = Event::where('title', 'like', '%' . $this->searchTitle . '%')
-                ->orderBy('created_at', 'desc')
+            $suggestionQuery = Event::where('title', 'like', '%' . $this->searchTitle . '%');
+
+            // مدير المسرح يشوف اقتراحات فعالياته فقط
+            if ($roleName === 'theater_manager') {
+                $suggestionQuery->where('created_by', Auth::id());
+            }
+
+            $suggestions = $suggestionQuery->orderBy('created_at', 'desc')
                 ->limit(8)
                 ->pluck('title')
                 ->unique()

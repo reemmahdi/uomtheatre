@@ -14,15 +14,11 @@ use App\Models\User;
  * الأدوار:
  * - super_admin       : كامل الصلاحيات
  * - theater_manager   : ينشئ فعالياته + يعدّلها (لو مسودة) + يحذفها (لو مسودة)
- * - event_manager     : يراجع، يقبل، ينشر، يلغي، يدير الوفود
+ *                       + يلغيها (لو مسودة أو مضافة فقط)
+ * - event_manager     : يقبل، ينشر، يغلق، يلغي، يدير الوفود
  * - receptionist      : عرض فقط
  * - university_office : عرض فقط للإحصائيات
  * - user              : لا يصل لها
- *
- * طريقة الاستخدام في Livewire:
- *   $this->authorize('update', $event);
- *   $this->authorize('delete', $event);
- *   $this->authorize('publish', $event);
  * ============================================================
  */
 class EventPolicy
@@ -35,7 +31,7 @@ class EventPolicy
         if ($user->role->name === 'super_admin') {
             return true;
         }
-        return null; // لا قرار - استمر للقواعد الأخرى
+        return null;
     }
 
     /**
@@ -81,12 +77,10 @@ class EventPolicy
             return false;
         }
 
-        // مدير المسرح يعدّل فعالياته فقط
         if ($event->created_by !== $user->id) {
             return false;
         }
 
-        // يعدّل فقط لو الفعالية بحالة "مسودة"
         return $event->status->name === 'draft';
     }
 
@@ -115,28 +109,17 @@ class EventPolicy
     }
 
     /**
-     * بدء مراجعة فعالية (added → under_review)
-     * مدير الإعلام فقط
+     * قبول فعالية (added → active) - مدير الإعلام
+     * (تجاوز مرحلة under_review التي تم حذفها)
      */
-    public function review(User $user, Event $event): bool
+    public function approve(User $user, Event $event): bool
     {
         return $user->role->name === 'event_manager'
             && $event->status->name === 'added';
     }
 
     /**
-     * قبول فعالية (under_review → active)
-     * مدير الإعلام فقط
-     */
-    public function approve(User $user, Event $event): bool
-    {
-        return $user->role->name === 'event_manager'
-            && $event->status->name === 'under_review';
-    }
-
-    /**
-     * نشر فعالية (active → published)
-     * مدير الإعلام فقط
+     * نشر فعالية (active → published) - مدير الإعلام
      */
     public function publish(User $user, Event $event): bool
     {
@@ -145,8 +128,7 @@ class EventPolicy
     }
 
     /**
-     * إغلاق فعالية (published → closed)
-     * مدير الإعلام فقط
+     * إغلاق فعالية (published → closed) - مدير الإعلام
      */
     public function close(User $user, Event $event): bool
     {
@@ -155,15 +137,31 @@ class EventPolicy
     }
 
     /**
-     * إلغاء فعالية - مدير الإعلام فقط، لأي حالة عدا المغلقة والمنتهية
+     * ✨ إلغاء فعالية (محدّثة - منطق متعدد الأدوار)
+     *
+     * مدير المسرح:
+     *   - يلغي فعالياته فقط
+     *   - فقط لو الفعالية بحالة "مسودة" أو "مضافة"
+     *   (بعد ما تتحول لـ active/published تنتقل لمسؤولية مدير الإعلام)
+     *
+     * مدير الإعلام:
+     *   - يلغي أي فعالية
+     *   - عدا المغلقة والمنتهية والملغاة
      */
     public function cancel(User $user, Event $event): bool
     {
-        if ($user->role->name !== 'event_manager') {
-            return false;
+        // مدير الإعلام: صلاحيات واسعة
+        if ($user->role->name === 'event_manager') {
+            return !in_array($event->status->name, ['cancelled', 'closed', 'end']);
         }
 
-        return !in_array($event->status->name, ['cancelled', 'closed', 'end']);
+        // مدير المسرح: صلاحيات محدودة بفعالياته الجديدة
+        if ($user->role->name === 'theater_manager') {
+            return $event->created_by === $user->id
+                && in_array($event->status->name, ['draft', 'added']);
+        }
+
+        return false;
     }
 
     /**
@@ -191,6 +189,6 @@ class EventPolicy
     public function manageVipSeats(User $user, Event $event): bool
     {
         return $user->role->name === 'event_manager'
-            && in_array($event->status->name, ['active', 'under_review', 'published']);
+            && in_array($event->status->name, ['active', 'published']);
     }
 }

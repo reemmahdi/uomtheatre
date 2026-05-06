@@ -14,21 +14,29 @@ use Livewire\Attributes\Title;
 #[Title('مقاعد الوفود')]
 class VipEvents extends BaseComponent
 {
+    // ✨ البحث
+    public string $searchTitle = '';
+
     public function render()
     {
         if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
             return redirect()->route('dashboard');
         }
 
-        // جيب الفعاليات اللي ممكن نحجز لها وفود (مو مسودة ومو ملغاة)
+        // الفعاليات اللي ممكن نحجز لها وفود (مو مسودة ومو ملغاة)
         $excludeStatuses = Status::whereIn('name', ['draft', 'cancelled', 'end'])->pluck('id');
 
-        $events = Event::with(['status', 'creator'])
-            ->whereNotIn('status_id', $excludeStatuses)
-            ->orderBy('start_datetime', 'desc')  // ✨ بدل event_date
+        $query = Event::with(['status', 'creator'])
+            ->whereNotIn('status_id', $excludeStatuses);
+
+        // ✨ تطبيق فلتر البحث
+        if (!empty($this->searchTitle)) {
+            $query->where('title', 'like', '%' . $this->searchTitle . '%');
+        }
+
+        $events = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($event) {
-                // عدد حجوزات الوفود لهالفعالية
                 $event->vip_booked = Reservation::where('event_id', $event->id)
                     ->where('type', 'vip_guest')
                     ->where('status', '!=', 'cancelled')

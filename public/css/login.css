@@ -1,9 +1,21 @@
-/* ============================================
-   UOMTheatre Login Page - Midnight Ocean
-   ============================================ */
+/* ═══════════════════════════════════════════════════
+   ✨ UOMTheatre Login Page - Midnight Ocean
+   Fully Responsive (Mobile / Tablet / Desktop)
+   ═══════════════════════════════════════════════════ */
 
-/* Google Fonts Import */
+/* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap');
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
 
 body {
     background: linear-gradient(135deg,
@@ -19,25 +31,26 @@ body {
     padding: 20px;
     font-family: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 /* Decorative light effects */
 body::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: -50%;
     right: -20%;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(228, 192, 94, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
+    z-index: 0;
 }
 
 body::after {
     content: '';
-    position: absolute;
+    position: fixed;
     bottom: -30%;
     left: -10%;
     width: 500px;
@@ -45,6 +58,7 @@ body::after {
     background: radial-gradient(circle, rgba(2, 132, 199, 0.2) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
+    z-index: 0;
 }
 
 /* ============ Login Card ============ */
@@ -55,10 +69,11 @@ body::after {
     width: 100%;
     max-width: 440px;
     box-shadow: 0 25px 70px rgba(12, 74, 110, 0.5);
-    border-top: 5px solid #E4C05E;
+    border-top: 5px solid #0C4A6E;
     position: relative;
     z-index: 10;
     animation: slideUp 0.6s ease-out;
+    margin: 0 auto;
 }
 
 @keyframes slideUp {
@@ -82,11 +97,11 @@ body::after {
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    border: 3px solid #E4C05E;
+    border: 3px solid #0C4A6E;
     object-fit: cover;
     background: #fff;
     margin-bottom: 15px;
-    box-shadow: 0 8px 20px rgba(228, 192, 94, 0.3);
+    box-shadow: 0 8px 20px rgba(12, 74, 110, 0.25);
 }
 
 .login-card .logo h3 {
@@ -95,6 +110,7 @@ body::after {
     font-weight: 700;
     font-family: 'Cairo', 'Tajawal', sans-serif;
     font-size: 24px;
+    line-height: 1.3;
 }
 
 .login-card .logo p {
@@ -111,11 +127,13 @@ body::after {
     margin-bottom: 8px;
     font-size: 14px;
     font-family: 'Tajawal', sans-serif;
+    display: block;
 }
 
 /* ============ Input with Icon ============ */
 .input-group-custom {
     position: relative;
+    width: 100%;
 }
 
 .input-icon {
@@ -131,10 +149,10 @@ body::after {
 }
 
 .input-group-custom .form-control.with-icon {
-    padding-right: 45px;
+    padding-right: 45px !important;
+    width: 100%;
 }
 
-/* عند التركيز على الحقل، الأيقونة تصير زرقاء */
 .input-group-custom .form-control:focus ~ .input-icon,
 .input-group-custom:focus-within .input-icon {
     color: #0369A1;
@@ -147,6 +165,8 @@ body::after {
     font-size: 14px;
     transition: all 0.3s ease;
     font-family: 'Tajawal', sans-serif;
+    width: 100%;
+    background: #fff;
 }
 
 .login-card .form-control:focus {
@@ -167,12 +187,27 @@ body::after {
     font-size: 13px;
     margin-bottom: 15px;
     font-family: 'Tajawal', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: shakeIn 0.4s ease-out;
+}
+
+@keyframes shakeIn {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
 }
 
 .login-card .alert-danger {
     background: #fdedec;
     border: 1px solid #f5c6cb;
     color: #8b1a1a;
+}
+
+.login-card .alert i {
+    flex-shrink: 0;
+    font-size: 16px;
 }
 
 /* ============ Login Button ============ */
@@ -189,6 +224,11 @@ body::after {
     transition: all 0.3s ease;
     font-family: 'Tajawal', sans-serif;
     box-shadow: 0 4px 15px rgba(12, 74, 110, 0.25);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .btn-login:hover:not(:disabled) {
@@ -202,6 +242,10 @@ body::after {
     opacity: 0.7;
     cursor: not-allowed;
     transform: none;
+}
+
+.btn-login i {
+    font-size: 17px;
 }
 
 /* ============ Loading Spinner ============ */
@@ -239,6 +283,173 @@ body::after {
 }
 
 .login-footer .year {
-    color: #E4C05E;
+    color: #0369A1;
     font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════
+   📱 RESPONSIVE - Tablet (768px)
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    body {
+        padding: 16px;
+        align-items: center;
+    }
+
+    .login-card {
+        padding: 35px 28px;
+        max-width: 420px;
+    }
+
+    .login-card .logo img {
+        width: 80px;
+        height: 80px;
+    }
+
+    .login-card .logo h3 {
+        font-size: 20px;
+    }
+
+    body::before {
+        width: 400px;
+        height: 400px;
+    }
+
+    body::after {
+        width: 350px;
+        height: 350px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   📱 RESPONSIVE - Mobile (480px)
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+    body {
+        padding: 12px;
+        align-items: center;
+    }
+
+    .login-card {
+        padding: 28px 22px;
+        border-radius: 18px;
+        max-width: 100%;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .login-card .logo {
+        margin-bottom: 24px;
+    }
+
+    .login-card .logo img {
+        width: 75px;
+        height: 75px;
+        margin-bottom: 12px;
+    }
+
+    .login-card .logo h3 {
+        font-size: 19px;
+        margin: 8px 0 4px;
+    }
+
+    .login-card .logo p {
+        font-size: 13px;
+    }
+
+    .login-card .form-label {
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+
+    .login-card .form-control {
+        font-size: 14px;
+        padding: 11px 14px;
+    }
+
+    .input-icon {
+        font-size: 15px;
+        right: 13px;
+    }
+
+    .input-group-custom .form-control.with-icon {
+        padding-right: 40px !important;
+    }
+
+    .btn-login {
+        padding: 12px;
+        font-size: 14px;
+        margin-top: 8px;
+    }
+
+    .login-card .alert {
+        font-size: 12.5px;
+        padding: 9px 12px;
+    }
+
+    body::before,
+    body::after {
+        display: none;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   📱 RESPONSIVE - Small Mobile (< 360px)
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 360px) {
+    body {
+        padding: 10px;
+    }
+
+    .login-card {
+        padding: 24px 18px;
+    }
+
+    .login-card .logo img {
+        width: 65px;
+        height: 65px;
+    }
+
+    .login-card .logo h3 {
+        font-size: 17px;
+    }
+
+    .login-card .form-control {
+        padding: 10px 12px;
+    }
+
+    .btn-login {
+        padding: 11px;
+        font-size: 13.5px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   🌗 Landscape mobile
+   ═══════════════════════════════════════════════════ */
+@media (max-height: 500px) and (orientation: landscape) {
+    body {
+        align-items: flex-start;
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+
+    .login-card {
+        padding: 22px 28px;
+    }
+
+    .login-card .logo {
+        margin-bottom: 16px;
+    }
+
+    .login-card .logo img {
+        width: 55px;
+        height: 55px;
+        margin-bottom: 6px;
+    }
+
+    .login-card .logo h3 {
+        font-size: 17px;
+        margin: 4px 0 2px;
+    }
 }

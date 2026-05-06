@@ -16,9 +16,19 @@ use Livewire\Attributes\On;
 class VipBooking extends BaseComponent
 {
     public int $eventId;
+
+    // ==================== حقول الحجز الجديد ====================
     public string $guestName = '';
     public string $guestPhone = '';
     public int $selectedSeatId = 0;
+
+    // ==================== ✨ حقول التعديل ====================
+    public ?int $editBookingId = null;
+    public string $editGuestName = '';
+    public string $editGuestPhone = '';
+
+    // ==================== ✨ حقول العرض ====================
+    public ?array $viewBooking = null;
 
     public function mount(int $id)
     {
@@ -28,7 +38,6 @@ class VipBooking extends BaseComponent
     // ==================== اختيار مقعد ====================
     public function selectSeat(int $seatId)
     {
-        // فحص الإيقاف
         $event = Event::findOrFail($this->eventId);
         if ($event->is_booking_paused) {
             $this->swalError('الحجز موقوف مؤقتاً لهذه الفعالية. لا يمكن إضافة حجوزات جديدة.');
@@ -53,7 +62,6 @@ class VipBooking extends BaseComponent
         ]);
 
         try {
-            // فحص ثاني للإيقاف
             $event = Event::findOrFail($this->eventId);
             if ($event->is_booking_paused) {
                 $this->swalError('الحجز موقوف مؤقتاً. لا يمكن إتمام الحجز.');
@@ -73,7 +81,7 @@ class VipBooking extends BaseComponent
                 return;
             }
 
-            Reservation::create([
+            $reservation = Reservation::create([
                 'user_id' => Auth::id(),
                 'event_id' => $this->eventId,
                 'seat_id' => $this->selectedSeatId,
@@ -83,11 +91,74 @@ class VipBooking extends BaseComponent
                 'guest_phone' => $this->guestPhone,
             ]);
 
+            $this->dispatch('new-booking-created', reservationId: $reservation->id);
+
             $this->swalSuccess('تم حجز المقعد ' . $seat->label . ' للضيف ' . $this->guestName);
             $this->reset(['guestName', 'guestPhone', 'selectedSeatId']);
             $this->dispatch('close-modal');
         } catch (\Exception $e) {
             $this->swalError('فشل الحجز: ' . $e->getMessage());
+        }
+    }
+
+    // ==================== ✨ 🆕 فتح نافذة العرض ====================
+    public function openViewBooking(int $reservationId)
+    {
+        $res = Reservation::with(['seat.section', 'event'])->findOrFail($reservationId);
+
+        $this->viewBooking = [
+            'id'           => $res->id,
+            'guest_name'   => $res->guest_name,
+            'guest_phone'  => $res->guest_phone,
+            'seat_label'   => $res->seat->label,
+            'section_name' => $res->seat->section->name,
+            'row_number'   => $res->seat->row_number,
+            'seat_number'  => $res->seat->seat_number,
+            'created_at'   => $res->created_at->format('Y-m-d H:i'),
+            'qr_code'      => $res->qr_code,
+        ];
+
+        $this->dispatch('open-modal', id: 'viewBookingModal');
+    }
+
+    // ==================== ✨ 🆕 فتح نافذة التعديل ====================
+    public function openEditBooking(int $reservationId)
+    {
+        $res = Reservation::findOrFail($reservationId);
+
+        $this->editBookingId   = $res->id;
+        $this->editGuestName   = $res->guest_name ?? '';
+        $this->editGuestPhone  = $res->guest_phone ?? '';
+
+        $this->dispatch('open-modal', id: 'editBookingModal');
+    }
+
+    // ==================== ✨ 🆕 حفظ التعديلات ====================
+    public function updateBooking()
+    {
+        $this->validate([
+            'editGuestName'  => 'required|string|max:255',
+            'editGuestPhone' => 'required|string|min:10',
+        ], [
+            'editGuestName.required'  => 'اسم الضيف مطلوب',
+            'editGuestPhone.required' => 'رقم الجوال مطلوب',
+            'editGuestPhone.min'      => 'رقم الجوال غير صحيح',
+        ]);
+
+        try {
+            $res = Reservation::findOrFail($this->editBookingId);
+            $oldName = $res->guest_name;
+
+            $res->update([
+                'guest_name'  => $this->editGuestName,
+                'guest_phone' => $this->editGuestPhone,
+            ]);
+
+            $this->swalSuccess('تم تحديث بيانات الضيف ' . $oldName);
+            $this->reset(['editBookingId', 'editGuestName', 'editGuestPhone']);
+            $this->dispatch('close-modal');
+        } catch (\Exception $e) {
+            $this->swalError('فشل التعديل: ' . $e->getMessage());
         }
     }
 
@@ -119,13 +190,7 @@ class VipBooking extends BaseComponent
         }
     }
 
-    // ==================== ✨ 🆕 جلب الجالسين في 4 جهات ====================
-    /**
-     * يبحث عن المقاعد المجاورة في 4 جهات (يمين، يسار، أمام، خلف)
-     * ويرجع أسماء الجالسين فيها (إن وجدوا).
-     *
-     * شبيه: مثل خريطة شطرنج - مقعد المركز ومحيطه الفوري
-     */
+    // ==================== جلب الجالسين في 4 جهات ====================
     private function getNeighbors(int $eventId, $seat): array
     {
         $neighbors = [];
@@ -157,46 +222,43 @@ class VipBooking extends BaseComponent
         return $neighbors;
     }
 
-    // ==================== ✨ 🆕 رابط واتساب رسمي + رابط دعوة ====================
+    // ==================== رابط واتساب رسمي ====================
     public function getWhatsAppLink(int $reservationId): string
     {
         $res = Reservation::with(['event', 'seat.section'])->findOrFail($reservationId);
         $event = $res->event;
         $seat = $res->seat;
 
-        // الجالسون في 4 جهات
         $neighbors = $this->getNeighbors($this->eventId, $seat);
 
-        // رابط صفحة الدعوة (يحوي QR والتفاصيل الكاملة)
+        // ✨ توليد الرابط بصيغة كاملة (https) - حتى ينعرض clickable في الواتساب
         $invitationUrl = route('invitation.show', $res->qr_code);
 
-        // ═══════════════════════════════════════════
-        // ✨ الرسالة الرسمية الجديدة (بدون رموز إيموجي)
-        // ═══════════════════════════════════════════
+        // ضمان أن الرابط يبدأ بـ http/https (الواتساب لا يحوّل localhost أو الروابط النسبية)
+        if (!str_starts_with($invitationUrl, 'http://') && !str_starts_with($invitationUrl, 'https://')) {
+            $invitationUrl = 'https://' . ltrim($invitationUrl, '/');
+        }
+
+        // ✨ تنسيق الوقت بصيغة عربية (صباحاً/مساءً)
+        $startTime = $event->start_datetime->format('h:i');
+        $period = $event->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+
         $msg  = "جامعة الموصل - مسرح الجامعة\n";
         $msg .= "─────────────────────────\n\n";
-
         $msg .= "السلام عليكم ورحمة الله وبركاته\n\n";
-
         $msg .= "الأستاذ/ة الفاضل/ة: {$res->guest_name}\n\n";
-
         $msg .= "تحية طيبة وبعد،\n\n";
-
         $msg .= "يسعدنا دعوتكم لحضور الفعالية الموسومة بـ:\n";
         $msg .= "{$event->title}\n\n";
-
         $msg .= "والتي ستقام بتاريخ " . $event->start_datetime->format('Y-m-d');
-        $msg .= " في تمام الساعة " . $event->start_datetime->format('H:i') . "،\n";
+        $msg .= " في تمام الساعة {$startTime} {$period}،\n";
         $msg .= "على مسرح جامعة الموصل.\n\n";
-
-        // معلومات المقعد
         $msg .= "معلومات مقعدكم:\n";
         $msg .= "- القسم: {$seat->section->name}\n";
         $msg .= "- الصف: {$seat->row_number}\n";
         $msg .= "- رقم المقعد: {$seat->seat_number}\n";
         $msg .= "- الرمز: {$seat->label}\n\n";
 
-        // الجالسون بجانبكم
         if (!empty($neighbors)) {
             $msg .= "الجالسون بجانبكم:\n";
             foreach ($neighbors as $n) {
@@ -205,17 +267,14 @@ class VipBooking extends BaseComponent
             $msg .= "\n";
         }
 
-        // رابط الدعوة الإلكترونية
+        // ✨ الرابط بصيغة قابلة للضغط (سطر مستقل + لا فواصل غريبة قبله/بعده)
         $msg .= "للاطلاع على دعوتكم الإلكترونية ورمز الدخول (QR Code):\n";
-        $msg .= "{$invitationUrl}\n\n";
+        $msg .= $invitationUrl . "\n\n";
 
         $msg .= "نتشرف بحضوركم الكريم،،،\n\n";
-
         $msg .= "تفضلوا بقبول فائق الاحترام والتقدير،،،\n\n";
-
         $msg .= "إدارة مسرح جامعة الموصل";
 
-        // تنسيق رقم الجوال للعراق
         $phone = preg_replace('/[^0-9]/', '', $res->guest_phone);
         if (str_starts_with($phone, '0')) {
             $phone = '964' . substr($phone, 1);
@@ -241,6 +300,7 @@ class VipBooking extends BaseComponent
             ->where('event_id', $this->eventId)
             ->where('type', 'vip_guest')
             ->where('status', '!=', 'cancelled')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->keyBy('seat_id');
 

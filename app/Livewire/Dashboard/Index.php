@@ -53,9 +53,11 @@ class Index extends BaseComponent
                 'cancelledEvents' => $cancelledStatus ? Event::where('created_by', $userId)->where('status_id', $cancelledStatus->id)->count() : 0,
             ];
         } elseif ($roleName === 'event_manager') {
-            $underReview = Status::where('name','under_review')->first();
+            $addedStatus  = Status::where('name','added')->first();
+            $activeStatus = Status::where('name','active')->first();
             $data += [
-                'pendingReview' => $underReview ? Event::where('status_id',$underReview->id)->count() : 0,
+                'pendingReview' => $addedStatus ? Event::where('status_id',$addedStatus->id)->count() : 0,
+                'activeEvents'  => $activeStatus ? Event::where('status_id',$activeStatus->id)->count() : 0,
             ];
         } elseif ($roleName === 'receptionist') {
             $data['checkedInToday'] = Reservation::where('status','checked_in')->whereDate('checked_in_at',today())->count();
