@@ -597,9 +597,20 @@ class Events extends BaseComponent
         // ✨ بناء الاستعلام مع الفلاتر
         $query = Event::with(['status', 'creator']);
 
-        // ✨ 🆕 فلترة بالدور: مدير المسرح يشوف فعالياته فقط
+        // ════════════════════════════════════════════════════════════
+        // ✨ 🆕 فلترة بالدور (محدّثة):
+        //    - مدير المسرح: يشوف فعالياته فقط (كل الحالات)
+        //    - مدير الإعلام: يشوف كل الفعاليات ما عدا المسودات
+        // ════════════════════════════════════════════════════════════
         if ($roleName === 'theater_manager') {
+            // مدير المسرح يشوف فعالياته فقط (بكل الحالات بما فيها draft)
             $query->where('created_by', Auth::id());
+        } elseif ($roleName === 'event_manager') {
+            // ✅ مدير الإعلام لا يشوف المسودات (draft خاصة بمدير المسرح فقط)
+            $draftStatusId = Status::where('name', 'draft')->value('id');
+            if ($draftStatusId) {
+                $query->where('status_id', '!=', $draftStatusId);
+            }
         }
 
         // البحث بالعنوان
@@ -625,8 +636,32 @@ class Events extends BaseComponent
             $query->whereDate('start_datetime', '<=', $this->filterDateTo);
         }
 
-        // ترتيب من الأحدث إلى الأقدم + Pagination
-        $events = $query->orderBy('created_at', 'desc')->paginate(10);
+        // ════════════════════════════════════════════════════════════
+        // ✨ 🆕 الترتيب الذكي (محدّث):
+        //    - مدير الإعلام: المضافة حديثاً (added) أولاً، ثم الأحدث
+        //    - باقي الأدوار: الأحدث أولاً (created_at desc)
+        // ════════════════════════════════════════════════════════════
+        if ($roleName === 'event_manager') {
+            // ترتيب أولوية: added أولاً، ثم under_review، ثم البقية
+            // باستخدام CASE WHEN لتوافق MySQL + PostgreSQL
+            $addedId       = Status::where('name', 'added')->value('id');
+            $underReviewId = Status::where('name', 'under_review')->value('id');
+
+            // ✅ المضافة حديثاً أولاً، ثم قيد المراجعة، ثم البقية حسب تاريخ الإنشاء
+            $query->orderByRaw(
+                'CASE 
+                    WHEN status_id = ? THEN 1
+                    WHEN status_id = ? THEN 2
+                    ELSE 3
+                END ASC',
+                [$addedId ?? 0, $underReviewId ?? 0]
+            )->orderBy('created_at', 'desc');
+        } else {
+            // مدير المسرح والأدوار الأخرى: الأحدث أولاً
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $events = $query->paginate(10);
 
         // ✨ 🆕 الحالات المعروضة في الفلتر (بعد حذف under_review)
         // ملاحظة: نرتّب في PHP بدل SQL لتوافق MySQL + PostgreSQL
@@ -646,6 +681,13 @@ class Events extends BaseComponent
             // مدير المسرح يشوف اقتراحات فعالياته فقط
             if ($roleName === 'theater_manager') {
                 $suggestionQuery->where('created_by', Auth::id());
+            }
+            // ✅ مدير الإعلام لا يشوف اقتراحات للمسودات
+            elseif ($roleName === 'event_manager') {
+                $draftStatusId = Status::where('name', 'draft')->value('id');
+                if ($draftStatusId) {
+                    $suggestionQuery->where('status_id', '!=', $draftStatusId);
+                }
             }
 
             $suggestions = $suggestionQuery->orderBy('created_at', 'desc')

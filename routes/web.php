@@ -61,16 +61,22 @@ Route::middleware('admin.web')->group(function () {
         Route::get('/dashboard/vip-events', fn() => view('pages.vip-events'))
             ->name('dashboard.vip-events');
 
-        // ✨ UUID بدل ID رقمي
+        // ✨ UUID بدل ID رقمي - نمرر eventId و eventUuid معاً للتوافق مع الـ View
         Route::get('/dashboard/events/{eventUuid}/vip-booking',
-            fn($eventUuid) => view('pages.vip-booking', ['eventUuid' => $eventUuid])
+            fn($eventUuid) => view('pages.vip-booking', [
+                'eventUuid' => $eventUuid,
+                'eventId' => $eventUuid, // ✅ للتوافق مع الـ Blade view
+            ])
         )
         ->where('eventUuid', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
         ->name('dashboard.vip-booking');
 
-        // ✨ UUID بدل ID رقمي
+        // ✨ UUID بدل ID رقمي - نمرر eventId و eventUuid معاً للتوافق مع الـ View
         Route::get('/dashboard/events/{eventUuid}/cancellation-notices',
-            fn($eventUuid) => view('pages.event-cancellation-notices', ['eventUuid' => $eventUuid])
+            fn($eventUuid) => view('pages.event-cancellation-notices', [
+                'eventUuid' => $eventUuid,
+                'eventId' => $eventUuid, // ✅ للتوافق مع الـ Blade view
+            ])
         )
         ->where('eventUuid', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
         ->name('dashboard.event-cancellation-notices');
