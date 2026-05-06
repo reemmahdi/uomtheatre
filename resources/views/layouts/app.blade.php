@@ -6,8 +6,8 @@
 
     {{-- ✨ عنوان مخصص لتبويب المتصفح بناءً على الصفحة الحالية --}}
     @php
-        $browserTitle = $title ?? match(request()->route()?->getName()git) {
-            'dashboard'                            => 'ادارة الفعاليات',
+        $browserTitle = $title ?? match(request()->route()?->getName()) {
+            'dashboard'                            => 'إدارة الفعاليات',
             'dashboard.events'                     => 'إدارة الفعاليات',
             'dashboard.vip-events'                 => 'إدارة حجز مقاعد الضيوف',
             'dashboard.vip-booking'                => 'إدارة حجز مقاعد الضيوف',
