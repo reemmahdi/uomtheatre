@@ -629,9 +629,14 @@ class Events extends BaseComponent
         $events = $query->orderBy('created_at', 'desc')->paginate(10);
 
         // ✨ 🆕 الحالات المعروضة في الفلتر (بعد حذف under_review)
-        $allStatuses = Status::whereIn('name', self::VISIBLE_STATUSES)
-            ->orderByRaw("FIELD(name, '" . implode("','", self::VISIBLE_STATUSES) . "')")
-            ->get();
+        // ملاحظة: نرتّب في PHP بدل SQL لتوافق MySQL + PostgreSQL
+        $statusesCollection = Status::whereIn('name', self::VISIBLE_STATUSES)->get();
+
+        // ترتيب حسب VISIBLE_STATUSES (متوافق مع كل قواعد البيانات)
+        $allStatuses = collect(self::VISIBLE_STATUSES)
+            ->map(fn($name) => $statusesCollection->firstWhere('name', $name))
+            ->filter()
+            ->values();
 
         // ✨ اقتراحات Autocomplete (مع فلترة الدور)
         $suggestions = [];
