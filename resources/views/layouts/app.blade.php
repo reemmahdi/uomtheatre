@@ -20,6 +20,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="{{ asset('css/sweet-alert-custom.css') }}">
 
+    {{-- ✨ Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/material_blue.css">
+
     @livewireStyles
 </head>
 <body>
@@ -68,8 +72,8 @@
             @endif
 
             @if(in_array($roleName, ['super_admin', 'event_manager']))
-            <a href="{{ route('dashboard.vip-events') }}" data-title="حجز مقاعد الوفود" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
-                <i class="bi bi-star-fill"></i><span class="nav-text">حجز مقاعد الوفود</span>
+            <a href="{{ route('dashboard.vip-events') }}" data-title="إدارة حجز مقاعد الوفود" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
+                <i class="bi bi-star-fill"></i><span class="nav-text">إدارة حجز مقاعد الوفود</span>
             </a>
             @endif
 
@@ -137,6 +141,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('js/sweet-alert-helper.js') }}"></script>
+
+    {{-- ✨ Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ar.js"></script>
 
     <script>
         (function() {

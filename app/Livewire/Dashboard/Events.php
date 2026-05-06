@@ -10,11 +10,17 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\On;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
 #[Title('الفعاليات')]
 class Events extends BaseComponent
 {
+    use WithPagination;
+
+    // ✨ استعمال Bootstrap للـ pagination
+    protected $paginationTheme = 'bootstrap';
+
     // ==================== Create Properties ====================
     public string $title = '';
     public string $description = '';
@@ -46,6 +52,7 @@ class Events extends BaseComponent
     public string $filterStatus = '';
     public string $filterDateFrom = '';
     public string $filterDateTo = '';
+    public bool $showSuggestions = false;
 
     /**
      * إعادة تعيين كل الفلاتر
@@ -53,6 +60,51 @@ class Events extends BaseComponent
     public function resetFilters(): void
     {
         $this->reset(['searchTitle', 'filterStatus', 'filterDateFrom', 'filterDateTo']);
+        $this->showSuggestions = false;
+        $this->resetPage();
+    }
+
+    /**
+     * ✨ اختيار اقتراح من القائمة المنسدلة
+     */
+    public function selectSuggestion(string $title): void
+    {
+        $this->searchTitle = $title;
+        $this->showSuggestions = false;
+        $this->resetPage();
+    }
+
+    /**
+     * ✨ إخفاء قائمة الاقتراحات
+     */
+    public function hideSuggestions(): void
+    {
+        $this->showSuggestions = false;
+    }
+
+    /**
+     * ✨ عند تغيير أي فلتر، نرجع للصفحة 1 تلقائياً
+     */
+    public function updatedSearchTitle(): void
+    {
+        // إظهار الاقتراحات لو فيه نص
+        $this->showSuggestions = !empty($this->searchTitle);
+        $this->resetPage();
+    }
+
+    public function updatedFilterStatus(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterDateTo(): void
+    {
+        $this->resetPage();
     }
 
     // ==================== Helper: دمج التاريخ والوقت ====================
@@ -148,13 +200,14 @@ class Events extends BaseComponent
 
         $this->validate([
             'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:250',
             'start_date'  => 'required|date|after_or_equal:today',
             'start_time'  => 'required|date_format:H:i',
             'end_date'    => 'required|date|after_or_equal:start_date',
             'end_time'    => 'required|date_format:H:i',
         ], [
             'title.required'             => 'عنوان الفعالية مطلوب',
+            'description.max'            => 'يجب ألا يتجاوز الوصف 250 حرف (حوالي 4 أسطر)',
             'start_date.required'        => 'تاريخ البدء مطلوب',
             'start_date.after_or_equal'  => 'تاريخ البدء يجب أن يكون اليوم أو في المستقبل',
             'start_time.required'        => 'وقت البدء مطلوب',
@@ -259,13 +312,16 @@ class Events extends BaseComponent
 
         $this->validate([
             'editTitle'       => 'required|string|max:255',
-            'editStartDate'   => 'required|date',
+            'editDescription' => 'nullable|string|max:250',
+            'editStartDate'   => 'required|date|after_or_equal:today',
             'editStartTime'   => 'required|date_format:H:i',
             'editEndDate'     => 'required|date|after_or_equal:editStartDate',
             'editEndTime'     => 'required|date_format:H:i',
         ], [
             'editTitle.required'            => 'العنوان مطلوب',
+            'editDescription.max'           => 'يجب ألا يتجاوز الوصف 250 حرف (حوالي 4 أسطر)',
             'editStartDate.required'        => 'تاريخ البدء مطلوب',
+            'editStartDate.after_or_equal'  => 'تاريخ البدء يجب أن يكون اليوم أو في المستقبل',
             'editStartTime.required'        => 'وقت البدء مطلوب',
             'editStartTime.date_format'     => 'صيغة وقت البدء غير صحيحة',
             'editEndDate.required'          => 'تاريخ الانتهاء مطلوب',
@@ -597,15 +653,29 @@ class Events extends BaseComponent
             $query->whereDate('start_datetime', '<=', $this->filterDateTo);
         }
 
-        $events = $query->orderBy('start_datetime', 'desc')->get();
+        // ✨ ترتيب من الأحدث إلى الأقدم (حسب تاريخ الإنشاء) + Pagination
+        $events = $query->orderBy('created_at', 'desc')->paginate(10);
 
         // ✨ كل الحالات للـ dropdown
         $allStatuses = Status::orderBy('id')->get();
+
+        // ✨ اقتراحات Autocomplete (أسماء الفعاليات المتطابقة)
+        $suggestions = [];
+        if ($this->showSuggestions && !empty($this->searchTitle)) {
+            $suggestions = Event::where('title', 'like', '%' . $this->searchTitle . '%')
+                ->orderBy('created_at', 'desc')
+                ->limit(8)
+                ->pluck('title')
+                ->unique()
+                ->values()
+                ->toArray();
+        }
 
         return view('livewire.dashboard.events', [
             'events'      => $events,
             'roleName'    => $roleName,
             'allStatuses' => $allStatuses,
+            'suggestions' => $suggestions,
         ]);
     }
 }

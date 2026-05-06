@@ -68,3 +68,5 @@ desktop.ini
 *.log
 debug.log
 error.log
+
+backups/

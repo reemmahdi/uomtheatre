@@ -3,7 +3,7 @@
 <div class="card-custom p-3 mb-3">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="text-muted">
-            إجمالي الفعاليات: <strong>{{ $events->count() }}</strong>
+            إجمالي الفعاليات: <strong>{{ $events->total() }}</strong>
             @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
             <span class="badge bg-info ms-2"><i class="bi bi-funnel-fill"></i> فلاتر مُفعَّلة</span>
             @endif
@@ -22,14 +22,36 @@
 <div class="card-custom p-3 mb-4 filters-bar">
     <div class="row g-2 align-items-end">
         {{-- بحث بالعنوان --}}
-        <div class="col-md-4">
+        <div class="col-md-4 position-relative">
             <label class="form-label small fw-bold mb-1">
                 <i class="bi bi-search"></i> البحث باسم الفعالية
             </label>
             <input type="text"
-                   wire:model.live.debounce.400ms="searchTitle"
-                   class="form-control form-control-sm"
-                   placeholder="اكتب جزءاً من عنوان الفعالية...">
+                   wire:model.live.debounce.250ms="searchTitle"
+                   wire:focus="$set('showSuggestions', true)"
+                   class="form-control form-control-sm autocomplete-input"
+                   placeholder="ابدأ بكتابة اسم الفعالية..."
+                   autocomplete="off">
+
+            {{-- ✨ قائمة الاقتراحات (Autocomplete) --}}
+            @if($showSuggestions && count($suggestions) > 0)
+            <div class="autocomplete-dropdown" wire:click.outside="hideSuggestions">
+                @foreach($suggestions as $suggestion)
+                <button type="button"
+                        class="autocomplete-item"
+                        wire:click="selectSuggestion(@js($suggestion))">
+                    <i class="bi bi-search text-muted"></i>
+                    <span>{!! str_ireplace($searchTitle, '<strong>'.e($searchTitle).'</strong>', e($suggestion)) !!}</span>
+                </button>
+                @endforeach
+            </div>
+            @elseif($showSuggestions && !empty($searchTitle) && count($suggestions) === 0)
+            <div class="autocomplete-dropdown">
+                <div class="autocomplete-empty">
+                    <i class="bi bi-info-circle"></i> لا توجد فعاليات بهذا الاسم
+                </div>
+            </div>
+            @endif
         </div>
 
         {{-- فلتر الحالة --}}
@@ -102,9 +124,9 @@
                 @endphp
                 {{-- ✨ تمييز بصري: وردي للملغاة، أصفر فاتح للموقوفة --}}
                 <tr @if($isCancelled) style="background-color: #fef2f2;" @elseif($isPaused) style="background-color: #fffbeb;" @endif>
-                    <td>{{ $loop->iteration }}</td>
+                    <td>{{ $events->firstItem() + $loop->index }}</td>
                     <td>
-                        <strong @if($isCancelled) style="color: #DC2626; text-decoration: line-through;" @endif>
+                        <strong @if($isCancelled) style="color: #64748b;" @endif>
                             @if($isCancelled) <i class="bi bi-x-octagon-fill text-danger"></i> @endif
                             @if($isPaused && !$isCancelled) <i class="bi bi-pause-circle-fill text-warning"></i> @endif
                             {{ $event->title }}
@@ -114,7 +136,7 @@
                         @endif
                         {{-- سبب الإلغاء --}}
                         @if($isCancelled && $event->cancellation_reason)
-                        <br><small class="text-danger fst-italic">
+                        <br><small class="text-muted fst-italic">
                             <i class="bi bi-info-circle"></i> سبب الإلغاء: {{ \Illuminate\Support\Str::limit($event->cancellation_reason, 60) }}
                         </small>
                         @endif
@@ -280,6 +302,15 @@
             </tbody>
         </table>
     </div>
+
+    {{-- ✨ روابط التصفّح (Pagination) --}}
+    @if($events->hasPages())
+    <div class="pagination-wrapper mt-3">
+        <div class="pagination-links-only d-flex justify-content-center">
+            {{ $events->onEachSide(1)->links() }}
+        </div>
+    </div>
+    @endif
 </div>
 
 
@@ -291,7 +322,12 @@
             <div class="modal-body">
                 @if(!empty($showEvent))
 
-                {{-- تنبيه الإلغاء --}}
+                {{-- ✨ عنوان الفعالية أولاً (دائماً) --}}
+                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #fdf2f8, #f5f0ff);">
+                    <h5 style="color: #7b2d8e; font-weight: 700; margin: 0;">{{ $showEvent['title'] }}</h5>
+                </div>
+
+                {{-- تنبيه الإلغاء (بعد العنوان) --}}
                 @if(($showEvent['status_name'] ?? '') === 'cancelled')
                 <div class="alert alert-danger border-danger mb-3">
                     <h6 class="alert-heading mb-2">
@@ -320,13 +356,10 @@
                 </div>
                 @endif
 
-                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #fdf2f8, #f5f0ff);">
-                    <h5 style="color: #7b2d8e; font-weight: 700;">{{ $showEvent['title'] }}</h5>
-                </div>
                 <table class="table table-borderless mb-0">
                     <tr><td class="text-muted" style="width:150px;"><i class="bi bi-card-text"></i> الوصف</td><td>{{ $showEvent['description'] }}</td></tr>
-                    <tr><td class="text-muted"><i class="bi bi-calendar-event"></i> البدء</td><td>{{ $showEvent['start_datetime'] }}</td></tr>
-                    <tr><td class="text-muted"><i class="bi bi-calendar-check"></i> الانتهاء</td><td>{{ $showEvent['end_datetime'] }}</td></tr>
+                    <tr><td class="text-muted"><i class="bi bi-calendar-event"></i> الانطلاق</td><td>{{ $showEvent['start_datetime'] }}</td></tr>
+                    <tr><td class="text-muted"><i class="bi bi-calendar-check"></i> الاختتام</td><td>{{ $showEvent['end_datetime'] }}</td></tr>
                     <tr><td class="text-muted"><i class="bi bi-hourglass-split"></i> المدة</td><td>{{ $showEvent['duration'] }}</td></tr>
                     <tr><td class="text-muted"><i class="bi bi-flag"></i> الحالة</td><td><span class="badge bg-primary">{{ $showEvent['status'] }}</span></td></tr>
                     <tr><td class="text-muted"><i class="bi bi-person"></i> أنشأها</td><td>{{ $showEvent['created_by'] }}</td></tr>
@@ -335,7 +368,9 @@
                 </table>
                 @endif
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button></div>
+            <div class="modal-footer modal-footer-uniform">
+                <button type="button" class="btn btn-secondary modal-btn-cancel" data-bs-dismiss="modal">إغلاق</button>
+            </div>
         </div>
     </div>
 </div>
@@ -347,6 +382,7 @@
             <div class="modal-header"><h5 class="modal-title"><i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 @error('title')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
+                @error('description')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('start_date')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('start_time')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('end_date')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
@@ -358,48 +394,68 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">الوصف</label>
-                    <textarea wire:model="description" class="form-control" rows="3" placeholder="وصف مختصر..."></textarea>
+                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
+                        <span>وصف الفعالية <small class="text-muted fw-normal">(اختياري)</small></span>
+                        <small class="text-muted fw-normal">{{ strlen($description) }} / 250 حرف</small>
+                    </label>
+                    <textarea wire:model.live="description"
+                              class="form-control"
+                              rows="4"
+                              maxlength="250"
+                              placeholder="اكتب وصفاً مختصراً للفعالية (اختياري - حد أقصى 250 حرف)..."></textarea>
                 </div>
 
-                <div class="mb-3 p-3 rounded" style="background: #f0f9ff; border-right: 4px solid #0369A1;">
-                    <h6 class="mb-3" style="color: #0369A1;">
-                        <i class="bi bi-calendar-event"></i> موعد البدء
+                <div class="mb-3 p-3 rounded date-picker-section" style="background: #e0f2fe; border-right: 5px solid #0C4A6E;">
+                    <h6 class="mb-3 fw-bold" style="color: #0C4A6E;">
+                        <i class="bi bi-calendar-event"></i> موعد الانطلاق
                     </h6>
                     <div class="row">
-                        <div class="col-md-7 mb-2">
-                            <label class="form-label"><i class="bi bi-calendar3"></i> التاريخ <span class="text-danger">*</span></label>
-                            <input type="date" wire:model="start_date" class="form-control" min="{{ date('Y-m-d') }}">
+                        <div class="col-md-7 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-calendar3"></i> التاريخ <span class="text-danger">*</span></label>
+                            <input type="text" id="start_date_input"
+                                   class="form-control flatpickr-date"
+                                   placeholder="اختر التاريخ"
+                                   value="{{ $start_date }}">
                         </div>
-                        <div class="col-md-5 mb-2">
-                            <label class="form-label"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
-                            <input type="time" wire:model="start_time" class="form-control">
+                        <div class="col-md-5 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
+                            <input type="text" id="start_time_input"
+                                   class="form-control flatpickr-time"
+                                   placeholder="اختر الوقت"
+                                   value="{{ $start_time }}">
                         </div>
                     </div>
                 </div>
 
-                <div class="mb-3 p-3 rounded" style="background: #f0fdf4; border-right: 4px solid #16a34a;">
-                    <h6 class="mb-3" style="color: #16a34a;">
-                        <i class="bi bi-calendar-check"></i> موعد الانتهاء
+                <div class="mb-3 p-3 rounded date-picker-section" style="background: #dcfce7; border-right: 5px solid #15803D;">
+                    <h6 class="mb-3 fw-bold" style="color: #15803D;">
+                        <i class="bi bi-calendar-check"></i> موعد الاختتام
                     </h6>
                     <div class="row">
-                        <div class="col-md-7 mb-2">
-                            <label class="form-label"><i class="bi bi-calendar3"></i> التاريخ <span class="text-danger">*</span></label>
-                            <input type="date" wire:model="end_date" class="form-control" min="{{ date('Y-m-d') }}">
+                        <div class="col-md-7 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-calendar3"></i> التاريخ <span class="text-danger">*</span></label>
+                            <input type="text" id="end_date_input"
+                                   class="form-control flatpickr-date"
+                                   placeholder="اختر التاريخ"
+                                   value="{{ $end_date }}">
                         </div>
-                        <div class="col-md-5 mb-2">
-                            <label class="form-label"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
-                            <input type="time" wire:model="end_time" class="form-control">
+                        <div class="col-md-5 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
+                            <input type="text" id="end_time_input"
+                                   class="form-control flatpickr-time"
+                                   placeholder="اختر الوقت"
+                                   value="{{ $end_time }}">
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button wire:click="createEvent" class="btn btn-primary" wire:loading.attr="disabled">
+            {{-- ✨ ترتيب موحّد: الإنشاء أولاً (يمين)، الإلغاء ثانياً (يسار) - بالوسط --}}
+            <div class="modal-footer modal-footer-uniform">
+                <button wire:click="createEvent" class="btn btn-primary modal-btn-action" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="createEvent"><i class="bi bi-plus-circle"></i> إنشاء</span>
                     <span wire:loading wire:target="createEvent">جاري الإنشاء...</span>
                 </button>
+                <button type="button" class="btn btn-secondary modal-btn-cancel" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>
@@ -412,45 +468,59 @@
             <div class="modal-header"><h5 class="modal-title"><i class="bi bi-pencil"></i> تعديل الفعالية</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 @error('editTitle')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
+                @error('editDescription')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('editStartDate')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('editStartTime')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('editEndDate')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
                 @error('editEndTime')<div class="alert alert-danger py-1 small">{{ $message }}</div>@enderror
 
                 <div class="mb-3"><label class="form-label fw-bold">العنوان</label><input type="text" wire:model="editTitle" class="form-control"></div>
-                <div class="mb-3"><label class="form-label fw-bold">الوصف</label><textarea wire:model="editDescription" class="form-control" rows="3"></textarea></div>
 
-                <div class="mb-3 p-3 rounded" style="background: #f0f9ff; border-right: 4px solid #0369A1;">
-                    <h6 class="mb-3" style="color: #0369A1;"><i class="bi bi-calendar-event"></i> موعد البدء</h6>
+                <div class="mb-3">
+                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
+                        <span>وصف الفعالية <small class="text-muted fw-normal">(اختياري)</small></span>
+                        <small class="text-muted fw-normal">{{ strlen($editDescription) }} / 250 حرف</small>
+                    </label>
+                    <textarea wire:model.live="editDescription"
+                              class="form-control"
+                              rows="4"
+                              maxlength="250"
+                              placeholder="اكتب وصفاً مختصراً للفعالية (اختياري - حد أقصى 250 حرف)..."></textarea>
+                </div>
+
+                <div class="mb-3 p-3 rounded date-picker-section" style="background: #e0f2fe; border-right: 5px solid #0C4A6E;">
+                    <h6 class="mb-3 fw-bold" style="color: #0C4A6E;"><i class="bi bi-calendar-event"></i> موعد الانطلاق</h6>
                     <div class="row">
-                        <div class="col-md-7 mb-2">
-                            <label class="form-label"><i class="bi bi-calendar3"></i> التاريخ</label>
-                            <input type="date" wire:model="editStartDate" class="form-control">
+                        <div class="col-md-7 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-calendar3"></i> التاريخ</label>
+                            <input type="text" id="edit_start_date_input" class="form-control flatpickr-date" placeholder="اختر التاريخ" value="{{ $editStartDate }}">
                         </div>
-                        <div class="col-md-5 mb-2">
-                            <label class="form-label"><i class="bi bi-clock"></i> الوقت</label>
-                            <input type="time" wire:model="editStartTime" class="form-control">
+                        <div class="col-md-5 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت</label>
+                            <input type="text" id="edit_start_time_input" class="form-control flatpickr-time" placeholder="اختر الوقت" value="{{ $editStartTime }}">
                         </div>
                     </div>
                 </div>
 
-                <div class="mb-3 p-3 rounded" style="background: #f0fdf4; border-right: 4px solid #16a34a;">
-                    <h6 class="mb-3" style="color: #16a34a;"><i class="bi bi-calendar-check"></i> موعد الانتهاء</h6>
+                <div class="mb-3 p-3 rounded date-picker-section" style="background: #dcfce7; border-right: 5px solid #15803D;">
+                    <h6 class="mb-3 fw-bold" style="color: #15803D;"><i class="bi bi-calendar-check"></i> موعد الاختتام</h6>
                     <div class="row">
-                        <div class="col-md-7 mb-2">
-                            <label class="form-label"><i class="bi bi-calendar3"></i> التاريخ</label>
-                            <input type="date" wire:model="editEndDate" class="form-control">
+                        <div class="col-md-7 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-calendar3"></i> التاريخ</label>
+                            <input type="text" id="edit_end_date_input" class="form-control flatpickr-date" placeholder="اختر التاريخ" value="{{ $editEndDate }}">
                         </div>
-                        <div class="col-md-5 mb-2">
-                            <label class="form-label"><i class="bi bi-clock"></i> الوقت</label>
-                            <input type="time" wire:model="editEndTime" class="form-control">
+                        <div class="col-md-5 mb-2" wire:ignore>
+                            <label class="form-label fw-bold" style="color: #15803D;"><i class="bi bi-clock"></i> الوقت</label>
+                            <input type="text" id="edit_end_time_input" class="form-control flatpickr-time" placeholder="اختر الوقت" value="{{ $editEndTime }}">
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button wire:click="updateEvent" class="btn btn-primary" wire:loading.attr="disabled">حفظ التعديلات</button>
+            <div class="modal-footer modal-footer-uniform">
+                <button wire:click="updateEvent" class="btn btn-primary modal-btn-action" wire:loading.attr="disabled">
+                    <i class="bi bi-check-lg"></i> حفظ التعديلات
+                </button>
+                <button type="button" class="btn btn-secondary modal-btn-cancel" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>
@@ -496,7 +566,7 @@
                         <small class="text-muted">(اختياري)</small>
                     </label>
                     <textarea wire:model="cancelReason"
-                              class="form-control"
+                              class="form-control cancel-reason-textarea"
                               rows="3"
                               maxlength="500"
                               placeholder="اكتب سبب الإلغاء (سيُعرض في تفاصيل الفعالية ويُرسل في الإشعارات)"></textarea>
@@ -504,12 +574,9 @@
                     @error('cancelReason')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> تراجع
-                </button>
+            <div class="modal-footer modal-footer-uniform">
                 <button wire:click="confirmCancelEvent"
-                        class="btn btn-danger"
+                        class="btn btn-danger modal-btn-action"
                         wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="confirmCancelEvent">
                         <i class="bi bi-x-octagon"></i> تأكيد الإلغاء
@@ -517,6 +584,9 @@
                     <span wire:loading wire:target="confirmCancelEvent">
                         <span class="wire-loading"></span> جاري الإلغاء...
                     </span>
+                </button>
+                <button type="button" class="btn btn-secondary modal-btn-cancel" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> تراجع
                 </button>
             </div>
         </div>
@@ -527,6 +597,97 @@
 <script>
     $wire.on('close-modal', () => {
         document.querySelectorAll('.modal').forEach(m => bootstrap.Modal.getInstance(m)?.hide());
+    });
+
+    // ═══════════════════════════════════════════════════
+    // ✨ تهيئة Flatpickr - بسيطة وموثوقة
+    // ═══════════════════════════════════════════════════
+    let flatpickrInstances = {};
+
+    function destroyFlatpickr() {
+        Object.keys(flatpickrInstances).forEach(key => {
+            try {
+                flatpickrInstances[key].destroy();
+            } catch (e) {}
+        });
+        flatpickrInstances = {};
+    }
+
+    function initFlatpickr() {
+        if (typeof flatpickr === 'undefined') return;
+
+        const arabicLocale = (flatpickr.l10ns && flatpickr.l10ns.ar) ? flatpickr.l10ns.ar : 'default';
+
+        // قائمة الحقول والـ properties المرتبطة بها بـ Livewire
+        const dateFields = [
+            { id: 'start_date_input', wireProp: 'start_date' },
+            { id: 'end_date_input', wireProp: 'end_date' },
+            { id: 'edit_start_date_input', wireProp: 'editStartDate' },
+            { id: 'edit_end_date_input', wireProp: 'editEndDate' }
+        ];
+
+        const timeFields = [
+            { id: 'start_time_input', wireProp: 'start_time' },
+            { id: 'end_time_input', wireProp: 'end_time' },
+            { id: 'edit_start_time_input', wireProp: 'editStartTime' },
+            { id: 'edit_end_time_input', wireProp: 'editEndTime' }
+        ];
+
+        // تهيئة حقول التاريخ
+        dateFields.forEach(field => {
+            const el = document.getElementById(field.id);
+            if (!el || flatpickrInstances[field.id]) return;
+
+            flatpickrInstances[field.id] = flatpickr(el, {
+                dateFormat: 'Y-m-d',
+                minDate: 'today',
+                locale: arabicLocale,
+                disableMobile: true,
+                allowInput: false,
+                defaultDate: el.value || null,
+                onChange: function(selectedDates, dateStr) {
+                    // تحديث Livewire property مباشرة
+                    $wire.set(field.wireProp, dateStr);
+                }
+            });
+        });
+
+        // تهيئة حقول الوقت (12 ساعة)
+        timeFields.forEach(field => {
+            const el = document.getElementById(field.id);
+            if (!el || flatpickrInstances[field.id]) return;
+
+            flatpickrInstances[field.id] = flatpickr(el, {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: 'H:i',
+                altInput: true,
+                altFormat: 'h:i K',
+                time_24hr: false,
+                locale: arabicLocale,
+                disableMobile: true,
+                allowInput: false,
+                minuteIncrement: 5,
+                defaultDate: el.value || null,
+                onChange: function(selectedDates, dateStr) {
+                    $wire.set(field.wireProp, dateStr);
+                }
+            });
+        });
+    }
+
+    // عند فتح المودال: تهيئة
+    document.addEventListener('shown.bs.modal', (e) => {
+        if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
+            setTimeout(initFlatpickr, 50);
+        }
+    });
+
+    // عند إغلاق المودال: تنظيف
+    document.addEventListener('hidden.bs.modal', (e) => {
+        if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
+            destroyFlatpickr();
+        }
     });
 </script>
 @endscript
