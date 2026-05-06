@@ -889,17 +889,61 @@
     </div>
 
     <div class="event-meta">
-      <span class="pill">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        السبت ١٥ حزيران ٢٠٢٦
-      </span>
-      <span class="pill">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        ٧:٣٠ مساءً
-      </span>
+      @if($selectedEvent && $selectedEvent->start_datetime)
+        @php
+          // أسماء الأيام والأشهر بالعربية
+          $arabicDays = [
+              'Saturday'  => 'السبت',
+              'Sunday'    => 'الأحد',
+              'Monday'    => 'الإثنين',
+              'Tuesday'   => 'الثلاثاء',
+              'Wednesday' => 'الأربعاء',
+              'Thursday'  => 'الخميس',
+              'Friday'    => 'الجمعة',
+          ];
+          $arabicMonths = [
+              1  => 'كانون الثاني',
+              2  => 'شباط',
+              3  => 'آذار',
+              4  => 'نيسان',
+              5  => 'أيار',
+              6  => 'حزيران',
+              7  => 'تموز',
+              8  => 'آب',
+              9  => 'أيلول',
+              10 => 'تشرين الأول',
+              11 => 'تشرين الثاني',
+              12 => 'كانون الأول',
+          ];
+
+          $startDt = \Carbon\Carbon::parse($selectedEvent->start_datetime);
+          $dayName = $arabicDays[$startDt->format('l')] ?? '';
+          $dayNum  = $startDt->format('j');
+          $month   = $arabicMonths[(int)$startDt->format('n')] ?? '';
+          $year    = $startDt->format('Y');
+
+          // الوقت بنظام 12 ساعة عربي
+          $hour12  = $startDt->format('g');
+          $minute  = $startDt->format('i');
+          $period  = $startDt->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+        @endphp
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          {{ $dayName }} {{ $dayNum }} {{ $month }} {{ $year }}
+        </span>
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          {{ $hour12 }}:{{ $minute }} {{ $period }}
+        </span>
+      @else
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          لم تُختر فعالية بعد
+        </span>
+      @endif
       <span class="pill">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        قاعة الإمام الأعظم
+        قاعة محمود الجليلي
       </span>
     </div>
 
@@ -930,7 +974,7 @@
       <div class="legend-row"><div class="left"><span class="legend-swatch sl"></span><span>مُحدَّد</span></div></div>
       <div class="legend-row"><div class="left"><span class="legend-swatch vp"></span><span>VIP / مقاعد الوفود</span></div></div>
       <div class="legend-row"><div class="left"><span class="legend-swatch rs"></span><span>محجوز</span></div></div>
-      <div class="legend-row"><div class="left"><span class="legend-swatch sd"></span><span>مأخوذ</span></div></div>
+      <div class="legend-row"><div class="left"><span class="legend-swatch sd"></span><span>مشغول</span></div></div>
     </div>
 
     <!-- Map canvas -->
@@ -1651,7 +1695,7 @@ if (window.SELECTED_EVENT_ID) {
 
   // ─── Tooltip ────────────────────────────────────────────────────
   function showTooltip(seat, ev) {
-    const statusLabel = { available: "متاح", reserved: "محجوز", sold: "مأخوذ" }[seat.status];
+    const statusLabel = { available: "متاح", reserved: "محجوز", sold: "مشغول" }[seat.status];
     const statusColor = { available: "#22C55E", reserved: "#94A3B8", sold: "#EF4444" }[seat.status];
     const isVip = seat.type === "vip";
     tooltip.innerHTML = `
@@ -1695,7 +1739,7 @@ if (window.SELECTED_EVENT_ID) {
     if (!entry) return;
     const s = entry.data;
     if (s.status === "sold" || s.status === "reserved") {
-      toast(s.status === "sold" ? "هذا المقعد مأخوذ" : "هذا المقعد محجوز", true);
+      toast(s.status === "sold" ? "هذا المقعد مشغول" : "هذا المقعد محجوز", true);
       return;
     }
     toggleSelect(s.id);
