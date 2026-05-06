@@ -926,6 +926,190 @@
             font-size: 11px;
         }
     }
+
+    /* ════════════════════════════════════════════════════════════════
+       📱 Mobile Card Layout (تحويل الجدول لكروت على الجوال < 768px)
+       ════════════════════════════════════════════════════════════════ */
+    @media (max-width: 767.98px) {
+        /* إخفاء الـ thead على الجوال - الكروت تبيّن نفسها */
+        .events-table thead {
+            display: none;
+        }
+
+        /* إعادة تنسيق الجدول */
+        .events-table,
+        .events-table tbody,
+        .events-table tr,
+        .events-table td {
+            display: block;
+            width: 100%;
+        }
+
+        /* إخفاء الحد بين الصفوف */
+        .events-table tr {
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(12, 74, 110, 0.06);
+            padding: 0;
+            overflow: hidden;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .events-table tr:hover {
+            box-shadow: 0 4px 14px rgba(12, 74, 110, 0.12);
+        }
+
+        /* الفعاليات الملغاة - حدود حمراء */
+        .events-table tr.row-cancelled {
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+
+        /* الفعاليات الموقوفة - حدود برتقالية */
+        .events-table tr.row-paused {
+            border-color: #fed7aa;
+            background: #fffbeb;
+        }
+
+        /* كل خلية تصير صف داخل الكرت */
+        .events-table td {
+            border: none !important;
+            padding: 10px 14px !important;
+            text-align: start !important;
+            position: relative;
+            min-height: 36px;
+        }
+
+        /* خط فاصل بين الخلايا داخل الكرت */
+        .events-table td:not(:last-child) {
+            border-bottom: 1px solid #f1f5f9 !important;
+        }
+
+        /* خلية الترقيم # - تصير في رأس الكرت مع الحالة */
+        .events-table td:first-child {
+            display: inline-block;
+            width: auto !important;
+            background: linear-gradient(135deg, #0C4A6E, #075985);
+            color: #fff;
+            border-radius: 14px 14px 0 0 !important;
+            text-align: start !important;
+            padding: 12px 16px !important;
+        }
+
+        .events-table td:first-child::before {
+            content: "فعالية رقم: ";
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0.85;
+            margin-inline-end: 4px;
+        }
+
+        .events-table td:first-child .row-number {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff !important;
+        }
+
+        /* خلية العنوان - بارزة */
+        .events-table td:nth-child(2) {
+            background: #f8fafc;
+            font-size: 14px;
+        }
+
+        .event-title-text {
+            font-size: 15px !important;
+        }
+
+        /* خلايا التاريخ - تخطيط أفقي مع ليبل */
+        .events-table td:nth-child(3),
+        .events-table td:nth-child(4) {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 12px;
+        }
+
+        .events-table td:nth-child(3)::before {
+            content: "🟢 موعد الانطلاق:";
+            font-weight: 700;
+            color: #0C4A6E;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .events-table td:nth-child(4)::before {
+            content: "🔴 موعد الاختتام:";
+            font-weight: 700;
+            color: #0C4A6E;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .events-table td:nth-child(3) .date-cell,
+        .events-table td:nth-child(4) .date-cell {
+            text-align: end;
+        }
+
+        /* خلية الحالة - تخطيط أفقي */
+        .events-table td:nth-child(5) {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 12px;
+        }
+
+        .events-table td:nth-child(5)::before {
+            content: "الحالة:";
+            font-weight: 700;
+            color: #0C4A6E;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        /* خلية الإجراءات - في الأسفل بشكل بارز */
+        .events-table td:last-child {
+            background: #f8fafc;
+            text-align: center !important;
+            padding: 12px 14px !important;
+        }
+
+        .events-table td:last-child::before {
+            content: "";
+        }
+
+        /* الأزرار في خلية الإجراءات - أكبر ومتباعدة */
+        .events-table td:last-child .btn-action {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            margin: 2px;
+            font-size: 16px !important;
+        }
+
+        .events-table td:last-child .btn-action i,
+        .events-table td:last-child .btn-action [class^="bi-"] {
+            font-size: 16px !important;
+        }
+
+        /* تكبير badge الحالة على الجوال */
+        .status-badge {
+            font-size: 13px;
+            padding: 6px 14px;
+        }
+
+        /* إصلاح الـ Pagination على الجوال */
+        .pagination {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* إصلاح فلاتر البحث على الجوال */
+        .filters-section .row > * {
+            margin-bottom: 8px;
+        }
+    }
 </style>
 
 
