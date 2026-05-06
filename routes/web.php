@@ -87,3 +87,49 @@ Route::get('/', fn() => redirect('/login'));
 Route::get('/seats-map', function () {
     return view('seats-map');
 })->name('seats-map');
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
+Route::get('/admin-reset-events-2026', function () {
+    // 🛡️ حماية: فقط super_admin
+    if (!Auth::check() || Auth::user()->role->name !== 'super_admin') {
+        abort(403, 'Unauthorized');
+    }
+
+    DB::beginTransaction();
+    try {
+        $reservationsCount = DB::table('reservations')->count();
+        $eventsCount = DB::table('events')->count();
+
+        DB::table('reservations')->delete();
+        DB::table('events')->delete();
+
+        // PostgreSQL sequences reset
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER SEQUENCE events_id_seq RESTART WITH 1');
+            DB::statement('ALTER SEQUENCE reservations_id_seq RESTART WITH 1');
+        } else {
+            DB::statement('ALTER TABLE events AUTO_INCREMENT = 1');
+            DB::statement('ALTER TABLE reservations AUTO_INCREMENT = 1');
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم الحذف بنجاح ✓',
+            'deleted' => [
+                'reservations' => $reservationsCount,
+                'events' => $eventsCount,
+            ],
+            'note' => '⚠️ احذفي هذا الـ Route الآن من routes/web.php للأمان!',
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+})->middleware(['web', 'auth']);
