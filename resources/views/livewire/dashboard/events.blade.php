@@ -223,8 +223,6 @@
                                 <button type="button"
                                         class="btn-action btn-action-edit"
                                         wire:click="openEdit({{ $event->id }})"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editEventModal"
                                         title="تعديل">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -1131,6 +1129,15 @@ document.addEventListener('livewire:initialized', () => {
             modal.show();
         }
     });
+
+    // ✨ عند إطلاق حدث open-edit-modal، افتح modal التعديل (بعد ما البيانات جاهزة)
+    Livewire.on('open-edit-modal', () => {
+        const modalEl = document.getElementById('editEventModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    });
 });
 
 // ═══════════════════════════════════════════════════
@@ -1145,6 +1152,23 @@ function destroyFlatpickr() {
         } catch (e) {}
     });
     flatpickrInstances = {};
+}
+
+/**
+ * ✨ يقرأ القيمة الحالية من Livewire مباشرة (وليس من DOM)
+ * هذا يحل مشكلة الحقول الفارغة في نافذة التعديل
+ */
+function getLivewireValue(propName) {
+    try {
+        const wireEl = document.querySelector('[wire\\:id]');
+        if (!wireEl) return null;
+        const wire = Livewire.find(wireEl.getAttribute('wire:id'));
+        if (!wire) return null;
+        const val = wire.get(propName);
+        return (val && String(val).trim() !== '' && String(val).trim() !== '00:00') ? String(val) : null;
+    } catch (e) {
+        return null;
+    }
 }
 
 function initFlatpickr() {
@@ -1171,7 +1195,11 @@ function initFlatpickr() {
         const el = document.getElementById(field.id);
         if (!el || flatpickrInstances[field.id]) return;
 
-        const initialValue = (el.value && el.value.trim() !== '') ? el.value : null;
+        // ✅ نقرأ من Livewire أولاً، ثم من DOM كـ fallback
+        let initialValue = getLivewireValue(field.wireProp);
+        if (!initialValue && el.value && el.value.trim() !== '') {
+            initialValue = el.value;
+        }
 
         flatpickrInstances[field.id] = flatpickr(el, {
             dateFormat: 'Y-m-d',
@@ -1200,8 +1228,12 @@ function initFlatpickr() {
         const el = document.getElementById(field.id);
         if (!el || flatpickrInstances[field.id]) return;
 
-        const rawValue = el.value ? el.value.trim() : '';
-        const initialValue = (rawValue !== '' && rawValue !== '00:00') ? rawValue : null;
+        // ✅ نقرأ من Livewire أولاً، ثم من DOM كـ fallback
+        let initialValue = getLivewireValue(field.wireProp);
+        if (!initialValue) {
+            const rawValue = el.value ? el.value.trim() : '';
+            initialValue = (rawValue !== '' && rawValue !== '00:00') ? rawValue : null;
+        }
 
         flatpickrInstances[field.id] = flatpickr(el, {
             enableTime: true,
@@ -1231,18 +1263,39 @@ function initFlatpickr() {
     });
 }
 
-// تهيئة Flatpickr عند فتح modal الإنشاء أو التعديل
+// ✨ تهيئة Flatpickr عند فتح modal الإنشاء أو التعديل
+// مع تأخير أكبر لـ editEventModal لضمان أن Livewire حدّث القيم
 document.addEventListener('shown.bs.modal', function(e) {
-    if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
+    if (e.target.id === 'createEventModal') {
         setTimeout(initFlatpickr, 50);
+    } else if (e.target.id === 'editEventModal') {
+        // ✅ تأخير أطول للتعديل + إعادة تهيئة بعد التأكد من تحديث القيم
+        setTimeout(() => {
+            destroyFlatpickr(); // نهدم القديم قبل التهيئة الجديدة
+            initFlatpickr();
+        }, 200);
     }
 });
 
-// تنظيف Flatpickr عند إغلاق الـ modal
+// ✨ تنظيف Flatpickr عند إغلاق الـ modal
 document.addEventListener('hidden.bs.modal', function(e) {
     if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
         destroyFlatpickr();
     }
+});
+
+// ✨ إعادة تهيئة Flatpickr بعد كل تحديث Livewire (للنافذة المفتوحة)
+document.addEventListener('livewire:initialized', () => {
+    Livewire.hook('morph.updated', ({ el, component }) => {
+        // إذا كانت نافذة التعديل مفتوحة، أعد تهيئة Flatpickr
+        const editModal = document.getElementById('editEventModal');
+        if (editModal && editModal.classList.contains('show')) {
+            setTimeout(() => {
+                destroyFlatpickr();
+                initFlatpickr();
+            }, 100);
+        }
+    });
 });
 </script>
 

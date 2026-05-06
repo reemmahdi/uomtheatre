@@ -284,6 +284,9 @@ class Events extends BaseComponent
         $this->editStartTime = $event->start_datetime->format('H:i');
         $this->editEndDate   = $event->end_datetime->format('Y-m-d');
         $this->editEndTime   = $event->end_datetime->format('H:i');
+
+        // ✨ فتح الـ modal بعد ما البيانات جاهزة (لا race condition)
+        $this->dispatch('open-edit-modal');
     }
 
     // ==================== تحديث فعالية ====================

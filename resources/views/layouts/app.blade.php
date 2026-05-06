@@ -3,7 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'لوحة التحكم' }} — {{ config('theatre.name') }}</title>
+
+    {{-- ✨ عنوان مخصص لتبويب المتصفح بناءً على الصفحة الحالية --}}
+    @php
+        $browserTitle = $title ?? match(request()->route()?->getName()git) {
+            'dashboard'                            => 'ادارة الفعاليات',
+            'dashboard.events'                     => 'إدارة الفعاليات',
+            'dashboard.vip-events'                 => 'إدارة حجز مقاعد الضيوف',
+            'dashboard.vip-booking'                => 'إدارة حجز مقاعد الضيوف',
+            'dashboard.event-cancellation-notices' => 'إشعارات إلغاء الفعالية',
+            'dashboard.users'                      => 'إدارة المستخدمين',
+            'dashboard.staff'                      => 'إدارة الموظفين',
+            'dashboard.checkin'                    => 'تسجيل الحضور',
+            'dashboard.seats-display'              => 'شاشة العرض المباشر',
+            'dashboard.stats'                      => 'الإحصائيات',
+            default                                => 'لوحة التحكم',
+        };
+    @endphp
+
+    <title>{{ $browserTitle }} — {{ config('theatre.name') }}</title>
 
     {{-- Favicon --}}
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -72,8 +90,8 @@
             @endif
 
             @if(in_array($roleName, ['super_admin', 'event_manager']))
-            <a href="{{ route('dashboard.vip-events') }}" data-title="إدارة حجز مقاعد الوفود" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
-                <i class="bi bi-star-fill"></i><span class="nav-text">إدارة حجز مقاعد الوفود</span>
+            <a href="{{ route('dashboard.vip-events') }}" data-title="إدارة حجز مقاعد الضيوف" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
+                <i class="bi bi-star-fill"></i><span class="nav-text">إدارة حجز مقاعد الضيوف</span>
             </a>
             @endif
 
@@ -117,8 +135,10 @@
                 </button>
                 <h5 class="mb-0">
                     @php
-                        // ✨ عنوان مخصص لمدير الإعلام بالصفحة الرئيسية
-                        $pageTitle = $title ?? 'لوحة التحكم';
+                        // ✨ عنوان الصفحة في الشريط العلوي (يطابق الـ browserTitle)
+                        $pageTitle = $browserTitle;
+
+                        // استثناء: لمدير الإعلام عند فتح الصفحة الرئيسية، نعرض "الفعاليات"
                         if (request()->routeIs('dashboard') && $roleName === 'event_manager') {
                             $pageTitle = 'الفعاليات';
                         }
