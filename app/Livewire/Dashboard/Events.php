@@ -6,6 +6,7 @@ use App\Livewire\BaseComponent;
 use App\Models\Event;
 use App\Models\EventLog;
 use App\Models\Status;
+use App\Services\EventApprovalService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -580,19 +581,19 @@ class Events extends BaseComponent
 
     // ==================== طلب تأكيد تغيير الحالة ====================
     /**
-     * ✨ مُحدَّث: رسائل تأكيد أكثر وضوحاً وتحذيرية
+     * ✨ مُحدَّث للمرحلة 1.ج: رسائل تعكس الـ workflow الجديد
      */
     public function requestChangeStatus(int $eventId, string $newStatusName)
     {
         $messages = [
-            'added'        => 'هل أنت متأكد من معلومات الفعالية؟ لن يمكنك التعديل عليها إذا تم الإرسال إلى مدير الإعلام',
+            'added'        => 'سيتم إرسال الفعالية لمدير المسرح ومكتب رئيس الجامعة للموافقة. لن يمكنك التعديل عليها بعد الإرسال.',
             'active'       => 'قبول الفعالية؟',
             'published'    => 'نشر الفعالية للجمهور؟',
             'closed'       => 'إغلاق الفعالية؟',
         ];
 
         $titles = [
-            'added'        => 'تأكيد الإرسال إلى مدير الإعلام',
+            'added'        => 'تأكيد الإرسال للموافقة',
             'active'       => 'تأكيد القبول',
             'published'    => 'تأكيد النشر',
             'closed'       => 'تأكيد الإغلاق',
@@ -627,7 +628,23 @@ class Events extends BaseComponent
         }
 
         try {
-            $event       = Event::findOrFail($eventId);
+            $event = Event::findOrFail($eventId);
+
+            // ✨ ════════════════════════════════════════════════════════
+            // ✨ المرحلة 1.ج: استخدام Service للموافقات عند الإرسال
+            // ✨ ════════════════════════════════════════════════════════
+            if ($newStatusName === Status::ADDED) {
+                // استخدام Service لإنشاء سجلات الموافقة المتوازية
+                $service = app(EventApprovalService::class);
+                $service->sendForApproval($event);
+
+                $this->swalSuccess('تم إرسال الفعالية لمدير المسرح ومكتب الرئيس للموافقة');
+                return;
+            }
+
+            // ════════════════════════════════════════════════════════
+            // باقي الانتقالات (publish, closed) — منطق قديم
+            // ════════════════════════════════════════════════════════
             $oldStatusId = $event->status_id;
             $newStatus   = Status::where('name', $newStatusName)->first();
 
@@ -654,7 +671,6 @@ class Events extends BaseComponent
                 'new_status_id' => $newStatus->id,
             ]);
 
-            // ✨ مُحدَّث: حذف under_review
             $names = [
                 'draft'        => 'مسودة',
                 'added'        => 'مضافة',
@@ -700,15 +716,23 @@ class Events extends BaseComponent
         $query = Event::with(['status', 'creator']);
 
         // ════════════════════════════════════════════════════════════
-        // ✨ 🆕 فلترة بالدور (محدّثة):
-        //    - مدير المسرح: يشوف فعالياته فقط (كل الحالات)
-        //    - مدير الإعلام: يشوف كل الفعاليات ما عدا المسودات
+        // ✨ 🆕 فلترة بالدور (محدّثة للمرحلة 1.ج):
+        //    - مدير الإعلام: ينشئ ويعدل ويرسل للموافقة → يرى فعالياته (كل الحالات)
+        //    - مدير المسرح: يعرض الفعاليات للمتابعة (بعد الموافقة)
+        //    - مكتب الرئيس: يعرض الفعاليات للمتابعة (بعد الموافقة)
+        //    ملاحظة: الموافقة الفعلية في شاشة "الفعاليات بانتظار موافقتي"
         // ════════════════════════════════════════════════════════════
-        if ($roleName === 'theater_manager') {
-            // مدير المسرح يشوف فعالياته فقط (بكل الحالات بما فيها draft)
+        if ($roleName === 'event_manager') {
+            // مدير الإعلام يرى فعالياته فقط (كل الحالات)
             $query->where('created_by', Auth::id());
-        } elseif ($roleName === 'event_manager') {
-            // ✅ مدير الإعلام لا يشوف المسودات (draft خاصة بمدير المسرح فقط)
+        } elseif ($roleName === 'theater_manager') {
+            // مدير المسرح يرى الفعاليات اللي وافق عليها (للمتابعة)
+            $draftStatusId = Status::where('name', 'draft')->value('id');
+            if ($draftStatusId) {
+                $query->where('status_id', '!=', $draftStatusId);
+            }
+        } elseif ($roleName === 'university_office') {
+            // مكتب الرئيس يرى الفعاليات بعد الموافقات (للمتابعة)
             $draftStatusId = Status::where('name', 'draft')->value('id');
             if ($draftStatusId) {
                 $query->where('status_id', '!=', $draftStatusId);
@@ -745,27 +769,24 @@ class Events extends BaseComponent
         }
 
         // ════════════════════════════════════════════════════════════
-        // ✨ 🆕 الترتيب الذكي (محدّث):
-        //    - مدير الإعلام: المضافة حديثاً (added) أولاً، ثم الأحدث
-        //    - باقي الأدوار: الأحدث أولاً (created_at desc)
+        // ✨ 🆕 الترتيب الذكي (محدّث للمرحلة 1.ج):
+        //    - مدير الإعلام: المسودات أولاً (للعمل عليها)، ثم الأحدث
+        //    - باقي الأدوار: الأحدث أولاً
         // ════════════════════════════════════════════════════════════
         if ($roleName === 'event_manager') {
-            // ترتيب أولوية: added أولاً، ثم under_review، ثم البقية
-            // باستخدام CASE WHEN لتوافق MySQL + PostgreSQL
-            $addedId       = Status::where('name', 'added')->value('id');
-            $underReviewId = Status::where('name', 'under_review')->value('id');
+            $draftId  = Status::where('name', 'draft')->value('id');
+            $activeId = Status::where('name', 'active')->value('id');
 
-            // ✅ المضافة حديثاً أولاً، ثم قيد المراجعة، ثم البقية حسب تاريخ الإنشاء
+            // المسودات أولاً (للإكمال)، ثم النشطة (للنشر)، ثم البقية
             $query->orderByRaw(
-                'CASE 
+                'CASE
                     WHEN status_id = ? THEN 1
                     WHEN status_id = ? THEN 2
                     ELSE 3
                 END ASC',
-                [$addedId ?? 0, $underReviewId ?? 0]
+                [$draftId ?? 0, $activeId ?? 0]
             )->orderBy('created_at', 'desc');
         } else {
-            // مدير المسرح والأدوار الأخرى: الأحدث أولاً
             $query->orderBy('created_at', 'desc');
         }
 
@@ -786,12 +807,12 @@ class Events extends BaseComponent
         if ($this->showSuggestions && !empty($this->searchTitle)) {
             $suggestionQuery = Event::where('title', 'like', '%' . $this->searchTitle . '%');
 
-            // مدير المسرح يشوف اقتراحات فعالياته فقط
-            if ($roleName === 'theater_manager') {
+            // مدير الإعلام يرى اقتراحات فعالياته فقط
+            if ($roleName === 'event_manager') {
                 $suggestionQuery->where('created_by', Auth::id());
             }
-            // ✅ مدير الإعلام لا يشوف اقتراحات للمسودات
-            elseif ($roleName === 'event_manager') {
+            // باقي الأدوار: لا يرون المسودات
+            elseif (in_array($roleName, ['theater_manager', 'university_office'])) {
                 $draftStatusId = Status::where('name', 'draft')->value('id');
                 if ($draftStatusId) {
                     $suggestionQuery->where('status_id', '!=', $draftStatusId);

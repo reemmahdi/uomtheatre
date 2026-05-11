@@ -3,14 +3,35 @@
 namespace App\Models;
 
 use App\Models\Traits\HasUuid;
+use App\Services\EventApprovalService;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * ════════════════════════════════════════════════════════════
+ * Event Model — UOMTheatre (مُحدّث للمرحلة 2.أ)
+ * ════════════════════════════════════════════════════════════
+ *
+ * ✨ التعديلات في هذه النسخة (إصلاحات Claude):
+ *   - إضافة علاقة seatAvailability() المفقودة (للمرحلة 2.أ)
+ *   - تصحيح عدد المقاعد: 997 بدل 945 (لأن النظام صار بدون VIP ثابت)
+ *   - استخدام nullsafe operator (?->) في كل status checks
+ *   - حماية durationInMinutes() من القيم السالبة (Carbon 3)
+ *   - ثابت TOTAL_SEATS لتسهيل التعديل لاحقاً
+ *
+ * ════════════════════════════════════════════════════════════
+ */
 class Event extends Model
 {
-    use HasUuid;  // ✨ جديد: توليد UUID تلقائياً + Route Model Binding
+    use HasUuid;
+
+    /**
+     * ✨ ثابت لعدد المقاعد الكلّي في القاعة
+     * (قاعة الدكتور محمود الجليلي — جامعة الموصل)
+     */
+    public const TOTAL_SEATS = 997;
 
     protected $fillable = [
-        'uuid',  // ✨ جديد: للحماية ضد IDOR
+        'uuid',
         'title',
         'description',
         'start_datetime',
@@ -35,7 +56,9 @@ class Event extends Model
         'is_booking_paused' => 'boolean',
     ];
 
-    // ==================== Relationships ====================
+    // ════════════════════════════════════════════════════════
+    // Relationships
+    // ════════════════════════════════════════════════════════
     public function status()
     {
         return $this->belongsTo(Status::class);
@@ -61,64 +84,166 @@ class Event extends Model
         return $this->hasMany(Notification::class);
     }
 
-    // ==================== Status Checks ====================
+    /**
+     * علاقة الموافقات (المرحلة 1.ب)
+     */
+    public function approvals()
+    {
+        return $this->hasMany(EventApproval::class);
+    }
+
+    /**
+     * موافقة مدير المسرح (واحدة فقط لكل فعالية)
+     */
+    public function theaterApproval()
+    {
+        return $this->hasOne(EventApproval::class)
+            ->whereHas('role', fn($q) => $q->where('name', Role::THEATER_MANAGER));
+    }
+
+    /**
+     * موافقة مكتب الرئيس (واحدة فقط لكل فعالية)
+     */
+    public function officeApproval()
+    {
+        return $this->hasOne(EventApproval::class)
+            ->whereHas('role', fn($q) => $q->where('name', Role::UNIVERSITY_OFFICE));
+    }
+
+    /**
+     * ✨ جديد (المرحلة 2.أ): علاقة إتاحة المقاعد للجمهور
+     *
+     * كل سجل = حالة إتاحة مقعد واحد لهذه الفعالية:
+     *   - is_public_available = true  → الجمهور يستطيع حجزه
+     *   - is_public_available = false → مستبعد (يظهر محجوزاً)
+     */
+    public function seatAvailability()
+    {
+        return $this->hasMany(EventSeatAvailability::class);
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Status Checks (مع nullsafe operator)
+    // ════════════════════════════════════════════════════════
     public function isDraft(): bool
     {
-        return $this->status->name === Status::DRAFT;
+        return $this->status?->name === Status::DRAFT;
     }
 
     public function isPublished(): bool
     {
-        return $this->status->name === Status::PUBLISHED;
+        return $this->status?->name === Status::PUBLISHED;
     }
 
-    /**
-     * هل يمكن الحجز لهذه الفعالية؟
-     *
-     * شرطان: 1) الفعالية منشورة  2) الحجوزات غير موقوفة مؤقتاً
-     */
     public function isBookable(): bool
     {
-        return $this->status->name === Status::PUBLISHED
+        return $this->status?->name === Status::PUBLISHED
             && !$this->is_booking_paused;
     }
 
     public function isCancelled(): bool
     {
-        return $this->status->name === 'cancelled';
+        return $this->status?->name === Status::CANCELLED;
     }
 
-    /**
-     * ✨ هل الحجوزات موقوفة مؤقتاً؟
-     */
     public function isBookingPaused(): bool
     {
         return (bool) $this->is_booking_paused;
     }
 
-    // ==================== Datetime Helpers ====================
+    // ════════════════════════════════════════════════════════
+    // Approval Helpers
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * هل الفعالية بانتظار الموافقات (added)؟
+     */
+    public function isPendingApproval(): bool
+    {
+        return $this->status?->name === Status::ADDED;
+    }
+
+    /**
+     * هل وافق الجميع على الفعالية؟
+     */
+    public function isFullyApproved(): bool
+    {
+        return app(EventApprovalService::class)->areAllApprovalsComplete($this);
+    }
+
+    /**
+     * هل وافق مدير المسرح؟
+     */
+    public function isApprovedByTheater(): bool
+    {
+        return $this->theaterApproval
+            && $this->theaterApproval->isApproved();
+    }
+
+    /**
+     * هل وافق مكتب الرئيس؟
+     */
+    public function isApprovedByOffice(): bool
+    {
+        return $this->officeApproval
+            && $this->officeApproval->isApproved();
+    }
+
+    /**
+     * هل تم رفض الفعالية من أي طرف؟
+     */
+    public function hasAnyRejection(): bool
+    {
+        return $this->approvals()
+            ->where('status', EventApproval::STATUS_REJECTED)
+            ->exists();
+    }
+
+    /**
+     * عدد الموافقات المنجزة (من 2)
+     */
+    public function approvalsCount(): int
+    {
+        return $this->approvals()
+            ->where('status', EventApproval::STATUS_APPROVED)
+            ->count();
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Datetime Helpers
+    // ════════════════════════════════════════════════════════
     public function isOngoing(): bool
     {
-        $now = now();
-        return $now->between($this->start_datetime, $this->end_datetime);
+        if (!$this->start_datetime || !$this->end_datetime) {
+            return false;
+        }
+        return now()->between($this->start_datetime, $this->end_datetime);
     }
 
     public function isUpcoming(): bool
     {
-        return $this->start_datetime->isFuture();
+        return $this->start_datetime?->isFuture() ?? false;
     }
 
     public function hasEnded(): bool
     {
-        return $this->end_datetime->isPast();
+        return $this->end_datetime?->isPast() ?? false;
     }
 
+    /**
+     * ✨ مُصحَّح: استخدام abs() لتجنّب القيم السالبة (Carbon 3 في Laravel 12)
+     */
     public function durationInMinutes(): int
     {
-        return $this->start_datetime->diffInMinutes($this->end_datetime);
+        if (!$this->start_datetime || !$this->end_datetime) {
+            return 0;
+        }
+        return (int) abs($this->start_datetime->diffInMinutes($this->end_datetime));
     }
 
-    // ==================== Seat Statistics ====================
+    // ════════════════════════════════════════════════════════
+    // Seat Statistics (مُصحَّحة — تستخدم 997 بدل 945)
+    // ════════════════════════════════════════════════════════
     public function reservedSeatsCount(): int
     {
         return $this->reservations()
@@ -133,13 +258,42 @@ class Event extends Model
             ->count();
     }
 
+    /**
+     * ✨ مُصحَّح: استخدام TOTAL_SEATS (997) بدل 945 الثابت
+     */
     public function availableSeatsCount(): int
     {
-        return 945 - $this->reservedSeatsCount();
+        return self::TOTAL_SEATS - $this->reservedSeatsCount();
     }
 
+    /**
+     * ✨ مُصحَّح: استخدام TOTAL_SEATS + حماية من القسمة على صفر
+     */
     public function occupancyRate(): float
     {
-        return round(($this->reservedSeatsCount() / 945) * 100, 1);
+        if (self::TOTAL_SEATS <= 0) {
+            return 0.0;
+        }
+        return round(($this->reservedSeatsCount() / self::TOTAL_SEATS) * 100, 1);
+    }
+
+    /**
+     * ✨ جديد: عدد المقاعد المستبعدة من الجمهور لهذه الفعالية
+     * (مفيد للوحة التحكم - بطاقة "مقاعد الوفود")
+     */
+    public function excludedSeatsCount(): int
+    {
+        return $this->seatAvailability()
+            ->where('is_public_available', false)
+            ->count();
+    }
+
+    /**
+     * ✨ جديد: عدد المقاعد المتاحة للجمهور فعلياً
+     * (المتاحة = الكلّية - المحجوزة - المستبعدة)
+     */
+    public function publicAvailableSeatsCount(): int
+    {
+        return self::TOTAL_SEATS - $this->reservedSeatsCount() - $this->excludedSeatsCount();
     }
 }

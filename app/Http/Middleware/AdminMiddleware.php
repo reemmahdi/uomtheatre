@@ -2,16 +2,29 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Role;
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * ════════════════════════════════════════════════════════════════
+ * AdminMiddleware — UOMTheatre (API)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * يسمح بالمرور فقط للمستخدمين الإداريين (أي مستخدم ليس role=user).
+ * يُستخدم مع مسارات API المحمية عبر Sanctum.
+ *
+ * ✨ التعديلات (إصلاحات Claude):
+ *   - استخدام Role::USER constant بدل string literal
+ *   - Return type hint
+ *   - تحسين رسائل الخطأ
+ *
+ * ════════════════════════════════════════════════════════════════
+ */
 class AdminMiddleware
 {
-    /**
-     * يسمح بالمرور فقط للمستخدمين الإداريين (أي مستخدم ليس role=user).
-     * يُستخدم مع مسارات API المحمية عبر Sanctum.
-     */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
 
@@ -30,7 +43,8 @@ class AdminMiddleware
         // تحميل الدور إن لم يكن محمّلاً
         $user->loadMissing('role');
 
-        if (!$user->role || $user->role->name === 'user') {
+        // ✨ مُحسَّن: استخدام Role::USER constant
+        if (!$user->role || $user->role->name === Role::USER) {
             return response()->json([
                 'message' => 'ليست لديك صلاحية للوصول إلى هذا المورد',
             ], 403);

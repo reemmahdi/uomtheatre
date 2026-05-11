@@ -242,8 +242,8 @@
                                 <i class="bi bi-eye"></i>
                             </button>
 
-                            {{-- 2. مدير المسرح: تعديل + إرسال للمراجعة (للمسودات فقط) --}}
-                            @if(in_array($roleName, ['super_admin', 'theater_manager']))
+                            {{-- ✨ مدير الإعلام: تعديل + إرسال للموافقة (للمسودات فقط) --}}
+                            @if(in_array($roleName, ['super_admin', 'event_manager']))
                                 @if($sName === 'draft')
                                 <button type="button"
                                         class="btn-action btn-action-edit"
@@ -254,28 +254,25 @@
                                 <button type="button"
                                         class="btn-action btn-action-send"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'added')"
-                                        title="إرسال للمراجعة">
+                                        title="إرسال للموافقة">
                                     <i class="bi bi-send"></i>
                                 </button>
                                 @endif
                             @endif
 
-                            {{-- 3. مدير الإعلام: قبول / نشر / إغلاق / وفود --}}
+                            {{-- ✨ مدير الإعلام: نشر / إغلاق / وفود --}}
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
-                                @if($sName === 'added')
-                                <button type="button"
-                                        class="btn-action btn-action-approve"
-                                        wire:click="requestChangeStatus({{ $event->id }}, 'active')"
-                                        title="قبول الفعالية">
-                                    <i class="bi bi-check-lg"></i>
-                                </button>
-                                @endif
-
                                 @if(in_array($sName, ['active', 'published']))
                                 <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
                                    class="btn-action btn-action-vip"
                                    title="إدارة مقاعد الوفود">
                                     <i class="bi bi-star-fill"></i>
+                                </a>
+                                {{-- ✨ جديد: تحديد المقاعد المتاحة للجمهور --}}
+                                <a href="{{ route('dashboard.seat-availability', $event->uuid) }}"
+                                   class="btn-action btn-action-seats"
+                                   title="تحديد المقاعد المتاحة للجمهور">
+                                    <i class="bi bi-grid-3x3-gap-fill"></i>
                                 </a>
                                 @endif
 
@@ -988,12 +985,13 @@
     }
 
     /* ════════ ألوان الأزرار - باليتة موحّدة (3 ألوان فقط) ════════ */
-    /* الأزرار الإيجابية (عرض، تعديل، إرسال، قبول، نشر، استئناف، وفود، إغلاق): أزرق داكن */
+    /* الأزرار الإيجابية (عرض، تعديل، إرسال، قبول، نشر، استئناف، وفود، تحديد مقاعد، إغلاق): أزرق داكن */
     .events-table .btn-action.btn-action-view,
     .events-table .btn-action.btn-action-edit,
     .events-table .btn-action.btn-action-send,
     .events-table .btn-action.btn-action-approve,
     .events-table .btn-action.btn-action-vip,
+    .events-table .btn-action.btn-action-seats,
     .events-table .btn-action.btn-action-publish,
     .events-table .btn-action.btn-action-close,
     .events-table .btn-action.btn-action-resume {
@@ -1006,6 +1004,7 @@
     .events-table .btn-action.btn-action-send:hover,
     .events-table .btn-action.btn-action-approve:hover,
     .events-table .btn-action.btn-action-vip:hover,
+    .events-table .btn-action.btn-action-seats:hover,
     .events-table .btn-action.btn-action-publish:hover,
     .events-table .btn-action.btn-action-close:hover,
     .events-table .btn-action.btn-action-resume:hover {

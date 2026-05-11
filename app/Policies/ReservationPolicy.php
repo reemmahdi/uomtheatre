@@ -3,20 +3,26 @@
 namespace App\Policies;
 
 use App\Models\Reservation;
+use App\Models\Role;
 use App\Models\User;
 
 /**
- * ============================================================
- * ReservationPolicy - UOMTheatre
- * ============================================================
- * قواعد صلاحيات الحجوزات (مقاعد الوفود + الحجز العادي + الحضور)
+ * ════════════════════════════════════════════════════════════
+ * ReservationPolicy — UOMTheatre (مُحدّث - إصلاحات Claude)
+ * ════════════════════════════════════════════════════════════
  *
- * الأدوار:
- * - super_admin   : كل شي
- * - event_manager : إدارة حجوزات الوفود فقط
- * - receptionist  : تسجيل الحضور (check-in) فقط
- * - user          : حجز/إلغاء حجوزاته الشخصية فقط
- * ============================================================
+ * ✨ التعديلات:
+ *   - استخدام Role::* constants بدل string literals
+ *   - استخدام $user->is*() helpers بدل التحقق المباشر
+ *   - nullsafe operator في كل مكان
+ *
+ * قواعد صلاحيات الحجوزات:
+ *   - super_admin   : كل شي
+ *   - event_manager : إدارة حجوزات الوفود فقط
+ *   - receptionist  : تسجيل الحضور (check-in) فقط
+ *   - user          : حجز/إلغاء حجوزاته الشخصية فقط
+ *
+ * ════════════════════════════════════════════════════════════
  */
 class ReservationPolicy
 {
@@ -25,7 +31,7 @@ class ReservationPolicy
      */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->role->name === 'super_admin') {
+        if ($user->isSuperAdmin()) {
             return true;
         }
         return null;
@@ -36,11 +42,11 @@ class ReservationPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role->name, [
-            'event_manager',
-            'receptionist',
-            'university_office',
-        ]);
+        return in_array($user->role?->name, [
+            Role::EVENT_MANAGER,
+            Role::RECEPTIONIST,
+            Role::UNIVERSITY_OFFICE,
+        ], true);
     }
 
     /**
@@ -49,7 +55,7 @@ class ReservationPolicy
     public function view(User $user, Reservation $reservation): bool
     {
         // مدير الإعلام والاستقبال يشوفون كل الحجوزات
-        if (in_array($user->role->name, ['event_manager', 'receptionist'])) {
+        if ($user->isEventManager() || $user->isReceptionist()) {
             return true;
         }
 
@@ -62,7 +68,7 @@ class ReservationPolicy
      */
     public function createVipBooking(User $user): bool
     {
-        return $user->role->name === 'event_manager';
+        return $user->isEventManager();
     }
 
     /**
@@ -70,7 +76,7 @@ class ReservationPolicy
      */
     public function cancelVipBooking(User $user, Reservation $reservation): bool
     {
-        return $user->role->name === 'event_manager'
+        return $user->isEventManager()
             && $reservation->type === 'vip_guest'
             && $reservation->status !== 'cancelled';
     }
@@ -80,7 +86,7 @@ class ReservationPolicy
      */
     public function checkIn(User $user, Reservation $reservation): bool
     {
-        return $user->role->name === 'receptionist'
+        return $user->isReceptionist()
             && $reservation->status === 'confirmed';
     }
 
@@ -89,6 +95,6 @@ class ReservationPolicy
      */
     public function sendNotification(User $user, Reservation $reservation): bool
     {
-        return $user->role->name === 'event_manager';
+        return $user->isEventManager();
     }
 }

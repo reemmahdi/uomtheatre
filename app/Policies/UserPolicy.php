@@ -5,35 +5,34 @@ namespace App\Policies;
 use App\Models\User;
 
 /**
- * ============================================================
- * UserPolicy - UOMTheatre
- * ============================================================
- * قواعد صلاحيات إدارة المستخدمين والموظفين
+ * ════════════════════════════════════════════════════════════
+ * UserPolicy — UOMTheatre (مُحدّث - إصلاحات Claude)
+ * ════════════════════════════════════════════════════════════
  *
- * الأدوار:
- * - super_admin : كامل الصلاحيات (إنشاء، تعديل، تفعيل، تعطيل)
- * - الباقي      : لا صلاحيات إدارية
+ * ✨ التعديلات:
+ *   - استخدام $user->isSuperAdmin() بدل التحقق المباشر
+ *     (هذه الدالة nullsafe بعد إصلاح User Model)
+ *
+ * قواعد صلاحيات إدارة المستخدمين:
+ *   - super_admin : كامل الصلاحيات
+ *   - الباقي      : لا صلاحيات إدارية
  *
  * ملاحظات أمنية:
- * - منع super_admin من تعطيل حسابه الشخصي
- * - منع تعديل حسابات السوبر أدمن من غير سوبر أدمن
+ *   - منع super_admin من تعطيل/حذف حسابه الشخصي
  *
- * طريقة الاستخدام في Livewire:
- *   $this->authorize('viewAny', User::class);
- *   $this->authorize('toggleStatus', $user);
- * ============================================================
+ * ════════════════════════════════════════════════════════════
  */
 class UserPolicy
 {
     /**
      * صلاحية مطلقة للسوبر أدمن
+     * (ما عدا تعطيل/حذف حسابه الشخصي)
      */
     public function before(User $user, string $ability): ?bool
     {
-        // السوبر أدمن يمر بكل الـ abilities ما عدا تعطيل حسابه الشخصي
-        if ($user->role->name === 'super_admin') {
-            // الاستثناء الوحيد: لا يقدر يعطّل نفسه
-            if ($ability === 'toggleStatus') {
+        if ($user->isSuperAdmin()) {
+            // الاستثناءات: لا يقدر يعطّل/يحذف نفسه
+            if (in_array($ability, ['toggleStatus', 'delete'], true)) {
                 return null; // اتركها للقاعدة الأصلية لتفحص
             }
             return true;
@@ -41,36 +40,24 @@ class UserPolicy
         return null;
     }
 
-    /**
-     * عرض قائمة المستخدمين/الموظفين - مدير النظام فقط
-     */
     public function viewAny(User $user): bool
     {
-        return $user->role->name === 'super_admin';
+        return $user->isSuperAdmin();
     }
 
-    /**
-     * عرض مستخدم محدد - مدير النظام فقط
-     */
     public function view(User $user, User $target): bool
     {
-        return $user->role->name === 'super_admin';
+        return $user->isSuperAdmin();
     }
 
-    /**
-     * إنشاء موظف جديد - مدير النظام فقط
-     */
     public function create(User $user): bool
     {
-        return $user->role->name === 'super_admin';
+        return $user->isSuperAdmin();
     }
 
-    /**
-     * تعديل بيانات موظف - مدير النظام فقط
-     */
     public function update(User $user, User $target): bool
     {
-        return $user->role->name === 'super_admin';
+        return $user->isSuperAdmin();
     }
 
     /**
@@ -78,11 +65,11 @@ class UserPolicy
      */
     public function delete(User $user, User $target): bool
     {
-        if ($user->role->name !== 'super_admin') {
+        if (!$user->isSuperAdmin()) {
             return false;
         }
 
-        // لا يقدر يحذف حسابه الشخصي
+        // 🛡️ حماية: لا يقدر يحذف حسابه الشخصي
         return $user->id !== $target->id;
     }
 
@@ -91,11 +78,11 @@ class UserPolicy
      */
     public function toggleStatus(User $user, User $target): bool
     {
-        if ($user->role->name !== 'super_admin') {
+        if (!$user->isSuperAdmin()) {
             return false;
         }
 
-        // 🛡️ حماية مهمة: منع تعطيل الحساب الشخصي
+        // 🛡️ حماية: منع تعطيل الحساب الشخصي
         return $user->id !== $target->id;
     }
 }

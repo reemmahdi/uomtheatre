@@ -4,11 +4,23 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * ════════════════════════════════════════════════════════════════
+ * CheckInController — UOMTheatre API (مُحدّث - إصلاحات Claude)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * ✨ التعديلات:
+ *   🔴 Policy authorize check
+ *   🟡 nullsafe على relationships (vip_guest قد لا يكون له user)
+ *
+ * ════════════════════════════════════════════════════════════════
+ */
 class CheckInController extends Controller
 {
-    public function checkIn(Request $request)
+    public function checkIn(Request $request): JsonResponse
     {
         $request->validate([
             'qr_code' => 'required|string',
@@ -22,6 +34,9 @@ class CheckInController extends Controller
             return response()->json(['message' => 'رمز QR غير صالح'], 404);
         }
 
+        // ✨ Policy check (موجود في ReservationPolicy::checkIn)
+        $this->authorize('checkIn', $reservation);
+
         if ($reservation->status === 'cancelled') {
             return response()->json(['message' => 'هذا الحجز ملغي'], 422);
         }
@@ -29,7 +44,7 @@ class CheckInController extends Controller
         if ($reservation->status === 'checked_in') {
             return response()->json([
                 'message'    => 'تم تسجيل الحضور مسبقاً',
-                'checked_at' => $reservation->checked_in_at,
+                'checked_at' => $reservation->checked_in_at?->toIso8601String(),
             ], 422);
         }
 
@@ -38,10 +53,11 @@ class CheckInController extends Controller
         return response()->json([
             'message' => 'تم تسجيل الحضور بنجاح',
             'data'    => [
-                'name'    => $reservation->user->name,
-                'event'   => $reservation->event->title,
-                'section' => $reservation->seat->section->name,
-                'seat'    => $reservation->seat->label,
+                // ✨ nullsafe: vip_guest قد لا يكون له user (guest_name بدلاً منه)
+                'name'    => $reservation->user?->name ?? $reservation->guest_name ?? 'ضيف',
+                'event'   => $reservation->event?->title ?? '—',
+                'section' => $reservation->seat?->section?->name ?? '—',
+                'seat'    => $reservation->seat?->label ?? '—',
                 'type'    => $reservation->type,
             ],
         ]);

@@ -8,40 +8,64 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * ============================================================
- * CheckRole Middleware - UOMTheatre
- * ============================================================
+ * ════════════════════════════════════════════════════════════════
+ * CheckRole Middleware — UOMTheatre
+ * ════════════════════════════════════════════════════════════════
+ *
  * يحمي الـ routes على مستوى الدور قبل الوصول للـ Controller
  *
  * طريقة الاستخدام في routes/web.php:
  *
- *   Route::middleware(['auth', 'role:super_admin,theater_manager'])
+ *   Route::middleware(['admin.web', 'role:super_admin,theater_manager'])
  *       ->get('/dashboard/events', ...);
  *
- * ============================================================
+ * ✨ التعديلات (إصلاحات Claude):
+ *   🔴 nullsafe operator (?->) - الكود السابق كان يفشل لو role null
+ *      $userRole = $user->role->name ?? null;  ❌ ينفجر قبل ??
+ *      $userRole = $user->role?->name;          ✅
+ *   - تحميل role إن لم يكن محمّلاً
+ *   - in_array مع strict=true
+ *   - دعم استخدامها في API routes أيضاً (request()->user())
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 class CheckRole
 {
-    public function handle(Request $request, Closure $next, ...$roles): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        // التحقق من تسجيل الدخول
-        if (!Auth::check()) {
+        // ✨ يدعم web (Auth::check) و API (request()->user())
+        $user = Auth::user() ?? $request->user();
+
+        if (!$user) {
+            // API request → JSON | Web → redirect
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'غير مصرح'], 401);
+            }
             return redirect()->route('login');
         }
 
-        $user = Auth::user();
-
         // التحقق من تفعيل الحساب
         if (!$user->is_active) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'حسابك معطّل'], 403);
+            }
             Auth::logout();
             return redirect()->route('login')
                 ->with('error', 'حسابك معطّل. يرجى التواصل مع الإدارة');
         }
 
-        // التحقق من الدور
-        $userRole = $user->role->name ?? null;
+        // ✨ تحميل role إن لم يكن محمّلاً
+        $user->loadMissing('role');
 
-        if (!in_array($userRole, $roles)) {
+        // ✨ مُصحَّح: nullsafe + in_array strict
+        $userRole = $user->role?->name;
+
+        if (!$userRole || !in_array($userRole, $roles, true)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'ليست لديك صلاحية لهذه الصفحة',
+                ], 403);
+            }
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 

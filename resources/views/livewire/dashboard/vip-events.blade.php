@@ -83,17 +83,26 @@
                         </span>
                     </td>
                     <td style="text-align: center;">
-                        <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
-                           class="btn btn-sm"
-                           style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; font-weight: 600; padding: 6px 14px;">
-                            @if($event->vip_booked == 0)
-                                <i class="bi bi-plus-circle"></i> بدء الحجز
-                            @elseif($isFullyBooked)
-                                <i class="bi bi-eye"></i> عرض القائمة
-                            @else
-                                <i class="bi bi-pencil-square"></i> إدارة الحجز
+                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                            <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
+                               class="btn btn-sm"
+                               style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; font-weight: 600; padding: 6px 14px;"
+                               title="إدارة مقاعد الوفود">
+                                @if($event->vip_booked == 0)
+                                    <i class="bi bi-plus-circle"></i> بدء الحجز
+                                @else
+                                    <i class="bi bi-grid-3x3-gap"></i> إدارة المقاعد
+                                @endif
+                            </a>
+                            @if($event->vip_booked > 0)
+                            <a href="{{ route('dashboard.vip-guests', $event->uuid) }}"
+                               class="btn btn-sm"
+                               style="background: linear-gradient(135deg, #15803D, #166534); color: #fff; font-weight: 600; padding: 6px 14px;"
+                               title="إدارة قائمة الضيوف">
+                                <i class="bi bi-people-fill"></i> الضيوف
+                            </a>
                             @endif
-                        </a>
+                        </div>
                     </td>
                 </tr>
                 @endforeach

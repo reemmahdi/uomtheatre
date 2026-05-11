@@ -4,16 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    {{-- ✨ مُصحَّح: CSRF meta tag (مطلوب للـ AJAX/fetch مثل seat-availability) --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     {{-- ✨ عنوان مخصص لتبويب المتصفح بناءً على الصفحة الحالية --}}
     @php
         $browserTitle = $title ?? match(request()->route()?->getName()) {
-            'dashboard'                            => 'إدارة الفعاليات',
+            'dashboard'                            => 'الرئيسية',
             'dashboard.events'                     => 'إدارة الفعاليات',
+            'dashboard.event-approvals'            => 'الفعاليات بانتظار موافقتي',
             'dashboard.vip-events'                 => 'إدارة حجز مقاعد الضيوف',
             'dashboard.vip-booking'                => 'إدارة حجز مقاعد الضيوف',
             'dashboard.event-cancellation-notices' => 'إشعارات إلغاء الفعالية',
             'dashboard.users'                      => 'إدارة المستخدمين',
             'dashboard.staff'                      => 'إدارة الموظفين',
+            'dashboard.permissions'                => 'إدارة الصلاحيات',
             'dashboard.checkin'                    => 'تسجيل الحضور',
             'dashboard.seats-display'              => 'شاشة العرض المباشر',
             'dashboard.stats'                      => 'الإحصائيات',
@@ -38,14 +43,25 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="{{ asset('css/sweet-alert-custom.css') }}">
 
-    {{-- ✨ Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
+    {{-- Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/material_blue.css">
 
     @livewireStyles
 </head>
 <body>
-    @php $roleName = auth()->user()->role->name; @endphp
+    {{-- ✨ مُصحَّح: nullsafe على role + early redirect لو null --}}
+    @php
+        $authUser = auth()->user();
+        $roleName = $authUser?->role?->name;
+        $roleDisplayName = $authUser?->role?->display_name ?? 'مستخدم';
+
+        // لو ما عنده role صحيح، يُسجَّل خروج (الـ middleware يفترض يحمي قبل، لكن للأمان)
+        if (!$roleName) {
+            auth()->logout();
+            return redirect()->route('login')->send();
+        }
+    @endphp
 
     {{-- Mobile Overlay --}}
     <div class="mobile-overlay" id="mobileOverlay"></div>
@@ -65,7 +81,7 @@
             <div class="logo-text">
                 <h5>{{ config('theatre.name') }}</h5>
                 <small>{{ config('theatre.hall_name', 'نظام حجز مقاعد المسرح') }}</small>
-                <br><span class="role-badge">{{ auth()->user()->role->display_name }}</span>
+                <br><span class="role-badge">{{ $roleDisplayName }}</span>
             </div>
         </div>
 
@@ -74,40 +90,75 @@
                 <i class="bi bi-speedometer2"></i><span class="nav-text">الرئيسية</span>
             </a>
 
-            @if($roleName === 'super_admin')
+            @if($roleName === \App\Models\Role::SUPER_ADMIN)
             <a href="{{ route('dashboard.users') }}" data-title="إدارة المستخدمين" class="nav-link {{ request()->routeIs('dashboard.users') ? 'active' : '' }}">
                 <i class="bi bi-people"></i><span class="nav-text">إدارة المستخدمين</span>
             </a>
             <a href="{{ route('dashboard.staff') }}" data-title="إدارة الموظفين" class="nav-link {{ request()->routeIs('dashboard.staff') ? 'active' : '' }}">
                 <i class="bi bi-shield-lock"></i><span class="nav-text">إدارة الموظفين</span>
             </a>
+            <a href="{{ route('dashboard.permissions') }}" data-title="إدارة الصلاحيات" class="nav-link {{ request()->routeIs('dashboard.permissions') ? 'active' : '' }}">
+                <i class="bi bi-shield-check"></i><span class="nav-text">إدارة الصلاحيات</span>
+            </a>
             @endif
 
-            @if(in_array($roleName, ['super_admin', 'theater_manager', 'event_manager']))
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::THEATER_MANAGER, \App\Models\Role::EVENT_MANAGER], true))
             <a href="{{ route('dashboard.events') }}" data-title="إدارة الفعاليات" class="nav-link {{ request()->routeIs('dashboard.events') ? 'active' : '' }}">
                 <i class="bi bi-calendar-event"></i><span class="nav-text">إدارة الفعاليات</span>
             </a>
             @endif
 
-            @if(in_array($roleName, ['super_admin', 'event_manager']))
+            {{-- شاشة الموافقات (مدير المسرح + مكتب الرئيس + سوبر أدمن) --}}
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::THEATER_MANAGER, \App\Models\Role::UNIVERSITY_OFFICE], true))
+            @php
+                // ✨ مُحسَّن: cache لمدة دقيقة لتجنب query في كل request
+                $cacheKey = 'pending_approvals_count_' . ($authUser->id);
+                $pendingApprovalsCount = \Illuminate\Support\Facades\Cache::remember(
+                    $cacheKey,
+                    now()->addMinute(),
+                    function () use ($roleName, $authUser) {
+                        return \App\Models\EventApproval::query()
+                            ->when(
+                                $roleName !== \App\Models\Role::SUPER_ADMIN,
+                                fn($q) => $q->where('role_id', $authUser->role_id)
+                            )
+                            ->where('status', \App\Models\EventApproval::STATUS_PENDING)
+                            ->count();
+                    }
+                );
+            @endphp
+            <a href="{{ route('dashboard.event-approvals') }}" data-title="بانتظار موافقتي" class="nav-link {{ request()->routeIs('dashboard.event-approvals') ? 'active' : '' }}">
+                <i class="bi bi-clipboard-check-fill"></i>
+                <span class="nav-text">
+                    بانتظار موافقتي
+                    @if($pendingApprovalsCount > 0)
+                    <span class="badge rounded-pill" style="background: #DC2626; color: #fff; margin-right: 6px; font-size: 11px;">
+                        {{ $pendingApprovalsCount }}
+                    </span>
+                    @endif
+                </span>
+            </a>
+            @endif
+
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::EVENT_MANAGER], true))
             <a href="{{ route('dashboard.vip-events') }}" data-title="إدارة حجز مقاعد الضيوف" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
                 <i class="bi bi-star-fill"></i><span class="nav-text">إدارة حجز مقاعد الضيوف</span>
             </a>
             @endif
 
-            @if(in_array($roleName, ['super_admin', 'receptionist', 'theater_manager']))
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::RECEPTIONIST, \App\Models\Role::THEATER_MANAGER], true))
             <a href="{{ route('dashboard.seats-display') }}" data-title="شاشة العرض" class="nav-link {{ request()->routeIs('dashboard.seats-display') ? 'active' : '' }}">
                 <i class="bi bi-display"></i><span class="nav-text">شاشة العرض المباشر</span>
             </a>
             @endif
 
-            @if(in_array($roleName, ['super_admin', 'receptionist']))
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::RECEPTIONIST], true))
             <a href="{{ route('dashboard.checkin') }}" data-title="تسجيل الحضور" class="nav-link {{ request()->routeIs('dashboard.checkin') ? 'active' : '' }}">
                 <i class="bi bi-qr-code-scan"></i><span class="nav-text">تسجيل الحضور</span>
             </a>
             @endif
 
-            @if(in_array($roleName, ['super_admin', 'university_office']))
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::UNIVERSITY_OFFICE], true))
             <a href="{{ route('dashboard.stats') }}" data-title="الإحصائيات" class="nav-link {{ request()->routeIs('dashboard.stats') ? 'active' : '' }}">
                 <i class="bi bi-bar-chart-line"></i><span class="nav-text">الإحصائيات</span>
             </a>
@@ -134,35 +185,35 @@
                     </span>
                 </button>
                 <h5 class="mb-0">
-                    @php
-                        // ✨ عنوان الصفحة في الشريط العلوي (يطابق الـ browserTitle)
-                        $pageTitle = $browserTitle;
-
-                        // استثناء: لمدير الإعلام عند فتح الصفحة الرئيسية، نعرض "الفعاليات"
-                        if (request()->routeIs('dashboard') && $roleName === 'event_manager') {
-                            $pageTitle = 'الفعاليات';
-                        }
-                    @endphp
-                    {{ $pageTitle }}
+                    {{ $browserTitle }}
                 </h5>
             </div>
-            <span class="text-muted topbar-user-info">
-                <i class="bi bi-person-circle" style="color: var(--primary);"></i>
-                <span class="topbar-username">{{ auth()->user()->name }}</span>
-                <span class="badge ms-2">{{ auth()->user()->role->display_name }}</span>
-            </span>
+            <div class="d-flex align-items-center" style="gap: 8px;">
+                {{-- جرس الإشعارات --}}
+                <livewire:notifications-bell />
+
+                <span class="text-muted topbar-user-info">
+                    <i class="bi bi-person-circle" style="color: var(--primary);"></i>
+                    <span class="topbar-username">{{ $authUser->name }}</span>
+                    <span class="badge ms-2">{{ $roleDisplayName }}</span>
+                </span>
+            </div>
         </div>
 
         @yield('content')
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    {{-- Alpine.js للـ dropdown الخاص بالجرس --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     @livewireScripts
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('js/sweet-alert-helper.js') }}"></script>
 
-    {{-- ✨ Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
+    {{-- Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ar.js"></script>
 

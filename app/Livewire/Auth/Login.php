@@ -2,21 +2,51 @@
 
 namespace App\Livewire\Auth;
 
-use Livewire\Component;
+use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Livewire\Component;
 
+/**
+ * ════════════════════════════════════════════════════════════════
+ * Login — UOMTheatre (مُحدّث - إصلاحات Claude)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * ✨ التعديلات:
+ *   🔴 إضافة rate limiting (حماية من brute force)
+ *   🟡 nullsafe على role + استخدام Role::USER constant
+ *   🟡 مسح password بعد كل محاولة
+ *
+ * ════════════════════════════════════════════════════════════════
+ */
 class Login extends Component
 {
     public string $email = '';
     public string $password = '';
     public string $errorMessage = '';
 
+    /**
+     * ✨ مفتاح rate limiting (مرتبط بـ email + IP لتقليل false positives)
+     */
+    protected function throttleKey(): string
+    {
+        return Str::lower($this->email) . '|' . request()->ip();
+    }
+
     public function login()
     {
-        // مسح أي رسالة خطأ سابقة
         $this->errorMessage = '';
 
-        // التحقق من البيانات - نستخدم try/catch لتوحيد الرسائل في مكان واحد
+        // ✨ rate limiting: max 5 attempts per minute
+        if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            $seconds = RateLimiter::availableIn($this->throttleKey());
+            $this->errorMessage = "محاولات كثيرة. حاولي مرة أخرى بعد {$seconds} ثانية";
+            $this->password = '';   // مسح للأمان
+            return;
+        }
+
+        // التحقق من البيانات
         try {
             $this->validate([
                 'email'    => 'required|email',
@@ -27,7 +57,6 @@ class Login extends Component
                 'password.required' => 'يرجى إدخال كلمة المرور',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // عرض أول خطأ فقط في صندوق الرسالة الموحّد
             $errors = $e->validator->errors()->all();
             $this->errorMessage = $errors[0] ?? 'بيانات الدخول غير صحيحة';
             return;
@@ -41,22 +70,29 @@ class Login extends Component
             if (!$user->is_active) {
                 Auth::logout();
                 $this->errorMessage = 'حسابك معطّل. يرجى التواصل مع الإدارة';
+                $this->password = '';
                 return;
             }
 
-            // منع المستخدمين العاديين من الدخول للوحة التحكم
-            if ($user->role->name === 'user') {
+            // ✨ منع المستخدمين العاديين (nullsafe + constant)
+            if ($user->role?->name === Role::USER) {
                 Auth::logout();
-                $this->errorMessage = 'لوحة التحكم مخصصة للموظفين. استخدم التطبيق للحجز';
+                $this->errorMessage = 'لوحة التحكم مخصصة للموظفين. استخدمي التطبيق للحجز';
+                $this->password = '';
                 return;
             }
 
-            // تجديد الـ session لمنع Session Fixation (أمان)
+            // ✨ نجاح: مسح rate limit + تجديد session
+            RateLimiter::clear($this->throttleKey());
             session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }
 
+        // ✨ فشل: زيادة عداد المحاولات
+        RateLimiter::hit($this->throttleKey(), 60);   // expires in 60 seconds
+
         $this->errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+        $this->password = '';   // ✨ مسح كلمة المرور بعد الفشل
     }
 
     public function render()

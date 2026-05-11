@@ -4,154 +4,210 @@ namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
 use App\Models\Event;
-use App\Models\Seat;
 use App\Models\Reservation;
+use App\Models\Seat;
+use App\Models\Section;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Title;
 
+/**
+ * ════════════════════════════════════════════════════════════════
+ * VipBooking — UOMTheatre (إعادة هندسة - مقاعد متغيرة per-event)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * 🎯 التغيير المعماري:
+ *   - مدير الإعلام يرى كل الـ 997 مقعد (بدل 52 ثابتة)
+ *   - يضغط على أي مقعد متاح → يحجز كوفد
+ *   - المقاعد المحجوزة كوفود = ملونة باسم الضيف
+ *   - المقاعد المحجوزة من الجمهور = ملونة بلون مختلف (لو الفعالية منشورة سابقاً)
+ *   - المتاحة = قابلة للضغط
+ *
+ * ════════════════════════════════════════════════════════════════
+ */
 #[Layout('layouts.app')]
 #[Title('حجز مقاعد الوفود')]
 class VipBooking extends BaseComponent
 {
     public int $eventId;
-    public string $eventUuid = '';  // ✨ جديد: للحماية ضد IDOR
+    public string $eventUuid = '';
 
     // ==================== حقول الحجز الجديد ====================
     public string $guestName = '';
     public string $guestPhone = '';
     public int $selectedSeatId = 0;
 
-    // ==================== ✨ حقول التعديل ====================
+    // ==================== حقول التعديل ====================
     public ?int $editBookingId = null;
     public string $editGuestName = '';
     public string $editGuestPhone = '';
 
-    // ==================== ✨ حقول العرض ====================
+    // ==================== حقول العرض ====================
     public ?array $viewBooking = null;
 
-    /**
-     * ✨ تعديل: يستقبل UUID بدل ID رقمي (حماية ضد IDOR)
-     *
-     * URL: /dashboard/events/{eventUuid}/vip-booking
-     * مثال: /dashboard/events/9f1d2c4a-3b5e-4f78-9c12-abcd1234ef56/vip-booking
-     */
+    // ════════════════════════════════════════════════════════════
+    // ✨ Helpers أمنية
+    // ════════════════════════════════════════════════════════════
+
+    protected function authorizeManageVip(): void
+    {
+        $event = Event::findOrFail($this->eventId);
+        if (!Auth::user()?->can('manageVipSeats', $event)) {
+            abort(403, 'غير مصرح لك بإدارة مقاعد الوفود لهذه الفعالية');
+        }
+    }
+
+    protected function getReservationForThisEvent(int $reservationId): Reservation
+    {
+        $res = Reservation::with(['seat.section', 'event'])->findOrFail($reservationId);
+        if ($res->event_id !== $this->eventId) {
+            abort(403, 'هذا الحجز لا يخص هذه الفعالية');
+        }
+        return $res;
+    }
+
     public function mount(string $eventUuid)
     {
-        // 🛡️ التحقق من شكل UUID صحيح (احتياطي - الـ Route يفلتره أيضاً)
         if (!preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $eventUuid)) {
             abort(404, 'معرّف الفعالية غير صحيح');
         }
 
-        // 🛡️ البحث عن الفعالية بـ UUID (لو غير موجودة، 404)
         $event = Event::where('uuid', $eventUuid)->firstOrFail();
-
         $this->eventUuid = $eventUuid;
-        $this->eventId = $event->id;  // الـ ID الرقمي يبقى داخلياً للأداء
+        $this->eventId   = $event->id;
+
+        $this->authorizeManageVip();
     }
 
     // ==================== اختيار مقعد ====================
-    public function selectSeat(int $seatId)
+    public function selectSeat(int $seatId): void
     {
+        $this->authorizeManageVip();
+
         $event = Event::findOrFail($this->eventId);
         if ($event->is_booking_paused) {
             $this->swalError('الحجز موقوف مؤقتاً لهذه الفعالية. لا يمكن إضافة حجوزات جديدة.');
             return;
         }
 
+        // 🎯 جديد: التأكد من أن المقعد متاح فعلاً (مش محجوز من قبل)
+        $seat = Seat::find($seatId);
+        if (!$seat) {
+            $this->swalError('المقعد غير موجود');
+            return;
+        }
+
+        if ($seat->isReservedForEvent($this->eventId)) {
+            $this->swalError('هذا المقعد محجوز مسبقاً');
+            return;
+        }
+
         $this->selectedSeatId = $seatId;
-        $this->guestName = '';
+        $this->guestName  = '';
         $this->guestPhone = '';
     }
 
     // ==================== حجز مقعد ====================
-    public function bookSeat()
+    public function bookSeat(): void
     {
+        $this->authorizeManageVip();
+
         $this->validate([
-            'guestName' => 'required|string|max:255',
+            'guestName'  => 'required|string|max:255',
             'guestPhone' => 'required|string|min:10',
         ], [
-            'guestName.required' => 'اسم الضيف مطلوب',
+            'guestName.required'  => 'اسم الضيف مطلوب',
             'guestPhone.required' => 'رقم الجوال مطلوب',
-            'guestPhone.min' => 'رقم الجوال غير صحيح',
+            'guestPhone.min'      => 'رقم الجوال غير صحيح',
         ]);
 
         try {
-            $event = Event::findOrFail($this->eventId);
-            if ($event->is_booking_paused) {
-                $this->swalError('الحجز موقوف مؤقتاً. لا يمكن إتمام الحجز.');
-                $this->dispatch('close-modal');
-                return;
-            }
+            $reservation = DB::transaction(function () {
+                $event = Event::lockForUpdate()->findOrFail($this->eventId);
 
-            $seat = Seat::findOrFail($this->selectedSeatId);
+                if ($event->is_booking_paused) {
+                    throw new \RuntimeException('الحجز موقوف مؤقتاً.');
+                }
 
-            $existing = Reservation::where('event_id', $this->eventId)
-                ->where('seat_id', $this->selectedSeatId)
-                ->where('status', '!=', 'cancelled')
-                ->first();
+                $seat = Seat::lockForUpdate()->findOrFail($this->selectedSeatId);
 
-            if ($existing) {
-                $this->swalError('هذا المقعد محجوز لـ ' . ($existing->guest_name ?? 'ضيف'));
-                return;
-            }
+                $existing = Reservation::where('event_id', $this->eventId)
+                    ->where('seat_id', $this->selectedSeatId)
+                    ->where('status', '!=', 'cancelled')
+                    ->lockForUpdate()
+                    ->first();
 
-            $reservation = Reservation::create([
-                'user_id' => Auth::id(),
-                'event_id' => $this->eventId,
-                'seat_id' => $this->selectedSeatId,
-                'status' => 'confirmed',
-                'type' => 'vip_guest',
-                'guest_name' => $this->guestName,
-                'guest_phone' => $this->guestPhone,
-            ]);
+                if ($existing) {
+                    $msg = $existing->type === 'vip_guest'
+                        ? 'هذا المقعد محجوز للوفد ' . ($existing->guest_name ?? 'ضيف')
+                        : 'هذا المقعد محجوز من قبل الجمهور';
+                    throw new \RuntimeException($msg);
+                }
 
+                return Reservation::create([
+                    'user_id'     => Auth::id(),
+                    'event_id'    => $this->eventId,
+                    'seat_id'     => $this->selectedSeatId,
+                    'status'      => 'confirmed',
+                    'type'        => 'vip_guest',
+                    'guest_name'  => $this->guestName,
+                    'guest_phone' => $this->guestPhone,
+                ]);
+            });
+
+            $seat = Seat::find($this->selectedSeatId);
             $this->dispatch('new-booking-created', reservationId: $reservation->id);
-
-            $this->swalSuccess('تم حجز المقعد ' . $seat->label . ' للضيف ' . $this->guestName);
+            $this->swalSuccess('تم حجز المقعد ' . ($seat?->label ?? '') . ' للضيف ' . $this->guestName);
             $this->reset(['guestName', 'guestPhone', 'selectedSeatId']);
             $this->dispatch('close-modal');
+        } catch (\RuntimeException $e) {
+            $this->swalError($e->getMessage());
         } catch (\Exception $e) {
             $this->swalError('فشل الحجز: ' . $e->getMessage());
         }
     }
 
-    // ==================== ✨ 🆕 فتح نافذة العرض ====================
-    public function openViewBooking(int $reservationId)
+    // ==================== فتح نافذة العرض ====================
+    public function openViewBooking(int $reservationId): void
     {
-        $res = Reservation::with(['seat.section', 'event'])->findOrFail($reservationId);
+        $this->authorizeManageVip();
+        $res = $this->getReservationForThisEvent($reservationId);
 
         $this->viewBooking = [
             'id'           => $res->id,
             'guest_name'   => $res->guest_name,
             'guest_phone'  => $res->guest_phone,
-            'seat_label'   => $res->seat->label,
-            'section_name' => $res->seat->section->name,
-            'row_number'   => $res->seat->row_number,
-            'seat_number'  => $res->seat->seat_number,
-            'created_at'   => $res->created_at->format('Y-m-d H:i'),
+            'seat_label'   => $res->seat?->label,
+            'section_name' => $res->seat?->section?->name,
+            'row_number'   => $res->seat?->row_number,
+            'seat_number'  => $res->seat?->seat_number,
+            'created_at'   => $res->created_at?->format('Y-m-d H:i'),
             'qr_code'      => $res->qr_code,
         ];
 
         $this->dispatch('open-modal', id: 'viewBookingModal');
     }
 
-    // ==================== ✨ 🆕 فتح نافذة التعديل ====================
-    public function openEditBooking(int $reservationId)
+    // ==================== فتح نافذة التعديل ====================
+    public function openEditBooking(int $reservationId): void
     {
-        $res = Reservation::findOrFail($reservationId);
+        $this->authorizeManageVip();
+        $res = $this->getReservationForThisEvent($reservationId);
 
-        $this->editBookingId   = $res->id;
-        $this->editGuestName   = $res->guest_name ?? '';
-        $this->editGuestPhone  = $res->guest_phone ?? '';
+        $this->editBookingId  = $res->id;
+        $this->editGuestName  = $res->guest_name ?? '';
+        $this->editGuestPhone = $res->guest_phone ?? '';
 
         $this->dispatch('open-modal', id: 'editBookingModal');
     }
 
-    // ==================== ✨ 🆕 حفظ التعديلات ====================
-    public function updateBooking()
+    // ==================== حفظ التعديلات ====================
+    public function updateBooking(): void
     {
+        $this->authorizeManageVip();
+
         $this->validate([
             'editGuestName'  => 'required|string|max:255',
             'editGuestPhone' => 'required|string|min:10',
@@ -162,7 +218,7 @@ class VipBooking extends BaseComponent
         ]);
 
         try {
-            $res = Reservation::findOrFail($this->editBookingId);
+            $res = $this->getReservationForThisEvent((int) $this->editBookingId);
             $oldName = $res->guest_name;
 
             $res->update([
@@ -179,24 +235,26 @@ class VipBooking extends BaseComponent
     }
 
     // ==================== طلب تأكيد إلغاء الحجز ====================
-    public function requestCancelBooking(int $reservationId)
+    public function requestCancelBooking(int $reservationId): void
     {
-        $res = Reservation::findOrFail($reservationId);
+        $this->authorizeManageVip();
+        $res = $this->getReservationForThisEvent($reservationId);
 
         $this->swalConfirm(
             message: "هل أنت متأكد من إلغاء حجز \"{$res->guest_name}\"؟",
-            action: 'confirmCancelBooking',
-            params: $reservationId,
-            title: 'تأكيد الإلغاء'
+            action:  'confirmCancelBooking',
+            params:  $reservationId,
+            title:   'تأكيد الإلغاء'
         );
     }
 
-    // ==================== تنفيذ الإلغاء بعد التأكيد ====================
     #[On('confirmCancelBooking')]
-    public function confirmCancelBooking($id)
+    public function confirmCancelBooking($id): void
     {
+        $this->authorizeManageVip();
+
         try {
-            $res = Reservation::findOrFail($id);
+            $res = $this->getReservationForThisEvent((int) $id);
             $name = $res->guest_name;
             $res->update(['status' => 'cancelled']);
 
@@ -209,10 +267,12 @@ class VipBooking extends BaseComponent
     // ==================== جلب الجالسين في 4 جهات ====================
     private function getNeighbors(int $eventId, $seat): array
     {
+        if (!$seat) return [];
+
         $neighbors = [];
         $directions = [
-            'right' => ['col' => $seat->seat_number - 1, 'row' => $seat->row_number, 'label' => 'على اليمين'],
-            'left'  => ['col' => $seat->seat_number + 1, 'row' => $seat->row_number, 'label' => 'على اليسار'],
+            'right' => ['col' => $seat->seat_number - 1, 'row' => $seat->row_number,     'label' => 'على اليمين'],
+            'left'  => ['col' => $seat->seat_number + 1, 'row' => $seat->row_number,     'label' => 'على اليسار'],
             'front' => ['col' => $seat->seat_number,     'row' => $seat->row_number - 1, 'label' => 'أمام'],
             'back'  => ['col' => $seat->seat_number,     'row' => $seat->row_number + 1, 'label' => 'خلف'],
         ];
@@ -220,7 +280,8 @@ class VipBooking extends BaseComponent
         foreach ($directions as $key => $dir) {
             $neighbor = Reservation::with('seat')
                 ->where('event_id', $eventId)
-                ->where('status', 'confirmed')
+                ->where('status', '!=', 'cancelled')
+                ->where('type', 'vip_guest')   // 🎯 جيران الوفود فقط (بأسماء)
                 ->whereHas('seat', fn($q) => $q
                     ->where('section_id', $seat->section_id)
                     ->where('row_number', $dir['row'])
@@ -241,23 +302,23 @@ class VipBooking extends BaseComponent
     // ==================== رابط واتساب رسمي ====================
     public function getWhatsAppLink(int $reservationId): string
     {
-        $res = Reservation::with(['event', 'seat.section'])->findOrFail($reservationId);
+        $this->authorizeManageVip();
+
+        $res   = $this->getReservationForThisEvent($reservationId);
         $event = $res->event;
-        $seat = $res->seat;
+        $seat  = $res->seat;
+
+        if (!$event || !$seat) return '';
 
         $neighbors = $this->getNeighbors($this->eventId, $seat);
 
-        // ✨ توليد الرابط بصيغة كاملة (https) - حتى ينعرض clickable في الواتساب
         $invitationUrl = route('invitation.show', $res->qr_code);
-
-        // ضمان أن الرابط يبدأ بـ http/https (الواتساب لا يحوّل localhost أو الروابط النسبية)
         if (!str_starts_with($invitationUrl, 'http://') && !str_starts_with($invitationUrl, 'https://')) {
             $invitationUrl = 'https://' . ltrim($invitationUrl, '/');
         }
 
-        // ✨ تنسيق الوقت بصيغة عربية (صباحاً/مساءً)
-        $startTime = $event->start_datetime->format('h:i');
-        $period = $event->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+        $startTime = $event->start_datetime?->format('h:i') ?? '';
+        $period = $event->start_datetime?->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
 
         $msg  = "جامعة الموصل - مسرح الجامعة\n";
         $msg .= "─────────────────────────\n\n";
@@ -266,11 +327,11 @@ class VipBooking extends BaseComponent
         $msg .= "تحية طيبة وبعد،\n\n";
         $msg .= "يسعدنا دعوتكم لحضور الفعالية الموسومة بـ:\n";
         $msg .= "{$event->title}\n\n";
-        $msg .= "والتي ستقام بتاريخ " . $event->start_datetime->format('Y-m-d');
+        $msg .= "والتي ستقام بتاريخ " . ($event->start_datetime?->format('Y-m-d') ?? '');
         $msg .= " في تمام الساعة {$startTime} {$period}،\n";
         $msg .= "على مسرح جامعة الموصل.\n\n";
         $msg .= "معلومات مقعدكم:\n";
-        $msg .= "- القسم: {$seat->section->name}\n";
+        $msg .= "- القسم: " . ($seat->section?->name ?? '') . "\n";
         $msg .= "- الصف: {$seat->row_number}\n";
         $msg .= "- رقم المقعد: {$seat->seat_number}\n";
         $msg .= "- الرمز: {$seat->label}\n\n";
@@ -283,7 +344,6 @@ class VipBooking extends BaseComponent
             $msg .= "\n";
         }
 
-        // ✨ الرابط بصيغة قابلة للضغط (سطر مستقل + لا فواصل غريبة قبله/بعده)
         $msg .= "للاطلاع على دعوتكم الإلكترونية ورمز الدخول (QR Code):\n";
         $msg .= $invitationUrl . "\n\n";
 
@@ -291,7 +351,7 @@ class VipBooking extends BaseComponent
         $msg .= "تفضلوا بقبول فائق الاحترام والتقدير،،،\n\n";
         $msg .= "إدارة مسرح جامعة الموصل";
 
-        $phone = preg_replace('/[^0-9]/', '', $res->guest_phone);
+        $phone = preg_replace('/[^0-9]/', '', $res->guest_phone ?? '');
         if (str_starts_with($phone, '0')) {
             $phone = '964' . substr($phone, 1);
         }
@@ -299,31 +359,44 @@ class VipBooking extends BaseComponent
         return 'https://wa.me/' . $phone . '?text=' . urlencode($msg);
     }
 
-    // ==================== Render ====================
+    // ====================================================================
+    // 🎯 Render — يجلب كل المقاعد + كل الحجوزات
+    // ====================================================================
     public function render()
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            return redirect()->route('dashboard');
-        }
+        $this->authorizeManageVip();
 
         $event = Event::with('status')->findOrFail($this->eventId);
-        $vipSeats = Seat::with('section')
-            ->where('is_vip_reserved', true)
+
+        // ✨ جديد: جلب كل المقاعد (الـ 997) مرتبة حسب القسم/الصف/الرقم
+        $allSeats = Seat::with('section')
             ->orderBy('section_id')
+            ->orderBy('row_number')
             ->orderBy('seat_number')
             ->get();
-        $bookings = Reservation::with(['seat.section'])
-            ->where('event_id', $this->eventId)
-            ->where('type', 'vip_guest')
+
+        // ✨ جديد: جلب كل الحجوزات النشطة (وفود + جمهور) - keyed by seat_id
+        $allReservations = Reservation::where('event_id', $this->eventId)
             ->where('status', '!=', 'cancelled')
-            ->orderBy('created_at', 'desc')
             ->get()
             ->keyBy('seat_id');
 
+        // ✨ تجميع حسب القسم → الصف → المقاعد
+        $seatsBySection = $allSeats->groupBy('section.name');
+
+        // إحصائيات
+        $stats = [
+            'total_seats'     => $allSeats->count(),
+            'vip_booked'      => $allReservations->where('type', 'vip_guest')->count(),
+            'public_reserved' => $allReservations->where('type', '!=', 'vip_guest')->count(),
+            'available'       => $allSeats->count() - $allReservations->count(),
+        ];
+
         return view('livewire.dashboard.vip-booking', [
-            'event' => $event,
-            'vipSeats' => $vipSeats,
-            'bookings' => $bookings,
+            'event'           => $event,
+            'seatsBySection'  => $seatsBySection,
+            'allReservations' => $allReservations,
+            'stats'           => $stats,
         ]);
     }
 }
