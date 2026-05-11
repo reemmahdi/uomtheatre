@@ -12,7 +12,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\On;
 
 #[Layout('layouts.app')]
-#[Title('حجز مقاعد الوفود')]
+#[Title('إدارة حجز المقاعد')]
 class VipBooking extends BaseComponent
 {
     public int $eventId;

@@ -6,7 +6,7 @@
         <div class="col-md-6">
             <h6 class="mb-1" style="color: var(--primary);">
                 <i class="bi bi-star-fill" style="color: #0C4A6E;"></i>
-                إدارة حجز مقاعد الوفود
+                إدارة حجز المقاعد
             </h6>
             <small class="text-muted">{{ $totalVipSeats }} مقعد لكل فعالية</small>
         </div>
@@ -110,7 +110,7 @@
             <i class="bi bi-x-circle"></i> مسح البحث
         </button>
     @else
-        <p class="mt-3 text-muted">لا توجد فعاليات جاهزة لحجز مقاعد الوفود</p>
+        <p class="mt-3 text-muted">لا توجد فعاليات جاهزة لحجز المقاعد</p>
         <p class="small text-muted">يجب أن تكون الفعالية في حالة "مضافة" أو أعلى</p>
     @endif
 </div>

@@ -9,8 +9,8 @@
         $browserTitle = $title ?? match(request()->route()?->getName()) {
             'dashboard'                            => 'إدارة الفعاليات',
             'dashboard.events'                     => 'إدارة الفعاليات',
-            'dashboard.vip-events'                 => 'إدارة حجز مقاعد الضيوف',
-            'dashboard.vip-booking'                => 'إدارة حجز مقاعد الضيوف',
+            'dashboard.vip-events'                 => 'إدارة حجز المقاعد',
+            'dashboard.vip-booking'                => 'إدارة حجز المقاعد',
             'dashboard.event-cancellation-notices' => 'إشعارات إلغاء الفعالية',
             'dashboard.users'                      => 'إدارة المستخدمين',
             'dashboard.staff'                      => 'إدارة الموظفين',
@@ -90,8 +90,8 @@
             @endif
 
             @if(in_array($roleName, ['super_admin', 'event_manager']))
-            <a href="{{ route('dashboard.vip-events') }}" data-title="إدارة حجز مقاعد الضيوف" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
-                <i class="bi bi-star-fill"></i><span class="nav-text">إدارة حجز مقاعد الضيوف</span>
+            <a href="{{ route('dashboard.vip-events') }}" data-title="إدارة حجز المقاعد" class="nav-link {{ request()->routeIs('dashboard.vip-events') || request()->routeIs('dashboard.vip-booking') ? 'active' : '' }}">
+                <i class="bi bi-star-fill"></i><span class="nav-text">إدارة حجز المقاعد</span>
             </a>
             @endif
 
