@@ -586,7 +586,7 @@ class Events extends BaseComponent
     public function requestChangeStatus(int $eventId, string $newStatusName)
     {
         $messages = [
-            'added'        => 'سيتم إرسال الفعالية لمدير المسرح ومكتب رئيس الجامعة للموافقة. لن يمكنك التعديل عليها بعد الإرسال.',
+            'added'        => 'سيتم إرسال الفعالية لمكتب رئاسة الجامعة للموافقة. لن يمكنك التعديل عليها بعد الإرسال.',
             'active'       => 'قبول الفعالية؟',
             'published'    => 'نشر الفعالية للجمهور؟',
             'closed'       => 'إغلاق الفعالية؟',
@@ -638,7 +638,7 @@ class Events extends BaseComponent
                 $service = app(EventApprovalService::class);
                 $service->sendForApproval($event);
 
-                $this->swalSuccess('تم إرسال الفعالية لمدير المسرح ومكتب الرئيس للموافقة');
+                $this->swalSuccess('تم إرسال الفعالية لمكتب رئاسة الجامعة للموافقة');
                 return;
             }
 

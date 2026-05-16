@@ -7,46 +7,52 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * ════════════════════════════════════════════════════════════
- * EventApproval Model — UOMTheatre
+ * EventApproval Model — UOMTheatre (تصميم جديد)
  * ════════════════════════════════════════════════════════════
  *
- * يمثّل موافقة دور واحد على فعالية (موافقة جزئية)
+ * 🎯 التصميم الجديد:
+ *   - موافق واحد فقط (مكتب رئاسة الجامعة)
+ *   - مدير المسرح صار "مشاهد فقط" بدون موافقة/رفض
+ *   - السجل ينشأ فقط عند اتخاذ القرار (لا توجد حالة pending)
+ *   - دعم دورات إعادة الإرسال عبر round_number
  *
- * كل فعالية تحتاج موافقتين متوازيتين:
- *   - موافقة من theater_manager
- *   - موافقة من university_office
+ * 📊 البنية:
+ *   - id, uuid, event_id, round_number, status, rejection_reason
+ *   - timestamps (created_at + updated_at)
  *
- * عند موافقة الاثنين معاً → الفعالية تنتقل إلى active
- * عند رفض أي منهما → الفعالية تعود إلى draft
+ * 🔒 القيود:
+ *   - UNIQUE(event_id, round_number) → قرار واحد لكل دورة
  *
- * ✨ يستخدم HasUuid Trait للحماية ضد IDOR
+ * 💡 ملاحظات:
+ *   - لا نحفظ decided_by (الجهة معروفة: مكتب الرئاسة دائماً)
+ *   - لا نحفظ decided_at (created_at يكفي)
+ *   - rejection_reason اختياري (nullable)
  *
  * ════════════════════════════════════════════════════════════
  */
 class EventApproval extends Model
 {
-    use HasUuid;  // ✨ توليد UUID تلقائياً
+    use HasUuid;
 
     protected $fillable = [
         'uuid',
         'event_id',
-        'user_id',
-        'role_id',
+        'round_number',
         'status',
-        'note',
-        'approved_at',
-        'rejected_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
-        'approved_at' => 'datetime',
-        'rejected_at' => 'datetime',
+        'round_number' => 'integer',
     ];
 
     // ════════════════════════════════════════════════════════
     // Constants للحالات
     // ════════════════════════════════════════════════════════
-    const STATUS_PENDING  = 'pending';
+    //
+    // ملاحظة: لا توجد STATUS_PENDING في التصميم الجديد
+    //         (السجل ينشأ فقط عند اتخاذ القرار)
+    //
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
 
@@ -58,24 +64,9 @@ class EventApproval extends Model
         return $this->belongsTo(Event::class);
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function role()
-    {
-        return $this->belongsTo(Role::class);
-    }
-
     // ════════════════════════════════════════════════════════
     // Helper Methods
     // ════════════════════════════════════════════════════════
-    public function isPending(): bool
-    {
-        return $this->status === self::STATUS_PENDING;
-    }
-
     public function isApproved(): bool
     {
         return $this->status === self::STATUS_APPROVED;
@@ -84,5 +75,13 @@ class EventApproval extends Model
     public function isRejected(): bool
     {
         return $this->status === self::STATUS_REJECTED;
+    }
+
+    /**
+     * هل لديها سبب رفض مكتوب؟
+     */
+    public function hasRejectionReason(): bool
+    {
+        return $this->isRejected() && !empty($this->rejection_reason);
     }
 }

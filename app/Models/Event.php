@@ -3,20 +3,36 @@
 namespace App\Models;
 
 use App\Models\Traits\HasUuid;
-use App\Services\EventApprovalService;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * ════════════════════════════════════════════════════════════
- * Event Model — UOMTheatre (مُحدّث للمرحلة 2.أ)
+ * Event Model — UOMTheatre (تصميم جديد)
  * ════════════════════════════════════════════════════════════
  *
- * ✨ التعديلات في هذه النسخة (إصلاحات Claude):
- *   - إضافة علاقة seatAvailability() المفقودة (للمرحلة 2.أ)
- *   - تصحيح عدد المقاعد: 997 بدل 945 (لأن النظام صار بدون VIP ثابت)
- *   - استخدام nullsafe operator (?->) في كل status checks
- *   - حماية durationInMinutes() من القيم السالبة (Carbon 3)
- *   - ثابت TOTAL_SEATS لتسهيل التعديل لاحقاً
+ * 🎯 التغييرات الرئيسية:
+ *
+ *   ❌ حُذف:    theaterApproval() - مدير المسرح يشاهد فقط
+ *   ❌ حُذف:    isApprovedByTheater()
+ *   ❌ حُذف:    isFullyApproved() (لا معنى لها مع موافق واحد)
+ *
+ *   ✏️ تعديل:   officeApproval() → جلب القرار من آخر دورة
+ *   ✏️ تعديل:   hasAnyRejection() → يفحص آخر دورة فقط
+ *
+ *   ➕ جديد:    currentRound() - رقم الدورة الحالية
+ *   ➕ جديد:    latestApproval() - آخر قرار (لأي دورة)
+ *   ➕ جديد:    isApproved() - وافقت الرئاسة بآخر دورة
+ *   ➕ جديد:    isRejected() - رفضتها الرئاسة بآخر دورة
+ *   ➕ جديد:    publisher() - علاقة مع مين نشر
+ *
+ * 🔄 منطق الحالة الجديد:
+ *
+ *   draft → added → [rejected (round++) | active → published → closed]
+ *                                                            ↓
+ *                                                        cancelled
+ *
+ *   - active = وافقت الرئاسة، تنتظر زر "نشر" من مدير الإعلام
+ *   - published = ضغط مدير الإعلام "نشر" → متاحة للجمهور
  *
  * ════════════════════════════════════════════════════════════
  */
@@ -25,8 +41,7 @@ class Event extends Model
     use HasUuid;
 
     /**
-     * ✨ ثابت لعدد المقاعد الكلّي في القاعة
-     * (قاعة الدكتور محمود الجليلي — جامعة الموصل)
+     * ثابت لعدد المقاعد الكلّي في قاعة الدكتور محمود الجليلي
      */
     public const TOTAL_SEATS = 997;
 
@@ -38,6 +53,7 @@ class Event extends Model
         'end_datetime',
         'status_id',
         'created_by',
+        'published_by',          // ✨ جديد - مين ضغط زر النشر
         'published_at',
         'closed_at',
         'cancellation_reason',
@@ -69,6 +85,14 @@ class Event extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * ✨ جديد: مَن نشر الفعالية (مدير الإعلام عادة)
+     */
+    public function publisher()
+    {
+        return $this->belongsTo(User::class, 'published_by');
+    }
+
     public function reservations()
     {
         return $this->hasMany(Reservation::class);
@@ -85,7 +109,7 @@ class Event extends Model
     }
 
     /**
-     * علاقة الموافقات (المرحلة 1.ب)
+     * كل سجلات الموافقة (من كل الدورات)
      */
     public function approvals()
     {
@@ -93,30 +117,28 @@ class Event extends Model
     }
 
     /**
-     * موافقة مدير المسرح (واحدة فقط لكل فعالية)
+     * ✨ جديد: آخر سجل موافقة (من أعلى دورة)
+     *
+     * كل فعالية لها قرار واحد لكل دورة، ونحن نحتاج آخر قرار
+     * (سواء كان approved أو rejected) لمعرفة الحالة الحالية.
      */
-    public function theaterApproval()
+    public function latestApproval()
     {
         return $this->hasOne(EventApproval::class)
-            ->whereHas('role', fn($q) => $q->where('name', Role::THEATER_MANAGER));
+            ->latestOfMany('round_number');
     }
 
     /**
-     * موافقة مكتب الرئيس (واحدة فقط لكل فعالية)
+     * ✏️ مُعدَّل: قرار مكتب الرئاسة (من آخر دورة)
+     *
+     * يحافظ على اسم الـ method القديم للتوافق مع باقي الكود،
+     * لكن الـ logic مختلف: ما عاد فيه theater approval منفصلة.
      */
     public function officeApproval()
     {
-        return $this->hasOne(EventApproval::class)
-            ->whereHas('role', fn($q) => $q->where('name', Role::UNIVERSITY_OFFICE));
+        return $this->latestApproval();
     }
 
-    /**
-     * ✨ جديد (المرحلة 2.أ): علاقة إتاحة المقاعد للجمهور
-     *
-     * كل سجل = حالة إتاحة مقعد واحد لهذه الفعالية:
-     *   - is_public_available = true  → الجمهور يستطيع حجزه
-     *   - is_public_available = false → مستبعد (يظهر محجوزاً)
-     */
     public function seatAvailability()
     {
         return $this->hasMany(EventSeatAvailability::class);
@@ -128,6 +150,22 @@ class Event extends Model
     public function isDraft(): bool
     {
         return $this->status?->name === Status::DRAFT;
+    }
+
+    /**
+     * ✨ جديد: هل الفعالية مرفوضة من مكتب الرئاسة؟
+     */
+    public function isRejected(): bool
+    {
+        return $this->status?->name === Status::REJECTED;
+    }
+
+    /**
+     * ✨ جديد: هل الفعالية مقبولة وتنتظر النشر؟
+     */
+    public function isActive(): bool
+    {
+        return $this->status?->name === Status::ACTIVE;
     }
 
     public function isPublished(): bool
@@ -152,11 +190,11 @@ class Event extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // Approval Helpers
+    // Approval Helpers (مُبسَّطة - موافق واحد)
     // ════════════════════════════════════════════════════════
 
     /**
-     * هل الفعالية بانتظار الموافقات (added)؟
+     * هل الفعالية بانتظار قرار مكتب الرئاسة؟
      */
     public function isPendingApproval(): bool
     {
@@ -164,49 +202,66 @@ class Event extends Model
     }
 
     /**
-     * هل وافق الجميع على الفعالية؟
+     * ✨ جديد: رقم الدورة الحالية
+     *
+     * - فعالية جديدة لم تُرسل بعد: 1
+     * - فعالية أُرسلت مرة واحدة: 1
+     * - فعالية رُفضت ثم أُعيد إرسالها: 2
+     * - وهكذا...
      */
-    public function isFullyApproved(): bool
+    public function currentRound(): int
     {
-        return app(EventApprovalService::class)->areAllApprovalsComplete($this);
+        $maxRound = $this->approvals()->max('round_number');
+        return $maxRound ? (int) $maxRound : 1;
     }
 
     /**
-     * هل وافق مدير المسرح؟
-     */
-    public function isApprovedByTheater(): bool
-    {
-        return $this->theaterApproval
-            && $this->theaterApproval->isApproved();
-    }
-
-    /**
-     * هل وافق مكتب الرئيس؟
+     * ✨ جديد: هل وافقت الرئاسة في آخر دورة؟
      */
     public function isApprovedByOffice(): bool
     {
-        return $this->officeApproval
-            && $this->officeApproval->isApproved();
+        $latest = $this->latestApproval;
+        return $latest && $latest->isApproved();
     }
 
     /**
-     * هل تم رفض الفعالية من أي طرف؟
+     * هل الفعالية مرفوضة في آخر دورة؟
      */
     public function hasAnyRejection(): bool
     {
-        return $this->approvals()
-            ->where('status', EventApproval::STATUS_REJECTED)
-            ->exists();
+        $latest = $this->latestApproval;
+        return $latest && $latest->isRejected();
     }
 
     /**
-     * عدد الموافقات المنجزة (من 2)
+     * عدد الموافقات الناجحة (عبر كل الدورات)
      */
     public function approvalsCount(): int
     {
         return $this->approvals()
             ->where('status', EventApproval::STATUS_APPROVED)
             ->count();
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Publishing Helpers (✨ جديد)
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * هل الفعالية جاهزة للنشر؟
+     * (موافقة من الرئاسة + بحالة active)
+     */
+    public function isReadyToPublish(): bool
+    {
+        return $this->isActive() && $this->isApprovedByOffice();
+    }
+
+    /**
+     * هل تم نشر الفعالية فعلاً؟
+     */
+    public function hasBeenPublished(): bool
+    {
+        return $this->published_at !== null;
     }
 
     // ════════════════════════════════════════════════════════
@@ -230,9 +285,6 @@ class Event extends Model
         return $this->end_datetime?->isPast() ?? false;
     }
 
-    /**
-     * ✨ مُصحَّح: استخدام abs() لتجنّب القيم السالبة (Carbon 3 في Laravel 12)
-     */
     public function durationInMinutes(): int
     {
         if (!$this->start_datetime || !$this->end_datetime) {
@@ -242,7 +294,7 @@ class Event extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // Seat Statistics (مُصحَّحة — تستخدم 997 بدل 945)
+    // Seat Statistics
     // ════════════════════════════════════════════════════════
     public function reservedSeatsCount(): int
     {
@@ -258,17 +310,11 @@ class Event extends Model
             ->count();
     }
 
-    /**
-     * ✨ مُصحَّح: استخدام TOTAL_SEATS (997) بدل 945 الثابت
-     */
     public function availableSeatsCount(): int
     {
         return self::TOTAL_SEATS - $this->reservedSeatsCount();
     }
 
-    /**
-     * ✨ مُصحَّح: استخدام TOTAL_SEATS + حماية من القسمة على صفر
-     */
     public function occupancyRate(): float
     {
         if (self::TOTAL_SEATS <= 0) {
@@ -277,10 +323,6 @@ class Event extends Model
         return round(($this->reservedSeatsCount() / self::TOTAL_SEATS) * 100, 1);
     }
 
-    /**
-     * ✨ جديد: عدد المقاعد المستبعدة من الجمهور لهذه الفعالية
-     * (مفيد للوحة التحكم - بطاقة "مقاعد الوفود")
-     */
     public function excludedSeatsCount(): int
     {
         return $this->seatAvailability()
@@ -288,10 +330,6 @@ class Event extends Model
             ->count();
     }
 
-    /**
-     * ✨ جديد: عدد المقاعد المتاحة للجمهور فعلياً
-     * (المتاحة = الكلّية - المحجوزة - المستبعدة)
-     */
     public function publicAvailableSeatsCount(): int
     {
         return self::TOTAL_SEATS - $this->reservedSeatsCount() - $this->excludedSeatsCount();

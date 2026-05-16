@@ -2,7 +2,7 @@
 
 <div class="card-custom p-3 mb-3">
     <div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
-        @if(in_array($roleName, ['super_admin', 'theater_manager']))
+        @if(in_array($roleName, ['super_admin', 'event_manager']))
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
             <i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة
         </button>
@@ -63,6 +63,7 @@
                         'published' => 'منشورة',
                         'closed'    => 'مغلقة',
                         'cancelled' => 'ملغاة',
+                        'rejected'  => 'مرفوضة',
                         'end'       => 'منتهية',
                     ];
                 @endphp
@@ -145,8 +146,8 @@
             <tbody>
                 @forelse($events as $event)
                 @php
-                    $statusColors = ['draft'=>'#6B7280','added'=>'#3B82F6','active'=>'#8B5CF6','published'=>'#10B981','closed'=>'#EF4444','cancelled'=>'#DC2626','end'=>'#9CA3AF'];
-                    $statusNames = ['draft'=>'مسودة','added'=>'مضافة','active'=>'نشطة','published'=>'منشورة','closed'=>'مغلقة','cancelled'=>'ملغاة','end'=>'منتهية'];
+                    $statusColors = ['draft'=>'#6B7280','added'=>'#3B82F6','active'=>'#8B5CF6','published'=>'#10B981','closed'=>'#EF4444','cancelled'=>'#DC2626','rejected'=>'#DC2626','end'=>'#9CA3AF'];
+                    $statusNames = ['draft'=>'مسودة','added'=>'مضافة','active'=>'نشطة','published'=>'منشورة','closed'=>'مغلقة','cancelled'=>'ملغاة','rejected'=>'مرفوضة','end'=>'منتهية'];
                     $sName = $event->status->name;
                     $sColor = $statusColors[$sName] ?? '#6B7280';
                     $sLabel = $statusNames[$sName] ?? $sName;
@@ -929,6 +930,10 @@
         background: #DC2626;
     }
 
+    .status-badge-rejected {
+        background: #DC2626;
+    }
+
     .status-badge-end {
         background: #6b7280;
     }
@@ -1295,11 +1300,13 @@ function destroyFlatpickr() {
 
 /**
  * ✨ يقرأ القيمة الحالية من Livewire مباشرة (وليس من DOM)
- * هذا يحل مشكلة الحقول الفارغة في نافذة التعديل
+ * 🔧 إصلاح: يستخدم closest('[wire:id]') من العنصر نفسه
+ *    لتجنب التضارب مع notifications-bell أو أي Livewire component آخر
  */
-function getLivewireValue(propName) {
+function getLivewireValue(el, propName) {
     try {
-        const wireEl = document.querySelector('[wire\\:id]');
+        if (!el) return null;
+        const wireEl = el.closest('[wire\\:id]');
         if (!wireEl) return null;
         const wire = Livewire.find(wireEl.getAttribute('wire:id'));
         if (!wire) return null;
@@ -1308,6 +1315,16 @@ function getLivewireValue(propName) {
     } catch (e) {
         return null;
     }
+}
+
+/**
+ * ✨ helper: يجد الـ Livewire component الصحيح من element
+ */
+function getWireFromElement(el) {
+    if (!el) return null;
+    const wireEl = el.closest('[wire\\:id]');
+    if (!wireEl) return null;
+    return Livewire.find(wireEl.getAttribute('wire:id'));
 }
 
 function initFlatpickr() {
@@ -1335,7 +1352,7 @@ function initFlatpickr() {
         if (!el || flatpickrInstances[field.id]) return;
 
         // ✅ نقرأ من Livewire أولاً، ثم من DOM كـ fallback
-        let initialValue = getLivewireValue(field.wireProp);
+        let initialValue = getLivewireValue(el, field.wireProp);
         if (!initialValue && el.value && el.value.trim() !== '') {
             initialValue = el.value;
         }
@@ -1349,13 +1366,13 @@ function initFlatpickr() {
             defaultDate: initialValue,
             onChange: function(selectedDates, dateStr) {
                 if (window.Livewire) {
-                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    const wire = getWireFromElement(el);
                     if (wire) wire.set(field.wireProp, dateStr);
                 }
             },
             onClose: function(selectedDates, dateStr) {
                 if (dateStr && window.Livewire) {
-                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    const wire = getWireFromElement(el);
                     if (wire) wire.set(field.wireProp, dateStr);
                 }
             }
@@ -1368,7 +1385,7 @@ function initFlatpickr() {
         if (!el || flatpickrInstances[field.id]) return;
 
         // ✅ نقرأ من Livewire أولاً، ثم من DOM كـ fallback
-        let initialValue = getLivewireValue(field.wireProp);
+        let initialValue = getLivewireValue(el, field.wireProp);
         if (!initialValue) {
             const rawValue = el.value ? el.value.trim() : '';
             initialValue = (rawValue !== '' && rawValue !== '00:00') ? rawValue : null;
@@ -1388,13 +1405,13 @@ function initFlatpickr() {
             defaultDate: initialValue,
             onChange: function(selectedDates, dateStr) {
                 if (dateStr && selectedDates.length > 0 && window.Livewire) {
-                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    const wire = getWireFromElement(el);
                     if (wire) wire.set(field.wireProp, dateStr);
                 }
             },
             onClose: function(selectedDates, dateStr) {
                 if (dateStr && selectedDates.length > 0 && window.Livewire) {
-                    const wire = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
+                    const wire = getWireFromElement(el);
                     if (wire) wire.set(field.wireProp, dateStr);
                 }
             }

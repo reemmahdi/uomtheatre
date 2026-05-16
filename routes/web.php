@@ -5,14 +5,14 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes — UOMTheatre (مُحدّث - إصلاحات Claude)
+| Web Routes — UOMTheatre (تصميم جديد - موافق واحد)
 |--------------------------------------------------------------------------
 |
-| ✨ التعديلات:
-|   - إضافة rate limiting على /login
-|   - / redirect ذكي حسب حالة المصادقة
-|   - حذف university_office من /dashboard/events (توافق مع app.blade.php)
-|   - حماية /seats-map بـ middleware (تجنب data leak)
+| ✨ التعديلات في هذه النسخة:
+|   - حذف theater_manager من /dashboard/my-approvals
+|     (مدير المسرح صار "مشاهد فقط" بدون موافقة)
+|   - مدير المسرح يحتفظ بـ /dashboard/events للمتابعة (read-only)
+|     لكن منطق read-only يُطبَّق داخل Livewire component
 |
 */
 
@@ -20,8 +20,7 @@ use Illuminate\Support\Facades\Route;
 // ✨ Routes العامة (بدون تسجيل دخول)
 // ═══════════════════════════════════════════════════════════
 
-// صفحة الدعوة الإلكترونية للوفود
-// ✨ آمن لأن qr_code random + نفحص cancellation في Component
+// صفحة الدعوة الإلكترونية للوفود (آمنة - qr_code random + cancellation check)
 Route::get('/invitation/{qrCode}', \App\Livewire\InvitationView::class)
     ->name('invitation.show');
 
@@ -29,7 +28,7 @@ Route::get('/invitation/{qrCode}', \App\Livewire\InvitationView::class)
 // المصادقة
 // ═══════════════════════════════════════════════════════════
 
-// ✨ مُحسّن: rate limiting على login (6 محاولات/دقيقة لكل IP)
+// rate limiting على login (6 محاولات/دقيقة لكل IP)
 Route::middleware('throttle:6,1')->group(function () {
     Route::get('/login', function () {
         if (Auth::check()) {
@@ -39,7 +38,9 @@ Route::middleware('throttle:6,1')->group(function () {
     })->name('login');
 });
 
-Route::post('/logout', function () {
+// ✨ مُحدَّث: قبول GET و POST لتجنب 403/419 عند انتهاء CSRF token
+//    GET آمن هنا لأن أسوأ سيناريو هو تسجيل خروج المستخدم (مزعج لكن غير ضار)
+Route::match(['get', 'post'], '/logout', function () {
     Auth::logout();
     session()->invalidate();
     session()->regenerateToken();
@@ -67,14 +68,15 @@ Route::middleware('admin.web')->group(function () {
             ->name('dashboard.permissions');
     });
 
-    // ── الفعاليات: مدير النظام + مدير المسرح + مدير الإعلام ──
-    // ✨ مُصحَّح: حذف university_office (يستخدم شاشة الموافقات بدلاً منها)
+    // ── الفعاليات: مدير النظام + مدير المسرح (للمتابعة) + مدير الإعلام ──
+    // 💡 مدير المسرح يدخل لكن يشاهد فقط (read-only) - المنطق في Livewire
     Route::middleware('role:super_admin,theater_manager,event_manager')->group(function () {
         Route::get('/dashboard/events', fn() => view('pages.events'))->name('dashboard.events');
     });
 
-    // ── شاشة الموافقات: لمدير المسرح + مكتب الرئيس + super_admin ──
-    Route::middleware('role:super_admin,theater_manager,university_office')->group(function () {
+    // ── شاشة الموافقات: لمكتب الرئاسة + super_admin فقط ──
+    // ✨ مُحدَّث: حُذف theater_manager (ما عاد يوافق)
+    Route::middleware('role:super_admin,university_office')->group(function () {
         Route::get('/dashboard/my-approvals', fn() => view('pages.page_event-approvals'))
             ->name('dashboard.event-approvals');
     });
@@ -83,7 +85,6 @@ Route::middleware('admin.web')->group(function () {
     // 🛡️ UUID-based Event Routes (حماية ضد IDOR)
     // ──────────────────────────────────────────────────────
 
-    // ✨ helper لاختصار UUID regex (DRY)
     $uuidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
 
     // ── حجز مقاعد الوفود: مدير النظام + مدير الإعلام فقط ──
@@ -133,12 +134,11 @@ Route::middleware('admin.web')->group(function () {
         Route::get('/dashboard/stats', fn() => view('pages.stats'))->name('dashboard.stats');
     });
 
-    // ✨ مُصحَّح: نقل /seats-map داخل admin.web (تجنب data leak)
-    // إذا كانت الخريطة فعلاً عامة (للجمهور)، أعيديها خارج المجموعة
+    // ✨ /seats-map داخل admin.web (تجنب data leak)
     Route::get('/seats-map', fn() => view('seats-map'))->name('seats-map');
 });
 
-// ✨ مُحسّن: redirect ذكي حسب حالة المصادقة
+// redirect ذكي حسب حالة المصادقة
 Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')

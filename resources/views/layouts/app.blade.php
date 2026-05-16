@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    {{-- ✨ مُصحَّح: CSRF meta tag (مطلوب للـ AJAX/fetch مثل seat-availability) --}}
+    {{-- CSRF meta tag (مطلوب للـ AJAX/fetch) --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    {{-- ✨ عنوان مخصص لتبويب المتصفح بناءً على الصفحة الحالية --}}
+    {{-- عنوان مخصص لتبويب المتصفح بناءً على الصفحة الحالية --}}
     @php
         $browserTitle = $title ?? match(request()->route()?->getName()) {
             'dashboard'                            => 'الرئيسية',
@@ -50,13 +50,12 @@
     @livewireStyles
 </head>
 <body>
-    {{-- ✨ مُصحَّح: nullsafe على role + early redirect لو null --}}
+    {{-- nullsafe على role + early redirect لو null --}}
     @php
         $authUser = auth()->user();
         $roleName = $authUser?->role?->name;
         $roleDisplayName = $authUser?->role?->display_name ?? 'مستخدم';
 
-        // لو ما عنده role صحيح، يُسجَّل خروج (الـ middleware يفترض يحمي قبل، لكن للأمان)
         if (!$roleName) {
             auth()->logout();
             return redirect()->route('login')->send();
@@ -69,7 +68,6 @@
     {{-- Sidebar --}}
     <div class="sidebar" id="mainSidebar">
 
-        {{-- زر إغلاق - فقط على الجوال --}}
         <button class="mobile-close-btn d-md-none" id="mobileCloseBtn" aria-label="إغلاق">
             <i class="bi bi-x-lg"></i>
         </button>
@@ -102,28 +100,35 @@
             </a>
             @endif
 
+            {{-- إدارة الفعاليات: super_admin + theater_manager (مشاهد) + event_manager --}}
             @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::THEATER_MANAGER, \App\Models\Role::EVENT_MANAGER], true))
-            <a href="{{ route('dashboard.events') }}" data-title="إدارة الفعاليات" class="nav-link {{ request()->routeIs('dashboard.events') ? 'active' : '' }}">
-                <i class="bi bi-calendar-event"></i><span class="nav-text">إدارة الفعاليات</span>
+            <a href="{{ route('dashboard.events') }}" data-title="{{ $roleName === \App\Models\Role::THEATER_MANAGER ? 'متابعة الفعاليات' : 'إدارة الفعاليات' }}" class="nav-link {{ request()->routeIs('dashboard.events') ? 'active' : '' }}">
+                <i class="bi bi-calendar-event"></i>
+                <span class="nav-text">
+                    @if($roleName === \App\Models\Role::THEATER_MANAGER)
+                        متابعة الفعاليات
+                    @else
+                        إدارة الفعاليات
+                    @endif
+                </span>
             </a>
             @endif
 
-            {{-- شاشة الموافقات (مدير المسرح + مكتب الرئيس + سوبر أدمن) --}}
-            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::THEATER_MANAGER, \App\Models\Role::UNIVERSITY_OFFICE], true))
+            {{-- ✨ مُحدَّث: شاشة الموافقات لمكتب الرئاسة + سوبر أدمن فقط --}}
+            {{--    (مدير المسرح صار مشاهد فقط، يدخل من إدارة الفعاليات) --}}
+            @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::UNIVERSITY_OFFICE], true))
             @php
-                // ✨ مُحسَّن: cache لمدة دقيقة لتجنب query في كل request
-                $cacheKey = 'pending_approvals_count_' . ($authUser->id);
-                $pendingApprovalsCount = \Illuminate\Support\Facades\Cache::remember(
+                // cache لمدة دقيقة لتجنب query في كل request
+                // ✨ مُحدَّث: نعد الفعاليات في حالة "added" (بدل الـ approvals المعلقة)
+                $cacheKey = 'pending_events_count_' . ($authUser->id);
+                $pendingEventsCount = \Illuminate\Support\Facades\Cache::remember(
                     $cacheKey,
                     now()->addMinute(),
-                    function () use ($roleName, $authUser) {
-                        return \App\Models\EventApproval::query()
-                            ->when(
-                                $roleName !== \App\Models\Role::SUPER_ADMIN,
-                                fn($q) => $q->where('role_id', $authUser->role_id)
-                            )
-                            ->where('status', \App\Models\EventApproval::STATUS_PENDING)
-                            ->count();
+                    function () {
+                        $addedStatusId = \App\Models\Status::where('name', \App\Models\Status::ADDED)->value('id');
+                        return $addedStatusId
+                            ? \App\Models\Event::where('status_id', $addedStatusId)->count()
+                            : 0;
                     }
                 );
             @endphp
@@ -131,9 +136,9 @@
                 <i class="bi bi-clipboard-check-fill"></i>
                 <span class="nav-text">
                     بانتظار موافقتي
-                    @if($pendingApprovalsCount > 0)
+                    @if($pendingEventsCount > 0)
                     <span class="badge rounded-pill" style="background: #DC2626; color: #fff; margin-right: 6px; font-size: 11px;">
-                        {{ $pendingApprovalsCount }}
+                        {{ $pendingEventsCount }}
                     </span>
                     @endif
                 </span>
@@ -165,12 +170,10 @@
             @endif
 
             <hr style="border-color: rgba(228, 192, 94, 0.25); margin: 15px 20px;">
-            <form method="POST" action="{{ route('dashboard.logout') }}" class="mx-3">
-                @csrf
-                <button type="submit" data-title="تسجيل خروج" class="nav-link w-100 text-start border-0 bg-transparent" style="cursor:pointer; color: #ffcdd2;">
-                    <i class="bi bi-box-arrow-right"></i><span class="nav-text">تسجيل خروج</span>
-                </button>
-            </form>
+            {{-- ✨ مُحدَّث: link مباشر بدل form لتجنب 403 عند انتهاء CSRF token --}}
+            <a href="{{ route('dashboard.logout') }}" data-title="تسجيل خروج" class="nav-link mx-3" style="cursor:pointer; color: #ffcdd2;">
+                <i class="bi bi-box-arrow-right"></i><span class="nav-text">تسجيل خروج</span>
+            </a>
         </nav>
     </div>
 
@@ -205,9 +208,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    {{-- Alpine.js للـ dropdown الخاص بالجرس --}}
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+    {{-- ✨ مُحدَّث: Livewire 3 يحمل Alpine.js تلقائياً
+         إضافة Alpine CDN منفصلاً تسبب "Multiple instances of Alpine" --}}
     @livewireScripts
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

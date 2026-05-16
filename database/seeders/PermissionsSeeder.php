@@ -7,15 +7,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * ════════════════════════════════════════════════════════════
- * PermissionsSeeder — UOMTheatre (مُحدّث - إصلاحات Claude)
+ * PermissionsSeeder — UOMTheatre (تصميم جديد)
  * ════════════════════════════════════════════════════════════
  *
- * ✨ التعديلات:
- *   🔴 idempotent (updateOrInsert بدل insert) - تشغيل مرتين آمن
- *   🟡 DB::transaction (atomic - لو فشل insert، rollback)
- *   🟡 إعادة بناء role_permission (delete + insert) لتجنب duplicates
+ * 🎯 التعديلات:
+ *   ❌ حُذف:    events.approve_theater (مدير المسرح ما يوافق)
+ *   ✅ بقاء:    events.approve_office  (مكتب الرئاسة فقط)
  *
- * يعبّئ الصلاحيات الافتراضية + يربطها بالأدوار حسب الـ workflow الجديد.
+ * 🟣 idempotent (updateOrInsert) - تشغيل مرتين آمن
+ * 🟡 DB::transaction - atomic
+ * 🟡 إعادة بناء role_permission لتجنب duplicates
  *
  * ════════════════════════════════════════════════════════════
  */
@@ -26,13 +27,14 @@ class PermissionsSeeder extends Seeder
         DB::transaction(function () {
             $this->seedPermissions();
             $this->seedRolePermissions();
+            $this->cleanupObsoletePermissions();  // ✨ جديد - تنظيف الصلاحيات المهجورة
         });
 
         $this->command->info('✅ Seeding صلاحيات اكتمل بنجاح');
     }
 
     /**
-     * ✨ مُصحَّح: updateOrInsert بدل insert (idempotent)
+     * تسجيل/تحديث الصلاحيات (idempotent)
      */
     protected function seedPermissions(): void
     {
@@ -41,15 +43,15 @@ class PermissionsSeeder extends Seeder
             ['name' => 'events.create',           'display_name' => 'إنشاء فعالية',           'group' => 'events',     'description' => 'إنشاء فعالية جديدة كمسودة'],
             ['name' => 'events.edit',             'display_name' => 'تعديل فعالية',           'group' => 'events',     'description' => 'تعديل بيانات الفعالية'],
             ['name' => 'events.delete',           'display_name' => 'حذف فعالية',             'group' => 'events',     'description' => 'حذف فعالية (مسودة فقط)'],
-            ['name' => 'events.send_for_approval','display_name' => 'إرسال للموافقة',         'group' => 'events',     'description' => 'إرسال الفعالية للجهات المختصة'],
+            ['name' => 'events.send_for_approval','display_name' => 'إرسال للموافقة',         'group' => 'events',     'description' => 'إرسال الفعالية لمكتب الرئاسة'],
             ['name' => 'events.cancel',           'display_name' => 'إلغاء فعالية',           'group' => 'events',     'description' => 'إلغاء فعالية وإرسال إشعارات'],
+            ['name' => 'events.view',             'display_name' => 'عرض الفعاليات',          'group' => 'events',     'description' => 'مشاهدة قائمة الفعاليات والتفاصيل'],
 
-            // مجموعة: الموافقات
-            ['name' => 'events.approve_theater',  'display_name' => 'موافقة مدير المسرح',     'group' => 'approvals',  'description' => 'موافقة الفعاليات من جانب مدير المسرح'],
-            ['name' => 'events.approve_office',   'display_name' => 'موافقة مكتب الرئيس',     'group' => 'approvals',  'description' => 'موافقة الفعاليات من جانب مكتب رئيس الجامعة'],
+            // مجموعة: الموافقات (✨ مُحدَّث - بدون approve_theater)
+            ['name' => 'events.approve_office',   'display_name' => 'موافقة مكتب الرئاسة',    'group' => 'approvals',  'description' => 'موافقة أو رفض الفعاليات من جانب مكتب رئاسة الجامعة'],
 
             // مجموعة: النشر
-            ['name' => 'events.publish',          'display_name' => 'نشر للجمهور',            'group' => 'publishing', 'description' => 'نشر الفعالية للجمهور بعد اكتمال الموافقات'],
+            ['name' => 'events.publish',          'display_name' => 'نشر للجمهور',            'group' => 'publishing', 'description' => 'نشر الفعالية للجمهور بعد موافقة الرئاسة'],
             ['name' => 'events.notify_all',       'display_name' => 'إرسال إشعار للجميع',     'group' => 'publishing', 'description' => 'إرسال إشعارات للمستخدمين'],
 
             // مجموعة: الوفود والمقاعد
@@ -68,8 +70,8 @@ class PermissionsSeeder extends Seeder
         $now = now();
         foreach ($permissions as $perm) {
             DB::table('permissions')->updateOrInsert(
-                ['name' => $perm['name']],   // ← الشرط (للبحث)
-                [                            // ← القيم
+                ['name' => $perm['name']],
+                [
                     'display_name' => $perm['display_name'],
                     'description'  => $perm['description'],
                     'group'        => $perm['group'],
@@ -83,7 +85,7 @@ class PermissionsSeeder extends Seeder
     }
 
     /**
-     * ✨ مُصحَّح: حذف وإعادة insert role_permission (idempotent)
+     * ربط الصلاحيات بالأدوار (✨ مُحدَّث للتصميم الجديد)
      */
     protected function seedRolePermissions(): void
     {
@@ -96,8 +98,8 @@ class PermissionsSeeder extends Seeder
             // ────────────────────────────────────────
             'super_admin' => [
                 'events.create', 'events.edit', 'events.delete',
-                'events.send_for_approval', 'events.cancel',
-                'events.approve_theater', 'events.approve_office',
+                'events.send_for_approval', 'events.cancel', 'events.view',
+                'events.approve_office',  // ✨ بدل approve_theater + approve_office
                 'events.publish', 'events.notify_all',
                 'vip.manage', 'vip.assign_seats',
                 'checkin.scan',
@@ -105,28 +107,33 @@ class PermissionsSeeder extends Seeder
             ],
 
             // ────────────────────────────────────────
-            // 🔵 مدير الإعلام (event_manager) — ينشئ + ينشر + يدير الوفود
+            // 🔵 مدير الإعلام (event_manager)
+            //    ينشئ + يرسل للموافقة + ينشر + يدير الوفود
             // ────────────────────────────────────────
             'event_manager' => [
                 'events.create', 'events.edit', 'events.delete',
                 'events.send_for_approval',
-                'events.cancel',
-                'events.publish', 'events.notify_all',
+                'events.cancel', 'events.view',
+                'events.publish',         // ✨ النشر بيد مدير الإعلام
+                'events.notify_all',
                 'vip.manage', 'vip.assign_seats',
             ],
 
             // ────────────────────────────────────────
-            // 🟡 مدير المسرح (theater_manager) — يوافق فقط
+            // 🟡 مدير المسرح (theater_manager) — ✨ مُحدَّث
+            //    صار "مشاهد فقط" - بدون قرار
             // ────────────────────────────────────────
             'theater_manager' => [
-                'events.approve_theater',
+                'events.view',  // ✨ فقط مشاهدة الفعاليات (للمتابعة)
             ],
 
             // ────────────────────────────────────────
-            // 🟢 مكتب رئيس الجامعة (university_office) — يوافق + يشاهد الإحصائيات
+            // 🟢 مكتب رئيس الجامعة (university_office)
+            //    يوافق/يرفض + يشاهد الإحصائيات
             // ────────────────────────────────────────
             'university_office' => [
                 'events.approve_office',
+                'events.view',
                 'stats.view',
             ],
 
@@ -143,7 +150,6 @@ class PermissionsSeeder extends Seeder
             'user' => [],
         ];
 
-        // ✨ مُصحَّح: حذف الموجود لكل دور قبل insert (تجنب duplicates)
         $now = now();
         $totalLinks = 0;
 
@@ -154,10 +160,10 @@ class PermissionsSeeder extends Seeder
                 continue;
             }
 
-            // حذف الصلاحيات الحالية لهذا الدور
+            // حذف الصلاحيات الحالية لهذا الدور (تنظيف)
             DB::table('role_permission')->where('role_id', $roleId)->delete();
 
-            // إعادة إضافتها
+            // إعادة إضافة الصلاحيات الجديدة
             foreach ($permNames as $permName) {
                 $permId = $perms[$permName] ?? null;
                 if (!$permId) {
@@ -176,5 +182,33 @@ class PermissionsSeeder extends Seeder
         }
 
         $this->command->info("✅ {$totalLinks} ربط أدوار-صلاحيات تم إعداده");
+    }
+
+    /**
+     * ✨ جديد: حذف الصلاحيات المهجورة من النظام
+     * (تجنّب ترك سجلات قديمة لا تستخدم)
+     */
+    protected function cleanupObsoletePermissions(): void
+    {
+        $obsoletePermissions = [
+            'events.approve_theater',  // مدير المسرح ما عاد يوافق
+        ];
+
+        $deletedCount = 0;
+        foreach ($obsoletePermissions as $permName) {
+            $permId = DB::table('permissions')->where('name', $permName)->value('id');
+            if ($permId) {
+                // حذف من role_permission أولاً (FK)
+                DB::table('role_permission')->where('permission_id', $permId)->delete();
+                // حذف الصلاحية نفسها
+                DB::table('permissions')->where('id', $permId)->delete();
+                $deletedCount++;
+                $this->command->info("  🗑️  حُذفت الصلاحية المهجورة: {$permName}");
+            }
+        }
+
+        if ($deletedCount === 0) {
+            $this->command->info('  ℹ️  لا توجد صلاحيات مهجورة');
+        }
     }
 }

@@ -4,8 +4,8 @@ namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
 use App\Models\Event;
-use App\Models\EventApproval;
 use App\Models\Role;
+use App\Models\Status;
 use App\Services\EventApprovalService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -14,15 +14,16 @@ use Livewire\Attributes\Title;
 
 /**
  * ════════════════════════════════════════════════════════════════
- * EventApprovals — UOMTheatre
+ * EventApprovals — UOMTheatre (تصميم جديد + زر تفاصيل)
  * ════════════════════════════════════════════════════════════════
  *
  * شاشة "الفعاليات بانتظار موافقتي"
- * تُستخدم من قبل:
- *   - مدير المسرح (theater_manager)
- *   - مدير مكتب الرئيس (university_office)
  *
- * كل دور يرى فقط الفعاليات التي بانتظار موافقته.
+ * 🎯 الميزات:
+ *   - عرض الفعاليات بحالة "added"
+ *   - 3 أزرار: تفاصيل 👁️ | موافقة ✅ | رفض ❌
+ *   - modal تفاصيل: يعرض كل المعلومات + سجل الرفض السابق
+ *   - rejection_reason اختياري
  *
  * ════════════════════════════════════════════════════════════════
  */
@@ -31,91 +32,93 @@ use Livewire\Attributes\Title;
 class EventApprovals extends BaseComponent
 {
     // ════════════════════════════════════════════════════════════
-    // حقول الرفض
+    // حقول الرفض (modal)
     // ════════════════════════════════════════════════════════════
-    public ?int $rejectingApprovalId = null;
+    public ?int $rejectingEventId = null;
     public string $rejectionNote = '';
     public string $rejectingEventTitle = '';
 
     // ════════════════════════════════════════════════════════════
+    // ✨ جديد: حقل عرض التفاصيل (modal)
+    // ════════════════════════════════════════════════════════════
+    public ?int $viewingEventId = null;
+
+    // ════════════════════════════════════════════════════════════
+    // ✨ جديد: فتح نافذة التفاصيل
+    // ════════════════════════════════════════════════════════════
+    public function openDetailsModal(int $eventId)
+    {
+        $this->viewingEventId = $eventId;
+        $this->dispatch('open-modal', id: 'eventDetailsModal');
+    }
+
+    public function closeDetailsModal()
+    {
+        $this->viewingEventId = null;
+    }
+
+    // ════════════════════════════════════════════════════════════
     // فتح نافذة الرفض
     // ════════════════════════════════════════════════════════════
-    public function openRejectModal(int $approvalId)
+    public function openRejectModal(int $eventId)
     {
-        $approval = EventApproval::with('event')->findOrFail($approvalId);
+        $event = Event::with('status')->findOrFail($eventId);
 
-        // التأكد أن الـ approval تخص دور المستخدم
-        if ($approval->role_id !== Auth::user()->role_id) {
-            $this->swalError('غير مصرح لك');
+        if ($event->status?->name !== Status::ADDED) {
+            $this->swalError('هذه الفعالية ليست بانتظار قرار');
             return;
         }
 
-        $this->rejectingApprovalId = $approvalId;
-        $this->rejectionNote = '';
-        $this->rejectingEventTitle = $approval->event->title;
+        $this->rejectingEventId    = $eventId;
+        $this->rejectionNote       = '';
+        $this->rejectingEventTitle = $event->title;
 
         $this->dispatch('open-modal', id: 'rejectApprovalModal');
     }
 
-    // ════════════════════════════════════════════════════════════
-    // إلغاء عملية الرفض
-    // ════════════════════════════════════════════════════════════
     public function cancelReject()
     {
-        $this->reset(['rejectingApprovalId', 'rejectionNote', 'rejectingEventTitle']);
+        $this->reset(['rejectingEventId', 'rejectionNote', 'rejectingEventTitle']);
     }
 
     // ════════════════════════════════════════════════════════════
     // طلب تأكيد الموافقة
     // ════════════════════════════════════════════════════════════
-    public function requestApprove(int $approvalId)
+    public function requestApprove(int $eventId)
     {
-        $approval = EventApproval::with('event')->findOrFail($approvalId);
+        $event = Event::with('status')->findOrFail($eventId);
 
-        if ($approval->role_id !== Auth::user()->role_id) {
-            $this->swalError('غير مصرح لك');
+        if ($event->status?->name !== Status::ADDED) {
+            $this->swalError('هذه الفعالية ليست بانتظار قرار');
             return;
         }
 
         $this->swalConfirm(
-            message: "هل أنت متأكد من الموافقة على فعالية \"{$approval->event->title}\"؟",
+            message: "هل أنتِ متأكدة من الموافقة على فعالية \"{$event->title}\"؟",
             action: 'confirmApprove',
-            params: $approvalId,
+            params: $eventId,
             title: 'تأكيد الموافقة'
         );
     }
 
-    // ════════════════════════════════════════════════════════════
-    // تنفيذ الموافقة بعد التأكيد
-    // ════════════════════════════════════════════════════════════
     #[On('confirmApprove')]
     public function confirmApprove($id = null)
     {
-        $approvalId = is_array($id) ? ($id['id'] ?? $id) : $id;
+        $eventId = is_array($id) ? ($id['id'] ?? $id) : $id;
 
-        if (!$approvalId) {
-            $this->swalError('معرّف الموافقة غير صحيح');
+        if (!$eventId) {
+            $this->swalError('معرّف الفعالية غير صحيح');
             return;
         }
 
         try {
-            $approval = EventApproval::with('event')->findOrFail($approvalId);
-
-            // تحقق إضافي للأمان
-            if ($approval->role_id !== Auth::user()->role_id) {
-                $this->swalError('غير مصرح لك');
-                return;
-            }
+            $event = Event::findOrFail($eventId);
 
             $service = app(EventApprovalService::class);
-            $result = $service->approve($approval->event, Auth::user());
+            $result = $service->approve($event);
 
             if ($result['success']) {
-                if ($result['all_approved']) {
-                    $this->swalSuccess($result['message']);
-                } else {
-                    $this->swalToast($result['message']);
-                }
+                $this->swalSuccess($result['message']);
             } else {
                 $this->swalError($result['message']);
             }
@@ -125,31 +128,26 @@ class EventApprovals extends BaseComponent
     }
 
     // ════════════════════════════════════════════════════════════
-    // تنفيذ الرفض (من نموذج الرفض)
+    // تنفيذ الرفض
     // ════════════════════════════════════════════════════════════
     public function submitReject()
     {
         $this->validate([
-            'rejectionNote' => 'required|string|max:500',
+            'rejectionNote' => 'nullable|string|max:500',
         ], [
-            'rejectionNote.required' => 'يرجى كتابة سبب الرفض',
-            'rejectionNote.max'      => 'الحد الأقصى 500 حرف',
+            'rejectionNote.max' => 'الحد الأقصى 500 حرف',
         ]);
 
         try {
-            $approval = EventApproval::with('event')->findOrFail($this->rejectingApprovalId);
-
-            if ($approval->role_id !== Auth::user()->role_id) {
-                $this->swalError('غير مصرح لك');
-                return;
-            }
+            $event = Event::findOrFail($this->rejectingEventId);
 
             $service = app(EventApprovalService::class);
-            $result = $service->reject($approval->event, Auth::user(), $this->rejectionNote);
+            $reason = trim($this->rejectionNote) ?: null;
+            $result = $service->reject($event, $reason);
 
             if ($result['success']) {
                 $this->swalSuccess($result['message']);
-                $this->reset(['rejectingApprovalId', 'rejectionNote', 'rejectingEventTitle']);
+                $this->reset(['rejectingEventId', 'rejectionNote', 'rejectingEventTitle']);
                 $this->dispatch('close-modal');
             } else {
                 $this->swalError($result['message']);
@@ -165,40 +163,35 @@ class EventApprovals extends BaseComponent
     public function render()
     {
         $user = Auth::user();
-        $roleName = $user->role->name;
+        $roleName = $user->role?->name;
 
-        // التأكد أن الدور يستطيع الموافقة
-        $allowedRoles = [Role::THEATER_MANAGER, Role::UNIVERSITY_OFFICE, Role::SUPER_ADMIN];
-        if (!in_array($roleName, $allowedRoles)) {
+        $allowedRoles = [Role::SUPER_ADMIN, Role::UNIVERSITY_OFFICE];
+        if (!in_array($roleName, $allowedRoles, true)) {
             return redirect()->route('dashboard');
         }
 
-        // للسوبر أدمن: نعرض كل الموافقات المعلّقة (للمراجعة)
-        // لباقي الأدوار: فقط ما يخص دورهم
-        if ($roleName === Role::SUPER_ADMIN) {
-            $approvals = EventApproval::with(['event.status', 'event.creator', 'role'])
-                ->where('status', EventApproval::STATUS_PENDING)
-                ->orderBy('created_at', 'desc')
-                ->get();
-        } else {
-            $approvals = EventApproval::with(['event.status', 'event.creator', 'role'])
-                ->where('role_id', $user->role_id)
-                ->where('status', EventApproval::STATUS_PENDING)
-                ->orderBy('created_at', 'desc')
-                ->get();
-        }
+        $service = app(EventApprovalService::class);
+        $events = $service->getPendingApprovals();
 
-        // إحصائيات سريعة
         $stats = [
-            'pending_count'   => $approvals->count(),
-            'role_label'      => $roleName === Role::THEATER_MANAGER ? 'مدير المسرح' :
-                                ($roleName === Role::UNIVERSITY_OFFICE ? 'مكتب رئيس الجامعة' : 'كل الموافقات'),
+            'pending_count' => $events->count(),
+            'role_label'    => $roleName === Role::SUPER_ADMIN
+                ? 'مدير النظام (مراقبة)'
+                : 'مدير مكتب رئاسة الجامعة',
         ];
 
+        // ✨ جديد: تحميل تفاصيل الفعالية المعروضة (لو فيه)
+        $viewingEvent = null;
+        if ($this->viewingEventId) {
+            $viewingEvent = Event::with(['creator', 'status', 'approvals'])
+                ->find($this->viewingEventId);
+        }
+
         return view('livewire.dashboard.event-approvals', [
-            'approvals' => $approvals,
-            'stats'     => $stats,
-            'roleName'  => $roleName,
+            'events'       => $events,
+            'stats'        => $stats,
+            'roleName'     => $roleName,
+            'viewingEvent' => $viewingEvent,
         ]);
     }
 }

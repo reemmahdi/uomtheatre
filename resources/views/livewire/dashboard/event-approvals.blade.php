@@ -1,3 +1,11 @@
+{{-- ════════════════════════════════════════════════════════════════
+     شاشة الموافقات — UOMTheatre
+
+     ✏️ مُحدَّث في هذه النسخة:
+       - حذف عمود "الوصف" من الجدول (يظهر في modal التفاصيل)
+       - حذف Alpine.js نهائياً (كان يكسر الأزرار)
+       - عدّاد الحروف يستخدم strlen() مباشرة من Livewire
+     ════════════════════════════════════════════════════════════════ --}}
 
 <div>
 
@@ -22,8 +30,8 @@
     </div>
 </div>
 
-{{-- ✨ قائمة الفعاليات --}}
-@if($approvals->count() > 0)
+{{-- ✨ قائمة الفعاليات (4 أعمدة فقط) --}}
+@if($events->count() > 0)
 <div class="card-custom p-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
@@ -31,16 +39,13 @@
                 <tr>
                     <th style="width: 50px;">#</th>
                     <th>اسم الفعالية</th>
-                    <th style="width: 180px;">الوصف</th>
-                    <th style="width: 150px;">موعد الانطلاق</th>
-                    <th style="width: 130px;">أنشأها</th>
-                    <th style="width: 200px; text-align: center;">الإجراء</th>
+                    <th style="width: 200px;">موعد الانطلاق</th>
+                    <th style="width: 280px; text-align: center;">الإجراء</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($approvals as $approval)
+                @foreach($events as $event)
                 @php
-                    $event = $approval->event;
                     $startTime = $event->start_datetime->format('h:i');
                     $period = $event->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
                 @endphp
@@ -48,16 +53,6 @@
                     <td><strong style="color: #0C4A6E;">{{ $loop->iteration }}</strong></td>
                     <td>
                         <strong style="color: #0C4A6E; font-size: 15px;">{{ $event->title }}</strong>
-                        @if($roleName === 'super_admin')
-                        <br>
-                        <small class="badge" style="background: #fef3c7; color: #8a6d1a; margin-top: 4px;">
-                            <i class="bi bi-person-badge"></i>
-                            بانتظار: {{ $approval->role->display_name }}
-                        </small>
-                        @endif
-                    </td>
-                    <td>
-                        <small class="text-muted">{{ \Illuminate\Support\Str::limit($event->description ?? '—', 60) }}</small>
                     </td>
                     <td>
                         <small class="text-muted d-block" dir="ltr">
@@ -69,27 +64,30 @@
                             {{ $startTime }} {{ $period }}
                         </small>
                     </td>
-                    <td>
-                        <small class="text-muted">
-                            <i class="bi bi-person-circle"></i>
-                            {{ $event->creator->name ?? '—' }}
-                        </small>
-                    </td>
                     <td style="text-align: center;">
-                        <div class="d-flex gap-2 justify-content-center">
-                            {{-- زر الموافقة --}}
+                        <div class="d-flex gap-1 justify-content-center flex-wrap">
+                            {{-- 👁️ زر التفاصيل --}}
                             <button type="button"
-                                    wire:click="requestApprove({{ $approval->id }})"
+                                    wire:click="openDetailsModal({{ $event->id }})"
                                     class="btn btn-sm"
-                                    style="background: linear-gradient(135deg, #15803D, #166534); color: #fff; font-weight: 600; padding: 6px 14px;">
+                                    style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; font-weight: 600; padding: 6px 12px;"
+                                    title="عرض التفاصيل الكاملة">
+                                <i class="bi bi-eye-fill"></i> تفاصيل
+                            </button>
+
+                            {{-- ✅ زر الموافقة --}}
+                            <button type="button"
+                                    wire:click="requestApprove({{ $event->id }})"
+                                    class="btn btn-sm"
+                                    style="background: linear-gradient(135deg, #15803D, #166534); color: #fff; font-weight: 600; padding: 6px 12px;">
                                 <i class="bi bi-check-circle-fill"></i> موافقة
                             </button>
 
-                            {{-- زر الرفض --}}
+                            {{-- ❌ زر الرفض --}}
                             <button type="button"
-                                    wire:click="openRejectModal({{ $approval->id }})"
+                                    wire:click="openRejectModal({{ $event->id }})"
                                     class="btn btn-sm btn-outline-danger"
-                                    style="font-weight: 600; padding: 6px 14px;">
+                                    style="font-weight: 600; padding: 6px 12px;">
                                 <i class="bi bi-x-circle-fill"></i> رفض
                             </button>
                         </div>
@@ -108,7 +106,144 @@
 </div>
 @endif
 
-{{-- ✨ نافذة الرفض --}}
+{{-- ════════════════════════════════════════════════════════════════
+     👁️ نافذة عرض التفاصيل
+     ════════════════════════════════════════════════════════════════ --}}
+<div class="modal fade" id="eventDetailsModal" tabindex="-1" wire:ignore.self>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            @if($viewingEvent)
+            <div class="modal-header" style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff;">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle-fill"></i> تفاصيل الفعالية
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" wire:click="closeDetailsModal"></button>
+            </div>
+            <div class="modal-body">
+
+                <h4 style="color: #0C4A6E; margin-bottom: 12px;">
+                    <i class="bi bi-calendar-event"></i> {{ $viewingEvent->title }}
+                </h4>
+
+                @if($viewingEvent->description)
+                <div class="mb-3 p-3" style="background: #f8fafc; border-radius: 8px; border-right: 3px solid #0C4A6E;">
+                    <small class="text-muted d-block mb-1"><strong>الوصف:</strong></small>
+                    <p class="mb-0" style="white-space: pre-wrap;">{{ $viewingEvent->description }}</p>
+                </div>
+                @endif
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3" style="background: #f0f9ff; border-radius: 8px;">
+                            <small class="text-muted d-block">
+                                <i class="bi bi-calendar3"></i> <strong>البداية</strong>
+                            </small>
+                            <div style="color: #0C4A6E; font-weight: 600;" dir="ltr">
+                                {{ $viewingEvent->start_datetime->format('Y-m-d') }}
+                            </div>
+                            <div style="color: #0C4A6E;">
+                                {{ $viewingEvent->start_datetime->format('h:i') }}
+                                {{ $viewingEvent->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3" style="background: #fef3c7; border-radius: 8px;">
+                            <small class="text-muted d-block">
+                                <i class="bi bi-calendar3"></i> <strong>النهاية</strong>
+                            </small>
+                            <div style="color: #92400e; font-weight: 600;" dir="ltr">
+                                {{ $viewingEvent->end_datetime->format('Y-m-d') }}
+                            </div>
+                            <div style="color: #92400e;">
+                                {{ $viewingEvent->end_datetime->format('h:i') }}
+                                {{ $viewingEvent->end_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block mb-1"><strong>أنشأها:</strong></small>
+                        <span>
+                            <i class="bi bi-person-circle" style="color: #0C4A6E;"></i>
+                            {{ $viewingEvent->creator->name ?? '—' }}
+                        </span>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block mb-1"><strong>تاريخ الإنشاء:</strong></small>
+                        <span dir="ltr">
+                            <i class="bi bi-clock-history" style="color: #0C4A6E;"></i>
+                            {{ $viewingEvent->created_at->format('Y-m-d H:i') }}
+                        </span>
+                    </div>
+                </div>
+
+                {{-- سجل الرفض السابق --}}
+                @php
+                    $currentRound = $viewingEvent->currentRound();
+                    $previousApprovals = $viewingEvent->approvals
+                        ->where('status', 'rejected')
+                        ->sortBy('round_number');
+                @endphp
+
+                @if($previousApprovals->count() > 0)
+                <div class="alert alert-warning mt-3" style="background: #fef3c7; border-color: #f59e0b; color: #92400e;">
+                    <h6 class="alert-heading mb-3">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        تنبيه: هذه الفعالية أُعيد إرسالها {{ $previousApprovals->count() }} مرة
+                    </h6>
+
+                    <small class="d-block mb-2">سجل القرارات السابقة:</small>
+
+                    @foreach($previousApprovals as $approval)
+                    <div class="mt-2 p-2" style="background: rgba(255,255,255,0.5); border-radius: 6px;">
+                        <strong>
+                            <i class="bi bi-x-circle-fill"></i>
+                            الدورة #{{ $approval->round_number }}: رُفضت
+                        </strong>
+                        <small class="text-muted d-block mt-1" dir="ltr">
+                            {{ $approval->created_at->format('Y-m-d H:i') }}
+                        </small>
+                        @if($approval->rejection_reason)
+                        <div class="mt-2 p-2" style="background: #ffffff; border-radius: 4px; border-right: 3px solid #DC2626;">
+                            <small class="text-muted"><strong>السبب:</strong></small>
+                            <p class="mb-0" style="white-space: pre-wrap;">{{ $approval->rejection_reason }}</p>
+                        </div>
+                        @else
+                        <small class="text-muted fst-italic">لم يُكتب سبب الرفض</small>
+                        @endif
+                    </div>
+                    @endforeach
+
+                    <hr class="my-3" style="border-color: #f59e0b;">
+                    <small class="d-block">
+                        <i class="bi bi-info-circle"></i>
+                        أنتِ الحين تنظرين في <strong>الدورة #{{ $currentRound }}</strong> بعد التعديل
+                    </small>
+                </div>
+                @else
+                <div class="alert alert-info mt-3" style="background: #dbeafe; border-color: #0C4A6E; color: #1e40af;">
+                    <i class="bi bi-info-circle-fill"></i>
+                    هذه أول مرة تُرسل فيها الفعالية للموافقة (الدورة الأولى)
+                </div>
+                @endif
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" wire:click="closeDetailsModal">
+                    <i class="bi bi-x"></i> إغلاق
+                </button>
+            </div>
+            @endif
+        </div>
+    </div>
+</div>
+
+{{-- ════════════════════════════════════════════════════════════════
+     ❌ نافذة الرفض (بدون Alpine - عدّاد بسيط)
+     ════════════════════════════════════════════════════════════════ --}}
 <div class="modal fade" id="rejectApprovalModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -122,19 +257,16 @@
                 <div class="alert alert-warning" style="background: #fef3c7; border-color: #f59e0b; color: #92400e;">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     سيتم إعادة الفعالية <strong>"{{ $rejectingEventTitle }}"</strong> إلى مدير الإعلام للتعديل.
-                    <br>
-                    <small class="mt-2 d-block">
-                        <i class="bi bi-info-circle"></i>
-                        الموافقات الأخرى (إن وُجدت) ستبقى محفوظة.
-                    </small>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">سبب الرفض <span class="text-danger">*</span></label>
-                    <textarea wire:model="rejectionNote"
+                    <label class="form-label fw-bold">سبب الرفض <small class="text-muted">(اختياري)</small></label>
+
+                    {{-- ✏️ مُحدَّث: بدون Alpine، عدّاد من Livewire مباشرة --}}
+                    <textarea wire:model.live="rejectionNote"
                               class="form-control"
                               rows="4"
-                              placeholder="اكتبي سبب الرفض ليتمكن مدير الإعلام من تعديل الفعالية..."
+                              placeholder="اكتبي سبب الرفض ليتمكن مدير الإعلام من تعديل الفعالية (اختياري)..."
                               maxlength="500"></textarea>
                     @error('rejectionNote')
                         <small class="text-danger mt-1 d-block">
@@ -142,7 +274,7 @@
                         </small>
                     @enderror
                     <small class="text-muted">
-                        <span x-data x-text="$wire.rejectionNote.length">0</span> / 500 حرف
+                        {{ mb_strlen($rejectionNote) }} / 500 حرف
                     </small>
                 </div>
             </div>
@@ -163,4 +295,40 @@
     </div>
 </div>
 
+{{-- ════════════════════════════════════════════════════════════════
+     🔧 JavaScript Bridge: ربط Livewire events بـ Bootstrap modals
+     السبب: dispatch('open-modal') من Livewire لا يفتح الـ modal تلقائياً
+            نحتاج listener يستجيب للأحداث ويتعامل مع Bootstrap API
+     ════════════════════════════════════════════════════════════════ --}}
+<script>
+document.addEventListener('livewire:initialized', () => {
+
+    // ✨ فتح modal عند استلام حدث 'open-modal' من Livewire
+    Livewire.on('open-modal', (event) => {
+        // Livewire 3 يرسل البيانات كـ array أحياناً
+        const modalId = event?.id || event?.[0]?.id || event?.[0];
+        if (!modalId) return;
+
+        const el = document.getElementById(modalId);
+        if (!el) {
+            console.warn('Modal not found:', modalId);
+            return;
+        }
+
+        const modal = bootstrap.Modal.getOrCreateInstance(el);
+        modal.show();
+    });
+
+    // ✨ إغلاق كل المودالات المفتوحة عند 'close-modal'
+    Livewire.on('close-modal', () => {
+        document.querySelectorAll('.modal.show').forEach(el => {
+            const modal = bootstrap.Modal.getInstance(el);
+            if (modal) modal.hide();
+        });
+    });
+
+});
+</script>
+
 </div>
+
