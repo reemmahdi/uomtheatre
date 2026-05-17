@@ -33,6 +33,22 @@
                     data-bs-target="#sendAllWhatsAppModal">
                 <i class="bi bi-whatsapp"></i> إرسال للكل
             </button>
+
+            {{-- ✨ زر طباعة قائمة الواتساب --}}
+            <a href="{{ route('dashboard.vip-guests.print-list', $event->uuid) }}"
+               target="_blank"
+               class="btn btn-sm"
+               style="background:#0C4A6E;color:#fff;font-weight:700;">
+                <i class="bi bi-printer-fill"></i> طباعة القائمة
+            </a>
+
+            {{-- ✨ زر طباعة الملصقات --}}
+            <a href="{{ route('dashboard.vip-guests.print-stickers', $event->uuid) }}"
+               target="_blank"
+               class="btn btn-sm"
+               style="background:#C9A530;color:#fff;font-weight:700;">
+                <i class="bi bi-tags-fill"></i> طباعة الملصقات
+            </a>
         </div>
     </div>
 

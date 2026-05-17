@@ -50,9 +50,10 @@
                 @foreach($events as $event)
                 @php
                     $totalVip = $event->total_vip_seats ?? 0;
+                    $vipFixed = $event->vip_fixed_count ?? 0;
+                    $vipExtra = $event->vip_extra_count ?? 0;
                     $available = $totalVip - $event->vip_booked;
                     $isFullyBooked = $totalVip > 0 && $event->vip_booked >= $totalVip;
-                    $hasNoExcluded = ($totalVip === 0);
                 @endphp
                 <tr>
                     <td><strong style="color: #0C4A6E;">{{ $loop->iteration }}</strong></td>
@@ -80,45 +81,38 @@
                         </small>
                     </td>
                     <td style="text-align: center;">
-                        @if($hasNoExcluded)
-                            <span class="badge bg-secondary" style="padding: 8px 16px; font-size: 13px;">
-                                <i class="bi bi-exclamation-triangle"></i>
-                                لم تُحدَّد بعد
-                            </span>
+                        <span class="badge" style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 700;">
+                            {{ $event->vip_booked }} / {{ $totalVip }}
+                        </span>
+                        @if($vipExtra > 0)
+                        <small class="d-block text-muted mt-1" style="font-size: 10px;">
+                            ({{ $vipFixed }} ثابت + {{ $vipExtra }} إضافي)
+                        </small>
                         @else
-                            <span class="badge" style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; padding: 8px 16px; font-size: 14px; font-weight: 700;">
-                                {{ $event->vip_booked }} / {{ $totalVip }}
-                            </span>
+                        <small class="d-block text-muted mt-1" style="font-size: 10px;">
+                            ({{ $vipFixed }} ثابت)
+                        </small>
                         @endif
                     </td>
                     <td style="text-align: center;">
                         <div class="d-flex gap-2 justify-content-center flex-wrap">
-                            @if($hasNoExcluded)
-                                <a href="{{ route('dashboard.seat-availability', $event->uuid) }}"
-                                   class="btn btn-sm btn-outline-warning"
-                                   style="font-weight: 600; padding: 6px 14px;"
-                                   title="حدد المقاعد المستبعدة أولاً">
-                                    <i class="bi bi-grid-3x3-gap"></i> تحديد المقاعد أولاً
-                                </a>
-                            @else
-                                <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
-                                   class="btn btn-sm"
-                                   style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; font-weight: 600; padding: 6px 14px;"
-                                   title="إدارة مقاعد الوفود">
-                                    @if($event->vip_booked == 0)
-                                        <i class="bi bi-plus-circle"></i> بدء الحجز
-                                    @else
-                                        <i class="bi bi-grid-3x3-gap"></i> إدارة المقاعد
-                                    @endif
-                                </a>
-                                @if($event->vip_booked > 0)
-                                <a href="{{ route('dashboard.vip-guests', $event->uuid) }}"
-                                   class="btn btn-sm"
-                                   style="background: linear-gradient(135deg, #15803D, #166534); color: #fff; font-weight: 600; padding: 6px 14px;"
-                                   title="إدارة قائمة الضيوف">
-                                    <i class="bi bi-people-fill"></i> الضيوف
-                                </a>
+                            <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
+                               class="btn btn-sm"
+                               style="background: linear-gradient(135deg, #0C4A6E, #075985); color: #fff; font-weight: 600; padding: 6px 14px;"
+                               title="إدارة مقاعد الوفود">
+                                @if($event->vip_booked == 0)
+                                    <i class="bi bi-plus-circle"></i> بدء الحجز
+                                @else
+                                    <i class="bi bi-grid-3x3-gap"></i> إدارة المقاعد
                                 @endif
+                            </a>
+                            @if($event->vip_booked > 0)
+                            <a href="{{ route('dashboard.vip-guests', $event->uuid) }}"
+                               class="btn btn-sm"
+                               style="background: linear-gradient(135deg, #15803D, #166534); color: #fff; font-weight: 600; padding: 6px 14px;"
+                               title="إدارة قائمة الضيوف">
+                                <i class="bi bi-people-fill"></i> الضيوف
+                            </a>
                             @endif
                         </div>
                     </td>

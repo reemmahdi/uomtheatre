@@ -37,19 +37,29 @@ class VipEvents extends BaseComponent
         $events = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($event) {
-                // ✨ مُحدَّث: المقاعد المستبعدة من الجمهور = المقاعد المتاحة للوفود
-                $excludedSeatIds = \App\Models\EventSeatAvailability::where('event_id', $event->id)
+                // ✨ مقاعد VIP الثابتة (52 - الصف 10 من Orchestra)
+                $vipFixedIds = \App\Models\Seat::where('is_vip_reserved', true)
+                    ->pluck('id')
+                    ->toArray();
+
+                // ✨ المقاعد المستبعدة من الجمهور (يحددها مدير الإعلام)
+                $excludedIds = \App\Models\EventSeatAvailability::where('event_id', $event->id)
                     ->where('is_public_available', false)
                     ->pluck('seat_id')
                     ->toArray();
 
-                $event->total_vip_seats = count($excludedSeatIds);
+                // ✨ المجموع: VIP ثابتة + مستبعدة = مقاعد الوفود
+                $vipSeatIds = array_values(array_unique(array_merge($vipFixedIds, $excludedIds)));
 
-                // الحجوزات الفعلية ضمن المقاعد المستبعدة فقط
+                $event->total_vip_seats = count($vipSeatIds);
+                $event->vip_fixed_count = count($vipFixedIds);          // عدد الـ VIP الثابتة
+                $event->vip_extra_count = count($excludedIds);          // عدد المضافة
+
+                // الحجوزات الفعلية ضمن مقاعد الوفود
                 $event->vip_booked = Reservation::where('event_id', $event->id)
                     ->where('type', 'vip_guest')
                     ->where('status', '!=', 'cancelled')
-                    ->whereIn('seat_id', $excludedSeatIds)
+                    ->whereIn('seat_id', $vipSeatIds)
                     ->count();
 
                 return $event;

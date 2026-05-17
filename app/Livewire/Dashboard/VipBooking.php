@@ -369,39 +369,48 @@ class VipBooking extends BaseComponent
         $event = Event::with('status')->findOrFail($this->eventId);
 
         // ════════════════════════════════════════════════════════════
-        // ✨ مُحدَّث: عرض فقط المقاعد المستبعدة من الجمهور
+        // ✨ مُحدَّث: مقاعد الوفود = VIP ثابتة + مقاعد مستبعدة
         // ════════════════════════════════════════════════════════════
-        // - المقاعد التي حددها مدير الإعلام بـ is_public_available=false
-        //   هي المقاعد المخصصة لحجز الوفود
-        // - لو لم يحدد مدير الإعلام أي مقاعد، الصفحة تطلع فاضية
+        // 1. المقاعد VIP الثابتة (52 مقعد - الصف 10 من Orchestra)
+        //    is_vip_reserved=true → دائماً متاحة للوفود
+        // 2. المقاعد التي يستبعدها مدير الإعلام (event_seat_availability)
+        //    is_public_available=false → إضافية للوفود
         // ════════════════════════════════════════════════════════════
-        $excludedSeatIds = \App\Models\EventSeatAvailability::where('event_id', $this->eventId)
+
+        // (1) المقاعد VIP الثابتة (52 مقعد - الصف 10 من Orchestra)
+        $vipFixedIds = Seat::where('is_vip_reserved', true)
+            ->pluck('id')
+            ->toArray();
+
+        // (2) المقاعد التي حددها مدير الإعلام لمنع حجزها من الجمهور
+        $excludedIds = \App\Models\EventSeatAvailability::where('event_id', $this->eventId)
             ->where('is_public_available', false)
             ->pluck('seat_id')
             ->toArray();
 
+        // (3) المجموع — مقاعد متاحة لحجز الوفود
+        $vipSeatIds = array_values(array_unique(array_merge($vipFixedIds, $excludedIds)));
+
         $allSeats = Seat::with('section')
-            ->whereIn('id', $excludedSeatIds)
+            ->whereIn('id', $vipSeatIds)
             ->orderBy('section_id')
             ->orderBy('row_number')
             ->orderBy('seat_number')
             ->get();
 
-        // ✨ جلب الحجوزات النشطة (فقط للمقاعد المستبعدة)
+        // الحجوزات النشطة (ضمن مقاعد الوفود فقط)
         $allReservations = Reservation::where('event_id', $this->eventId)
-            ->whereIn('seat_id', $excludedSeatIds)
+            ->whereIn('seat_id', $vipSeatIds)
             ->where('status', '!=', 'cancelled')
             ->get()
             ->keyBy('seat_id');
 
-        // ✨ تجميع حسب القسم → الصف → المقاعد
         $seatsBySection = $allSeats->groupBy('section.name');
 
-        // إحصائيات (تركز على المقاعد المستبعدة فقط)
         $stats = [
             'total_seats'     => $allSeats->count(),
             'vip_booked'      => $allReservations->where('type', 'vip_guest')->count(),
-            'public_reserved' => 0,  // المقاعد المستبعدة لا تُحجز من الجمهور
+            'public_reserved' => 0,
             'available'       => $allSeats->count() - $allReservations->count(),
         ];
 

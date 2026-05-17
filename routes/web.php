@@ -138,6 +138,42 @@ Route::middleware('admin.web')->group(function () {
     Route::get('/seats-map', fn() => view('seats-map'))->name('seats-map');
 
     // ════════════════════════════════════════════════════════════
+    // ✨ صفحات طباعة قائمة الضيوف + الملصقات
+    // ════════════════════════════════════════════════════════════
+    Route::middleware('role:super_admin,event_manager')->group(function () use ($uuidPattern) {
+
+        // طباعة قائمة الضيوف للواتساب
+        Route::get('/dashboard/events/{eventUuid}/vip-guests/print-list', function (string $eventUuid) {
+            $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
+            if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) abort(403);
+
+            $bookings = \App\Models\Reservation::with(['seat.section'])
+                ->where('event_id', $event->id)
+                ->where('type', 'vip_guest')
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            return view('pages.vip-guests-print-list', compact('event', 'bookings'));
+        })->where('eventUuid', $uuidPattern)->name('dashboard.vip-guests.print-list');
+
+        // طباعة ملصقات المقاعد
+        Route::get('/dashboard/events/{eventUuid}/vip-guests/print-stickers', function (string $eventUuid) {
+            $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
+            if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) abort(403);
+
+            $bookings = \App\Models\Reservation::with(['seat.section'])
+                ->where('event_id', $event->id)
+                ->where('type', 'vip_guest')
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('seat_id', 'asc')
+                ->get();
+
+            return view('pages.vip-guests-print-stickers', compact('event', 'bookings'));
+        })->where('eventUuid', $uuidPattern)->name('dashboard.vip-guests.print-stickers');
+    });
+
+    // ════════════════════════════════════════════════════════════
     // ✨ API endpoints لشاشة تحديد المقاعد المتاحة
     // ════════════════════════════════════════════════════════════
     //   - يستخدمها seat-availability.blade.php عبر fetch()
