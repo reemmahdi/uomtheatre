@@ -37,16 +37,26 @@ class VipEvents extends BaseComponent
         $events = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($event) {
+                // ✨ مُحدَّث: المقاعد المستبعدة من الجمهور = المقاعد المتاحة للوفود
+                $excludedSeatIds = \App\Models\EventSeatAvailability::where('event_id', $event->id)
+                    ->where('is_public_available', false)
+                    ->pluck('seat_id')
+                    ->toArray();
+
+                $event->total_vip_seats = count($excludedSeatIds);
+
+                // الحجوزات الفعلية ضمن المقاعد المستبعدة فقط
                 $event->vip_booked = Reservation::where('event_id', $event->id)
                     ->where('type', 'vip_guest')
                     ->where('status', '!=', 'cancelled')
+                    ->whereIn('seat_id', $excludedSeatIds)
                     ->count();
+
                 return $event;
             });
 
         return view('livewire.dashboard.vip-events', [
             'events' => $events,
-            'totalVipSeats' => config('theatre.vip_seats', 52),
         ]);
     }
 }

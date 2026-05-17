@@ -368,15 +368,28 @@ class VipBooking extends BaseComponent
 
         $event = Event::with('status')->findOrFail($this->eventId);
 
-        // ✨ جديد: جلب كل المقاعد (الـ 997) مرتبة حسب القسم/الصف/الرقم
+        // ════════════════════════════════════════════════════════════
+        // ✨ مُحدَّث: عرض فقط المقاعد المستبعدة من الجمهور
+        // ════════════════════════════════════════════════════════════
+        // - المقاعد التي حددها مدير الإعلام بـ is_public_available=false
+        //   هي المقاعد المخصصة لحجز الوفود
+        // - لو لم يحدد مدير الإعلام أي مقاعد، الصفحة تطلع فاضية
+        // ════════════════════════════════════════════════════════════
+        $excludedSeatIds = \App\Models\EventSeatAvailability::where('event_id', $this->eventId)
+            ->where('is_public_available', false)
+            ->pluck('seat_id')
+            ->toArray();
+
         $allSeats = Seat::with('section')
+            ->whereIn('id', $excludedSeatIds)
             ->orderBy('section_id')
             ->orderBy('row_number')
             ->orderBy('seat_number')
             ->get();
 
-        // ✨ جديد: جلب كل الحجوزات النشطة (وفود + جمهور) - keyed by seat_id
+        // ✨ جلب الحجوزات النشطة (فقط للمقاعد المستبعدة)
         $allReservations = Reservation::where('event_id', $this->eventId)
+            ->whereIn('seat_id', $excludedSeatIds)
             ->where('status', '!=', 'cancelled')
             ->get()
             ->keyBy('seat_id');
@@ -384,11 +397,11 @@ class VipBooking extends BaseComponent
         // ✨ تجميع حسب القسم → الصف → المقاعد
         $seatsBySection = $allSeats->groupBy('section.name');
 
-        // إحصائيات
+        // إحصائيات (تركز على المقاعد المستبعدة فقط)
         $stats = [
             'total_seats'     => $allSeats->count(),
             'vip_booked'      => $allReservations->where('type', 'vip_guest')->count(),
-            'public_reserved' => $allReservations->where('type', '!=', 'vip_guest')->count(),
+            'public_reserved' => 0,  // المقاعد المستبعدة لا تُحجز من الجمهور
             'available'       => $allSeats->count() - $allReservations->count(),
         ];
 

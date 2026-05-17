@@ -136,6 +136,93 @@ Route::middleware('admin.web')->group(function () {
 
     // ✨ /seats-map داخل admin.web (تجنب data leak)
     Route::get('/seats-map', fn() => view('seats-map'))->name('seats-map');
+
+    // ════════════════════════════════════════════════════════════
+    // ✨ API endpoints لشاشة تحديد المقاعد المتاحة
+    // ════════════════════════════════════════════════════════════
+    //   - يستخدمها seat-availability.blade.php عبر fetch()
+    //   - محمية بصلاحية manageVipSeats (super_admin + event_manager)
+    //   - مفتاح المقعد = label (مثل "A-1-3")
+    // ════════════════════════════════════════════════════════════
+    Route::middleware('role:super_admin,event_manager')->prefix('api/events')->group(function () use ($uuidPattern) {
+
+        // ── GET: جلب المقاعد المستبعدة + الإحصائيات ──
+        Route::get('/{eventUuid}/availability', function (string $eventUuid) {
+            $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
+
+            // التحقق من الصلاحية (defense in depth)
+            if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) {
+                return response()->json(['error' => 'غير مصرح لك'], 403);
+            }
+
+            // التحقق من حالة الفعالية
+            if (!in_array($event->status?->name, ['active', 'published'], true)) {
+                return response()->json([
+                    'error' => 'يمكن إدارة المقاعد فقط للفعاليات النشطة أو المنشورة'
+                ], 400);
+            }
+
+            $service = app(\App\Services\EventSeatAvailabilityService::class);
+
+            // التهيئة لو لزم
+            if (!$service->isInitialized($event)) {
+                $service->initializeForEvent($event);
+            }
+
+            // جلب الـ seat IDs المستبعدة + ترجمتها لـ labels (مثل "A-1-3")
+            $excludedSeatIds = $service->getExcludedSeatIds($event);
+
+            $excludedKeys = \App\Models\Seat::whereIn('id', $excludedSeatIds)
+                ->pluck('label')
+                ->toArray();
+
+            return response()->json([
+                'excluded_seat_keys' => $excludedKeys,
+                'stats'              => $service->getStats($event),
+            ]);
+        })->where('eventUuid', $uuidPattern);
+
+        // ── POST: حفظ المقاعد المستبعدة ──
+        Route::post('/{eventUuid}/availability/save', function (string $eventUuid, \Illuminate\Http\Request $request) {
+            $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
+
+            if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) {
+                return response()->json(['error' => 'غير مصرح لك'], 403);
+            }
+
+            $excludedKeys = $request->input('excluded_seat_keys', []);
+
+            if (!is_array($excludedKeys)) {
+                return response()->json(['error' => 'بيانات غير صحيحة'], 422);
+            }
+
+            // ترجمة الـ keys (labels) إلى seat IDs
+            $excludedSeatIds = \App\Models\Seat::whereIn('label', $excludedKeys)
+                ->pluck('id')
+                ->toArray();
+
+            $allSeatIds = \App\Models\Seat::pluck('id')->toArray();
+            $availableSeatIds = array_values(array_diff($allSeatIds, $excludedSeatIds));
+
+            $service = app(\App\Services\EventSeatAvailabilityService::class);
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($event, $availableSeatIds, $excludedSeatIds, $service) {
+                if (!empty($availableSeatIds)) {
+                    $service->bulkUpdate($event, $availableSeatIds, true);
+                }
+                if (!empty($excludedSeatIds)) {
+                    $service->bulkUpdate($event, $excludedSeatIds, false, 'استبعاد من قبل مدير الإعلام');
+                }
+            });
+
+            return response()->json([
+                'success'        => true,
+                'excluded_count' => count($excludedSeatIds),
+                'available_count' => count($availableSeatIds),
+                'stats'          => $service->getStats($event),
+            ]);
+        })->where('eventUuid', $uuidPattern);
+    });
 });
 
 // redirect ذكي حسب حالة المصادقة
