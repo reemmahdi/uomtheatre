@@ -24,7 +24,7 @@
         </div>
         <div class="flex-grow-1">
             <h5 class="mb-1" style="color: #92400E; font-weight: 700;">
-                <i class="bi bi-exclamation-triangle-fill"></i> الحجز موقوف مؤقتاً
+                <i class="bi bi-exclamation-triangle-fill"></i> الحجز متوقف مؤقتاً
             </h5>
             <p class="mb-0" style="color: #78350F;">
                 لا يمكن إضافة حجوزات جديدة لهذه الفعالية حالياً.
@@ -147,7 +147,7 @@
             @else
                 {{-- ⚪ متاح --}}
                 @if($event->is_booking_paused)
-                    <div class="seat-item-wrapper" title="الحجز موقوف">
+                    <div class="seat-item-wrapper" title="الحجز متوقف">
                         <div class="seat-item paused">
                             <div class="seat-chair">
                                 <div class="chair-back"></div>

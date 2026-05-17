@@ -21,7 +21,7 @@
                 تحديد المقاعد المتاحة للجمهور
             </h5>
             <small class="text-muted">
-                {{ $event->title }} — اضغطي على المقعد لاستبعاده/إعادة إتاحته
+                {{ $event->title }} — انقر على المقعد لاستبعاده أو إعادة إتاحته
             </small>
         </div>
         <div class="d-flex gap-2 flex-wrap">
@@ -97,7 +97,7 @@
         {{-- أدوات الاستبعاد --}}
         <div class="col-md-7">
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <small class="fw-bold text-muted">⚡ أدوات سريعة:</small>
+                <small class="fw-bold text-muted">أدوات سريعة:</small>
                 <button id="btnIncludeAll" class="btn btn-outline-success btn-sm">
                     <i class="bi bi-check2-square"></i> إتاحة الكل
                 </button>
@@ -128,12 +128,12 @@
                 </span>
                 <span>
                     <span style="display: inline-block; width: 14px; height: 14px; background: #C9A530; border-radius: 50%; vertical-align: middle; border: 1.5px solid #A88729;"></span>
-                    VIP / محمي
+                    VIP
                 </span>
             </div>
             {{-- ✨ Info box للمقعد المحدد --}}
             <div id="seatInfoBox" class="text-end" style="font-size: 13px; padding: 8px 12px; background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0; min-height: 38px; display: flex; align-items: center; justify-content: flex-end; color: #64748b;">
-                <i class="bi bi-cursor-fill me-2"></i> اضغطي على مقعد لعرض تفاصيله
+                اختر مقعداً لعرض تفاصيله
             </div>
         </div>
     </div>
@@ -157,10 +157,10 @@
             {{-- ضوء المسرح --}}
             <ellipse cx="850" cy="320" rx="900" ry="280" fill="url(#stageGlow)" pointer-events="none"/>
 
-            {{-- شريط المسرح داخل SVG --}}
-            <rect x="200" y="280" width="1300" height="50" rx="8" fill="#0C4A6E" pointer-events="none"/>
+            {{-- شريط المسرح داخل SVG (برغندي رسمي) --}}
+            <rect x="200" y="280" width="1300" height="50" rx="8" fill="#7B1E2F" pointer-events="none"/>
             <text x="850" y="313" text-anchor="middle" fill="#fff" font-weight="700" font-size="28" pointer-events="none">
-                🎭 خشبة المسرح
+                خشبة المسرح
             </text>
 
             {{-- مجموعة المقاعد --}}
@@ -333,7 +333,7 @@
         const statusInfo = {
             available: { color: '#16A34A', bg: '#dcfce7', icon: 'bi-check-circle-fill', text: 'متاح للجمهور' },
             excluded:  { color: '#DC2626', bg: '#fef2f2', icon: 'bi-x-circle-fill', text: 'مستبعد (محجوز)' },
-            vip:       { color: '#A88729', bg: '#fef9e7', icon: 'bi-shield-fill', text: 'VIP — محمي' },
+            vip:       { color: '#A88729', bg: '#fef9e7', icon: 'bi-shield-fill', text: 'VIP' },
         };
         const info = statusInfo[status] || statusInfo.available;
 
@@ -467,11 +467,11 @@
             if (window.SwalHelper?.success) {
                 SwalHelper.success(`تم حفظ التغييرات بنجاح (${data.excluded_count || excludedKeys.size} مقعد مستبعد)`);
             } else {
-                alert('✅ تم حفظ التغييرات بنجاح');
+                alert('تم حفظ التغييرات بنجاح');
             }
         } catch (err) {
             console.error(err);
-            alert('❌ فشل الحفظ: ' + err.message);
+            alert('فشل الحفظ: ' + err.message);
         } finally {
             btn.disabled = false;
         }
