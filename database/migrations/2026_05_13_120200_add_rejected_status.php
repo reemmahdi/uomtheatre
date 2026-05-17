@@ -37,6 +37,27 @@ return new class extends Migration
     {
         $now = now();
 
+        // ════════════════════════════════════════════════════════════
+        // ✨ PostgreSQL: مزامنة الـ sequence مع MAX(id) قبل أي INSERT
+        // ════════════════════════════════════════════════════════════
+        // المشكلة: الـ seeder يدخل records بـ IDs محددة (1, 2, 3...)
+        //         لكن الـ sequence counter لسه عند 1. عندما updateOrInsert
+        //         يحاول INSERT جديد، يستخدم الـ sequence → id=2 → فشل.
+        //
+        // الحل: setval(sequence, MAX(id)) قبل INSERT
+        //
+        // ملاحظة: في MySQL ما يحدث هذا (auto_increment يتحدّث تلقائياً)
+        // ════════════════════════════════════════════════════════════
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("
+                SELECT setval(
+                    pg_get_serial_sequence('statuses', 'id'),
+                    COALESCE((SELECT MAX(id) FROM statuses), 1),
+                    true
+                )
+            ");
+        }
+
         DB::table('statuses')->updateOrInsert(
             ['name' => 'rejected'],
             [
@@ -46,8 +67,6 @@ return new class extends Migration
                 'created_at'   => $now,
             ]
         );
-
-        echo "  ✅ تم إضافة حالة 'rejected'\n";
     }
 
     public function down(): void
