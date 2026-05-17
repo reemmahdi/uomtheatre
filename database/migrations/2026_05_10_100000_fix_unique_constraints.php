@@ -56,6 +56,21 @@ return new class extends Migration {
 
     public function up(): void
     {
+        // ════════════════════════════════════════════════════════════
+        // ✨ Safety check: تجاوز إذا الجدول غير موجود
+        // ════════════════════════════════════════════════════════════
+        // السبب: في PostgreSQL (Laravel Cloud)، الـ migrations تشتغل
+        //        بترتيب أبجدي، وهذا الـ migration يجي قبل
+        //        'migration_event_seat_availability' (بدون timestamp).
+        //
+        // الحل: تجاوز بصمت. الـ migration التهيئة سينشئ الجدول لاحقاً،
+        //       وبعده migration 'normalize_seat_availability_indexes'
+        //       سيصلح اسم الـ index.
+        // ════════════════════════════════════════════════════════════
+        if (!Schema::hasTable('event_seat_availability')) {
+            return;
+        }
+
         // ─────────────────────────────────────────────
         // 1. event_seat_availability table
         // ─────────────────────────────────────────────
@@ -87,6 +102,10 @@ return new class extends Migration {
         // ملاحظة: نحذف الـ UNIQUE من reservations نهائياً
         // لأنه يمنع re-booking بعد cancellation
         // ─────────────────────────────────────────────
+
+        if (!Schema::hasTable('reservations')) {
+            return;
+        }
 
         $oldNamesReservations = [
             'unique_event_seat',
