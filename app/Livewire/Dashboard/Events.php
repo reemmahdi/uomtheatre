@@ -585,15 +585,21 @@ class Events extends BaseComponent
      */
     public function requestChangeStatus(int $eventId, string $newStatusName)
     {
+        // ✨ مُحدَّث: رسالة مخصصة للفعاليات المرفوضة (إعادة إرسال)
+        $event = Event::find($eventId);
+        $isResubmit = $event && $event->status?->name === Status::REJECTED;
+
         $messages = [
-            'added'        => 'سيتم إرسال الفعالية لمكتب رئاسة الجامعة للموافقة. لن يمكنك التعديل عليها بعد الإرسال.',
+            'added'        => $isResubmit
+                ? 'إعادة إرسال الفعالية لمكتب رئاسة الجامعة للموافقة (دورة جديدة). لن يمكنك التعديل عليها بعد الإرسال.'
+                : 'سيتم إرسال الفعالية لمكتب رئاسة الجامعة للموافقة. لن يمكنك التعديل عليها بعد الإرسال.',
             'active'       => 'قبول الفعالية؟',
             'published'    => 'نشر الفعالية للجمهور؟',
             'closed'       => 'إغلاق الفعالية؟',
         ];
 
         $titles = [
-            'added'        => 'تأكيد الإرسال للموافقة',
+            'added'        => $isResubmit ? 'تأكيد إعادة الإرسال' : 'تأكيد الإرسال للموافقة',
             'active'       => 'تأكيد القبول',
             'published'    => 'تأكيد النشر',
             'closed'       => 'تأكيد الإغلاق',

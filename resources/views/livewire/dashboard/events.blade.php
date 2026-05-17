@@ -243,19 +243,20 @@
                                 <i class="bi bi-eye"></i>
                             </button>
 
-                            {{-- ✨ مدير الإعلام: تعديل + إرسال للموافقة (للمسودات فقط) --}}
+                            {{-- ✨ مدير الإعلام: تعديل + إرسال للموافقة --}}
+                            {{-- 🔧 مُحدَّث: يظهر للمسودات + الفعاليات المرفوضة (لإعادة الإرسال) --}}
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
-                                @if($sName === 'draft')
+                                @if(in_array($sName, ['draft', 'rejected']))
                                 <button type="button"
                                         class="btn-action btn-action-edit"
                                         wire:click="openEdit({{ $event->id }})"
-                                        title="تعديل">
+                                        title="{{ $sName === 'rejected' ? 'تعديل وإعادة إرسال' : 'تعديل' }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button type="button"
                                         class="btn-action btn-action-send"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'added')"
-                                        title="إرسال للموافقة">
+                                        title="{{ $sName === 'rejected' ? 'إعادة الإرسال للموافقة' : 'إرسال للموافقة' }}">
                                     <i class="bi bi-send"></i>
                                 </button>
                                 @endif

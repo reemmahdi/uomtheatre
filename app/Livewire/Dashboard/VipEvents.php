@@ -34,7 +34,8 @@ class VipEvents extends BaseComponent
             $query->where('title', 'like', '%' . $this->searchTitle . '%');
         }
 
-        $events = $query->orderBy('created_at', 'desc')
+        // ✨ مُحدَّث: ترتيب حسب الإضافة (الأحدث أولاً) - id أكثر ثباتاً من created_at
+        $events = $query->orderBy('id', 'desc')
             ->get()
             ->map(function ($event) {
                 // ✨ مقاعد VIP الثابتة (52 - الصف 10 من Orchestra)

@@ -70,9 +70,9 @@ class EventPolicy
             return false;
         }
 
-        // فعالياته فقط + مسودة فقط
+        // ✨ مُحدَّث: السماح بتعديل المسودات + الفعاليات المرفوضة (لإعادة الإرسال)
         return $event->created_by === $user->id
-            && $event->isDraft();
+            && in_array($event->status?->name, [Status::DRAFT, Status::REJECTED], true);
     }
 
     public function delete(User $user, Event $event): bool
@@ -81,12 +81,13 @@ class EventPolicy
             return false;
         }
 
+        // ✨ مُحدَّث: السماح بحذف المسودات + المرفوضة
         return $event->created_by === $user->id
-            && $event->isDraft();
+            && in_array($event->status?->name, [Status::DRAFT, Status::REJECTED], true);
     }
 
     // ════════════════════════════════════════════════════════════
-    // إرسال للموافقة (draft → added)
+    // إرسال للموافقة (draft/rejected → added)
     // ════════════════════════════════════════════════════════════
 
     public function send(User $user, Event $event): bool
@@ -95,8 +96,9 @@ class EventPolicy
             return false;
         }
 
+        // ✨ مُحدَّث: السماح بإرسال المسودات + إعادة إرسال المرفوضة
         return $event->created_by === $user->id
-            && $event->isDraft();
+            && in_array($event->status?->name, [Status::DRAFT, Status::REJECTED], true);
     }
 
     // ════════════════════════════════════════════════════════════
