@@ -11,25 +11,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * Staff — UOMTheatre (مُحدّث - إصلاحات Claude)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات:
- *   🔴 إزالة hardcoded role_id=6 → Role::USER ديناميكياً
- *   🔴 authorize() في كل method (مش فقط render)
- *   🔴 منع إنشاء/تعديل super_admin من الـ form (security)
- *   🟡 nullsafe على role
- *   🟡 redirect في mount بدل render
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('إدارة الموظفين')]
 class Staff extends BaseComponent
 {
-    // ==================== Properties ====================
     public string $name = '';
     public string $email = '';
     public string $password = '';
@@ -43,9 +28,6 @@ class Staff extends BaseComponent
     public string $editPhone = '';
     public int $editRoleId = 0;
 
-    /**
-     * ✨ helper: التحقق من super_admin
-     */
     protected function authorizeSuperAdmin(): void
     {
         if (!Auth::user()?->isSuperAdmin()) {
@@ -53,9 +35,6 @@ class Staff extends BaseComponent
         }
     }
 
-    /**
-     * ✨ helper: التحقق أن الدور المختار ليس super_admin (حماية)
-     */
     protected function validateRoleNotSuperAdmin(int $roleId): void
     {
         $superAdminId = Role::where('name', Role::SUPER_ADMIN)->value('id');
@@ -70,10 +49,9 @@ class Staff extends BaseComponent
         $this->authorizeSuperAdmin();
     }
 
-    // ==================== إنشاء موظف جديد ====================
     public function createStaff(): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         $this->validate([
             'name'     => 'required|string|max:255',
@@ -91,7 +69,6 @@ class Staff extends BaseComponent
             'role_id.exists'    => 'الدور المحدد غير صالح',
         ]);
 
-        // ✨ منع إنشاء super_admin من هذه الشاشة (security)
         $this->validateRoleNotSuperAdmin($this->role_id);
 
         try {
@@ -112,14 +89,12 @@ class Staff extends BaseComponent
         }
     }
 
-    // ==================== فتح نافذة التعديل ====================
     public function openEdit(int $id): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         $user = User::findOrFail($id);
 
-        // ✨ منع تعديل super_admin من هنا (يجب أن يكون من الـ database مباشرة)
         if ($user->isSuperAdmin()) {
             $this->swalError('حسابات super_admin لا يمكن تعديلها من هذه الشاشة');
             return;
@@ -133,10 +108,9 @@ class Staff extends BaseComponent
         $this->editPassword = '';
     }
 
-    // ==================== تحديث بيانات الموظف ====================
     public function updateStaff(): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         $rules = [
             'editName'   => 'required|string|max:255',
@@ -161,7 +135,6 @@ class Staff extends BaseComponent
         try {
             $user = User::findOrFail($this->editId);
 
-            // ✨ حماية إضافية: منع ترقية حساب موجود إلى super_admin
             if ($user->isSuperAdmin()) {
                 $this->swalError('حسابات super_admin لا يمكن تعديلها');
                 return;
@@ -187,7 +160,6 @@ class Staff extends BaseComponent
         }
     }
 
-    // ==================== طلب تأكيد تغيير الحالة ====================
     public function requestToggleStatus(int $id): void
     {
         $this->authorizeSuperAdmin();
@@ -210,11 +182,10 @@ class Staff extends BaseComponent
         );
     }
 
-    // ==================== تنفيذ تغيير الحالة بعد التأكيد ====================
     #[On('confirmToggleStatus')]
     public function confirmToggleStatus($id): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         try {
             $user = User::findOrFail($id);
@@ -233,22 +204,20 @@ class Staff extends BaseComponent
         }
     }
 
-    // ==================== Render ====================
     public function render()
     {
         $this->authorizeSuperAdmin();
 
-        // ✨ مُصحَّح: ديناميكي بدل hardcoded 6
         $userRoleId        = Role::where('name', Role::USER)->value('id');
         $superAdminRoleId  = Role::where('name', Role::SUPER_ADMIN)->value('id');
 
         return view('livewire.dashboard.staff', [
-            // الموظفون: كل من ليس "user" عادي ولا "super_admin"
+
             'staff' => User::with('role')
                 ->whereNotIn('role_id', array_filter([$userRoleId, $superAdminRoleId]))
                 ->orderByDesc('created_at')
                 ->get(),
-            // الأدوار المسموحة في الفورم: ليست super_admin ولا user
+
             'roles' => Role::whereNotIn('name', [Role::SUPER_ADMIN, Role::USER])
                 ->orderBy('id')
                 ->get(),

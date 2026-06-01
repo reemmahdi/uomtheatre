@@ -4,22 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * ════════════════════════════════════════════════════════════
- * Permission Model — UOMTheatre
- * ════════════════════════════════════════════════════════════
- *
- * يمثّل صلاحية واحدة في النظام (مثل: events.create, vip.manage)
- *
- * العلاقات:
- *   - many-to-many مع Role عبر جدول role_permission
- *
- * الاستخدام:
- *   $perm = Permission::where('name', 'events.create')->first();
- *   $rolesWithThisPerm = $perm->roles;
- *
- * ════════════════════════════════════════════════════════════
- */
 class Permission extends Model
 {
     protected $fillable = [
@@ -29,17 +13,11 @@ class Permission extends Model
         'group',
     ];
 
-    /**
-     * العلاقة: كل صلاحية ممكن تنتمي لعدة أدوار
-     */
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_permission');
     }
 
-    // ════════════════════════════════════════════════════════
-    // Constants لأسماء الصلاحيات (للأمان أكثر من string literals)
-    // ════════════════════════════════════════════════════════
     const EVENTS_CREATE           = 'events.create';
     const EVENTS_EDIT             = 'events.edit';
     const EVENTS_DELETE           = 'events.delete';

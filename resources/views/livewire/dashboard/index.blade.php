@@ -4,9 +4,6 @@
 <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--             👑 مدير النظام super_admin         --}}
-{{-- ══════════════════════════════════════════════ --}}
 @if($roleName === 'super_admin')
 <div class="row g-4 mb-4">
     <div class="col-md-3">
@@ -137,12 +134,9 @@
     </table>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--        🎭 مدير المسرح theater_manager          --}}
-{{-- ══════════════════════════════════════════════ --}}
 @elseif($roleName === 'theater_manager')
 <div class="row g-4 mb-4">
-    {{-- 1. كل الفعاليات --}}
+    
     <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #0C4A6E;">
             <div class="d-flex justify-content-between align-items-center">
@@ -157,7 +151,7 @@
         </div>
     </div>
 
-    {{-- 2. الفعاليات المرسلة للإعلام (لمدير المسرح) / المنشورة (للآخرين) --}}
+    
     <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #0369A1;">
             <div class="d-flex justify-content-between align-items-center">
@@ -181,7 +175,7 @@
         </div>
     </div>
 
-    {{-- 3. الفعاليات المسوّدة --}}
+    
     <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #94A3B8;">
             <div class="d-flex justify-content-between align-items-center">
@@ -196,7 +190,7 @@
         </div>
     </div>
 
-    {{-- 4. الفعاليات الملغاة (المحذوفة) --}}
+    
     <div class="col-md-3">
         <div class="stat-card" style="border-bottom:3px solid #B91C1C;">
             <div class="d-flex justify-content-between align-items-center">
@@ -217,9 +211,6 @@
     <p class="text-muted mb-0">بصفتك مدير قاعة الدكتور محمود الجليلي، مهمتك إنشاء الفعاليات والتأكد من صحة بياناتها، ثم إحالتها إلى مدير الإعلام. وتبقى إمكانية التعديل متاحة ما دامت الفعالية في حالة "مسودة".</p>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--        📢 مدير الإعلام event_manager           --}}
-{{-- ══════════════════════════════════════════════ --}}
 @elseif($roleName === 'event_manager')
 <div class="row g-4 mb-4">
     <div class="col-md-3">
@@ -281,9 +272,6 @@
     <p class="text-muted mb-0">بصفتك مدير الإعلام ومسؤول الفعاليات في النظام، مهمتك تدقيق الفعاليات المرسلة من قبل مدير المسرح، ثم حجز مقاعد الوفود ونشر الفعاليات للجمهور بعد إتمام عملية الحجز.</p>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--         📋 موظف الاستقبال receptionist         --}}
-{{-- ══════════════════════════════════════════════ --}}
 @elseif($roleName === 'receptionist')
 <div class="row g-4 mb-4">
     <div class="col-md-6">
@@ -323,9 +311,6 @@
     </a>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--     📊 مكتب الرئيس university_office           --}}
-{{-- ══════════════════════════════════════════════ --}}
 @elseif($roleName === 'university_office')
 <div class="row g-4 mb-4">
     <div class="col-md-4">

@@ -2,89 +2,61 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * ════════════════════════════════════════════════════════════
- * Migration للمرحلة 1.أ — UOMTheatre
- * ════════════════════════════════════════════════════════════
- *
- * ينشئ ثلاثة جداول جديدة:
- *
- * 1. permissions          : قائمة الصلاحيات في النظام
- * 2. role_permission      : ربط الأدوار بالصلاحيات (Pivot)
- * 3. event_approvals      : موافقات كل دور على كل فعالية (متوازي)
- *
- * ════════════════════════════════════════════════════════════
- */
 return new class extends Migration
 {
     public function up(): void
     {
-        // ════════════════════════════════════════════════════════
-        // 1. جدول permissions — قائمة الصلاحيات
-        // ════════════════════════════════════════════════════════
-        Schema::create('permissions', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();           // مثل: events.create
-            $table->string('display_name');             // مثل: إنشاء فعالية
-            $table->text('description')->nullable();    // وصف تفصيلي
-            $table->string('group')->default('general'); // للتجميع في الشاشة
-            $table->timestamps();
-        });
+        if (!Schema::hasColumn('event_approvals', 'role_id')) {
+            return;
+        }
 
-        // ════════════════════════════════════════════════════════
-        // 2. جدول role_permission — Pivot لربط الأدوار بالصلاحيات
-        // ════════════════════════════════════════════════════════
-        Schema::create('role_permission', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
-            $table->foreignId('permission_id')->constrained('permissions')->onDelete('cascade');
-            $table->timestamps();
+        $driver = DB::getDriverName();
 
-            // كل دور لا يمكن أن يحصل على نفس الصلاحية مرتين
-            $table->unique(['role_id', 'permission_id']);
-        });
+        try {
+            if ($driver === 'mysql') {
+                DB::statement("ALTER TABLE `event_approvals` DROP FOREIGN KEY `event_approvals_role_id_foreign`");
+            } elseif ($driver === 'pgsql') {
+                DB::statement("ALTER TABLE event_approvals DROP CONSTRAINT IF EXISTS event_approvals_role_id_foreign");
+            }
+        } catch (\Throwable $e) {
+        }
 
-        // ════════════════════════════════════════════════════════
-        // 3. جدول event_approvals — موافقات الفعاليات
-        //
-        // كل فعالية تحتاج موافقتين (مدير المسرح + مكتب الرئيس)
-        // كل موافقة تُسجَّل بشكل منفصل مع timestamp
-        //
-        // ✨ يستخدم UUID للحماية ضد IDOR (مثل جدول events)
-        // ════════════════════════════════════════════════════════
-        Schema::create('event_approvals', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('uuid')->unique();  // ✨ للحماية ضد IDOR
+        $indexes = [
+            'event_approvals_role_id_index',
+            'event_approvals_role_id_status_index',
+        ];
 
-            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('role_id')->constrained('roles');
+        foreach ($indexes as $indexName) {
+            try {
+                if ($driver === 'mysql') {
+                    DB::statement("DROP INDEX `{$indexName}` ON `event_approvals`");
+                } elseif ($driver === 'pgsql') {
+                    DB::statement("DROP INDEX IF EXISTS {$indexName}");
+                }
+            } catch (\Throwable $e) {
+            }
+        }
 
-            // حالة الموافقة: pending / approved / rejected
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-
-            // ملاحظة اختيارية (سبب الرفض مثلاً)
-            $table->text('note')->nullable();
-
-            // timestamps للتتبع
-            $table->timestamp('approved_at')->nullable();
-            $table->timestamp('rejected_at')->nullable();
-            $table->timestamps();
-
-            // كل دور لا يمكنه الموافقة على نفس الفعالية مرتين
-            $table->unique(['event_id', 'role_id'], 'unique_event_role_approval');
-
-            // فهرس للبحث السريع عن الفعاليات بانتظار موافقة دور معيّن
-            $table->index(['role_id', 'status']);
+        Schema::table('event_approvals', function (Blueprint $table) {
+            $table->dropColumn('role_id');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('event_approvals');
-        Schema::dropIfExists('role_permission');
-        Schema::dropIfExists('permissions');
+        if (Schema::hasColumn('event_approvals', 'role_id')) {
+            return;
+        }
+
+        Schema::table('event_approvals', function (Blueprint $table) {
+            $table->foreignId('role_id')
+                ->nullable()
+                ->after('event_id')
+                ->constrained('roles')
+                ->nullOnDelete();
+        });
     }
 };

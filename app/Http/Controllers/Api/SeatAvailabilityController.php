@@ -10,25 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * SeatAvailabilityController — UOMTheatre
- * ════════════════════════════════════════════════════════════════
- *
- * API endpoints لإدارة إتاحة المقاعد للجمهور:
- *
- *   GET  /api/events/{uuid}/availability      → جلب المستبعدات
- *   POST /api/events/{uuid}/availability/save → حفظ التغييرات
- *
- * ملاحظة: كل المقاعد متساوية - لا يوجد فلترة VIP
- *
- * ════════════════════════════════════════════════════════════════
- */
 class SeatAvailabilityController extends Controller
 {
-    /**
-     * GET — جلب قائمة المقاعد المستبعدة لفعالية
-     */
     public function show(string $eventUuid): JsonResponse
     {
         $event = Event::where('uuid', $eventUuid)->firstOrFail();
@@ -43,33 +26,35 @@ class SeatAvailabilityController extends Controller
             $service->initializeForEvent($event);
         }
 
-        // جلب كل المقاعد المستبعدة
         $excludedSeatIds = $service->getExcludedSeatIds($event);
 
-        // تحويل IDs إلى مفاتيح بصيغة "A-10-5"
         $excludedKeys = Seat::whereIn('id', $excludedSeatIds)
-            ->with('section')
-            ->get()
-            ->map(function ($seat) {
-                return "{$seat->section->name}-{$seat->row_number}-{$seat->seat_number}";
-            })
+            ->pluck('label')
+            ->filter()
             ->values()
             ->toArray();
 
-        $totalSeats = Seat::count();
+        $vipSeatKeys = Seat::where('is_vip_reserved', true)
+            ->pluck('label')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        $totalSeats   = Seat::count();
+        $vipCount     = count($vipSeatKeys);
+        $excludedCount = count($excludedKeys);
 
         return response()->json([
             'event_title'        => $event->title,
             'excluded_seat_keys' => $excludedKeys,
-            'excluded_count'     => count($excludedKeys),
-            'available_count'    => $totalSeats - count($excludedKeys),
+            'vip_seat_keys'      => $vipSeatKeys,
+            'vip_count'          => $vipCount,
+            'excluded_count'     => $excludedCount,
+            'available_count'    => $totalSeats - $vipCount - $excludedCount,
             'total_seats'        => $totalSeats,
         ]);
     }
 
-    /**
-     * POST — حفظ التغييرات
-     */
     public function save(Request $request, string $eventUuid): JsonResponse
     {
         $event = Event::where('uuid', $eventUuid)->firstOrFail();
@@ -85,7 +70,6 @@ class SeatAvailabilityController extends Controller
 
         $excludedKeys = $validated['excluded_keys'] ?? [];
 
-        // تحويل المفاتيح إلى seat IDs
         $excludedSeatIds = [];
         foreach ($excludedKeys as $key) {
             [$sectionName, $row, $num] = explode('-', $key);
@@ -101,11 +85,9 @@ class SeatAvailabilityController extends Controller
 
         $service = app(EventSeatAvailabilityService::class);
 
-        // 1. أولاً: جعل كل المقاعد متاحة
         $allSeatIds = Seat::pluck('id')->toArray();
         $service->bulkUpdate($event, $allSeatIds, true);
 
-        // 2. ثم: استبعاد فقط ما يجب استبعاده
         if (!empty($excludedSeatIds)) {
             $service->bulkUpdate($event, $excludedSeatIds, false, 'استبعد بواسطة مدير الإعلام');
         }

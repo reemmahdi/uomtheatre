@@ -1,15 +1,7 @@
-{{-- ════════════════════════════════════════════════════════════════
-     شاشة الموافقات — UOMTheatre
 
-     ✏️ مُحدَّث في هذه النسخة:
-       - حذف عمود "الوصف" من الجدول (يظهر في modal التفاصيل)
-       - حذف Alpine.js نهائياً (كان يكسر الأزرار)
-       - عدّاد الحروف يستخدم strlen() مباشرة من Livewire
-     ════════════════════════════════════════════════════════════════ --}}
 
 <div>
 
-{{-- ✨ شريط الإحصائيات --}}
 <div class="card-custom p-3 mb-3">
     <div class="row g-2 align-items-center">
         <div class="col-md-7">
@@ -30,7 +22,6 @@
     </div>
 </div>
 
-{{-- ✨ قائمة الفعاليات (4 أعمدة فقط) --}}
 @if($events->count() > 0)
 <div class="card-custom p-0">
     <div class="table-responsive">
@@ -48,7 +39,7 @@
                 @php
                     $startTime = $event->start_datetime->format('h:i');
                     $period = $event->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
-                @endphp
+@endphp
                 <tr>
                     <td><strong style="color: #0C4A6E;">{{ $loop->iteration }}</strong></td>
                     <td>
@@ -66,7 +57,7 @@
                     </td>
                     <td style="text-align: center;">
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
-                            {{-- 👁️ زر التفاصيل --}}
+                            
                             <button type="button"
                                     wire:click="openDetailsModal({{ $event->id }})"
                                     class="btn btn-sm"
@@ -75,7 +66,7 @@
                                 <i class="bi bi-eye-fill"></i> تفاصيل
                             </button>
 
-                            {{-- ✅ زر الموافقة --}}
+                            
                             <button type="button"
                                     wire:click="requestApprove({{ $event->id }})"
                                     class="btn btn-sm"
@@ -83,7 +74,7 @@
                                 <i class="bi bi-check-circle-fill"></i> موافقة
                             </button>
 
-                            {{-- ❌ زر الرفض --}}
+                            
                             <button type="button"
                                     wire:click="openRejectModal({{ $event->id }})"
                                     class="btn btn-sm btn-outline-danger"
@@ -106,9 +97,6 @@
 </div>
 @endif
 
-{{-- ════════════════════════════════════════════════════════════════
-     👁️ نافذة عرض التفاصيل
-     ════════════════════════════════════════════════════════════════ --}}
 <div class="modal fade" id="eventDetailsModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -180,13 +168,13 @@
                     </div>
                 </div>
 
-                {{-- سجل الرفض السابق --}}
+                
                 @php
                     $currentRound = $viewingEvent->currentRound();
                     $previousApprovals = $viewingEvent->approvals
                         ->where('status', 'rejected')
                         ->sortBy('round_number');
-                @endphp
+@endphp
 
                 @if($previousApprovals->count() > 0)
                 <div class="alert alert-warning mt-3" style="background: #fef3c7; border-color: #f59e0b; color: #92400e;">
@@ -241,9 +229,6 @@
     </div>
 </div>
 
-{{-- ════════════════════════════════════════════════════════════════
-     ❌ نافذة الرفض (بدون Alpine - عدّاد بسيط)
-     ════════════════════════════════════════════════════════════════ --}}
 <div class="modal fade" id="rejectApprovalModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -262,7 +247,7 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold">سبب الرفض <small class="text-muted">(اختياري)</small></label>
 
-                    {{-- ✏️ مُحدَّث: بدون Alpine، عدّاد من Livewire مباشرة --}}
+                    
                     <textarea wire:model.live="rejectionNote"
                               class="form-control"
                               rows="4"
@@ -295,11 +280,6 @@
     </div>
 </div>
 
-{{-- ════════════════════════════════════════════════════════════════
-     🔧 JavaScript Bridge: ربط Livewire events بـ Bootstrap modals
-     السبب: dispatch('open-modal') من Livewire لا يفتح الـ modal تلقائياً
-            نحتاج listener يستجيب للأحداث ويتعامل مع Bootstrap API
-     ════════════════════════════════════════════════════════════════ --}}
 <script>
 document.addEventListener('livewire:initialized', () => {
 

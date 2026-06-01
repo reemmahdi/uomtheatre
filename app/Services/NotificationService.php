@@ -8,35 +8,10 @@ use App\Models\Notification;
 use App\Models\Role;
 use App\Models\User;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * NotificationService — UOMTheatre (مُحدّث)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات في هذه النسخة (إصلاحات Claude):
- *   🟡 notifyApprovalRequested: يرسل فقط للأدوار pending
- *      (سابقاً كان يرسل حتى لمن وافق سابقاً!)
- *   🟡 استخدام Notification::TYPE_* constants بدل string literals
- *   🟡 null safety على $rejecter->role
- *   🟡 توحيد أسماء الأنواع مع Notification Model
- *
- * ════════════════════════════════════════════════════════════════
- */
 class NotificationService
 {
-    // ════════════════════════════════════════════════════════════
-    // 1. طلب موافقة على فعالية
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * يُرسَل لمدير المسرح ومكتب الرئيس عند إرسال فعالية للموافقة
-     *
-     * 🟡 مُصحَّح: يرسل فقط للأدوار التي عندها pending approval
-     *    (لو رفض شخص ثم أعدنا الإرسال، الموافق سابقاً لا يستلم إشعار)
-     */
     public function notifyApprovalRequested(Event $event): void
     {
-        // ✨ جلب IDs الأدوار التي عندها pending فقط (مش كل الأدوار المُحدّدة)
         $pendingRoleIds = EventApproval::where('event_id', $event->id)
             ->where('status', EventApproval::STATUS_PENDING)
             ->pluck('role_id')
@@ -63,13 +38,6 @@ class NotificationService
         }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // 2. اكتمال الموافقات
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * يُرسَل لمدير الإعلام عند موافقة الجميع على فعاليته
-     */
     public function notifyApprovalsComplete(Event $event): void
     {
         if (!$event->created_by) {
@@ -86,22 +54,12 @@ class NotificationService
         ]);
     }
 
-    // ════════════════════════════════════════════════════════════
-    // 3. رفض فعالية
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * يُرسَل لمدير الإعلام عند رفض فعاليته
-     *
-     * 🟡 مُصحَّح: nullsafe على role
-     */
     public function notifyEventRejected(Event $event, User $rejecter, ?string $reason = null): void
     {
         if (!$event->created_by) {
             return;
         }
 
-        // ✨ تأكد من تحميل العلاقة + nullsafe
         $rejecterRoleName = $rejecter->role?->display_name ?? 'الجهة المختصة';
 
         $reasonText = $reason ? "\n\nسبب الرفض: {$reason}" : '';
@@ -115,10 +73,6 @@ class NotificationService
             'is_read'  => false,
         ]);
     }
-
-    // ════════════════════════════════════════════════════════════
-    // 4. نشر فعالية (للسوبر أدمن - مراقبة)
-    // ════════════════════════════════════════════════════════════
 
     public function notifyEventPublished(Event $event): void
     {
@@ -138,13 +92,8 @@ class NotificationService
         }
     }
 
-    /**
-     * ✨ جديد: إشعار إلغاء فعالية (للحجوزات الموجودة)
-     * يُستخدم في المرحلة 3.و من الملخص
-     */
     public function notifyEventCancelled(Event $event, ?string $reason = null): int
     {
-        // كل المستخدمين الذين عندهم حجز نشط في هذه الفعالية
         $userIds = $event->reservations()
             ->where('status', '!=', 'cancelled')
             ->whereNotNull('user_id')
@@ -173,13 +122,6 @@ class NotificationService
         return $count;
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Helpers
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * تعليم كل إشعارات مستخدم كمقروءة
-     */
     public function markAllAsRead(User $user): int
     {
         return Notification::where('user_id', $user->id)
@@ -187,9 +129,6 @@ class NotificationService
             ->update(['is_read' => true]);
     }
 
-    /**
-     * عدّ الإشعارات غير المقروءة لمستخدم
-     */
     public function unreadCount(User $user): int
     {
         return Notification::where('user_id', $user->id)

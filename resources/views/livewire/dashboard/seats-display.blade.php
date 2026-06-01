@@ -806,12 +806,12 @@
         }
     </style>
 
-    {{-- Hidden data attribute for JS --}}
+    
     @if($eventId)
         <div data-event-id="{{ $eventId }}" style="display:none;"></div>
     @endif
 
-    {{-- Event Selector --}}
+    
     <div class="event-selector">
         <label for="eventSelect">
             <i class="bi bi-calendar-event"></i>
@@ -844,7 +844,6 @@
             <p>اختر الفعالية من القائمة أعلاه لرؤية المقاعد المحجوزة والمتاحة.</p>
         </div>
     @else
-
 
 <div class="app">
 
@@ -889,7 +888,7 @@
           $hour12  = $startDt->format('g');
           $minute  = $startDt->format('i');
           $period  = $startDt->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
-        @endphp
+@endphp
         <span class="pill">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           {{ $dayName }} {{ $dayNum }} {{ $month }} {{ $year }}
@@ -1202,13 +1201,9 @@
   ──────────────────────────────────────────────────────────────────────
 -->
 
-
-
-
-
     @endif
 
-    {{-- Load Scripts --}}
+    
     @if($eventId)
         <script src="{{ asset('js/seating-data.js') }}"></script>
         <script src="{{ asset('js/seating-app.js') }}"></script>

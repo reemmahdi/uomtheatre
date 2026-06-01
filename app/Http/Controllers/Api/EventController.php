@@ -13,24 +13,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * EventController — UOMTheatre API (إعادة هندسة كاملة)
- * ════════════════════════════════════════════════════════════════
- *
- * 🎯 التعديلات:
- *   - schema جديد (start_datetime/end_datetime)
- *   - publicIndex: حساب المتاح بدل اعتماد is_vip_reserved
- *   - backwards compatibility (event_date/event_time للـ Flutter)
- *   - Policy authorize
- *
- * ════════════════════════════════════════════════════════════════
- */
 class EventController extends Controller
 {
-    /**
-     * تحويل Event إلى array - استخدام مشترك
-     */
     private function eventToArray(Event $event, bool $detailed = false): array
     {
         $data = [
@@ -75,10 +59,6 @@ class EventController extends Controller
         return response()->json(['events' => $events]);
     }
 
-    /**
-     * 🎯 publicIndex - الفعاليات المنشورة للجمهور
-     * (مُصحَّح: حساب المتاح بدون is_vip_reserved)
-     */
     public function publicIndex(): JsonResponse
     {
         $publishedStatus = Status::where('name', Status::PUBLISHED)->first();
@@ -86,7 +66,7 @@ class EventController extends Controller
             return response()->json(['events' => []]);
         }
 
-        $totalSeats = Seat::count();   // ✨ الـ 997 كلها
+        $totalSeats = Seat::count();
 
         $events = Event::with(['status'])
             ->where('status_id', $publishedStatus->id)
@@ -94,7 +74,6 @@ class EventController extends Controller
             ->orderBy('start_datetime', 'asc')
             ->get()
             ->map(function ($event) use ($totalSeats) {
-                // ✨ جديد: حساب المحجوز كوفد + المحجوز من الجمهور بشكل منفصل
                 $vipBooked = Reservation::where('event_id', $event->id)
                     ->where('type', 'vip_guest')
                     ->where('status', '!=', 'cancelled')
@@ -105,7 +84,6 @@ class EventController extends Controller
                     ->where('status', '!=', 'cancelled')
                     ->count();
 
-                // المتاح للجمهور = الإجمالي - الوفود - الجمهور المحجوز
                 $availableForPublic = $totalSeats - $vipBooked - $publicReserved;
 
                 return [
@@ -118,7 +96,7 @@ class EventController extends Controller
                     'event_date'      => $event->start_datetime?->format('Y-m-d'),
                     'event_time'      => $event->start_datetime?->format('H:i'),
                     'total_seats'     => $totalSeats,
-                    'vip_seats'       => $vipBooked,           // ✨ متغير per-event
+                    'vip_seats'       => $vipBooked,
                     'public_reserved' => $publicReserved,
                     'available'       => $availableForPublic,
                     'is_booking_paused' => (bool) $event->is_booking_paused,

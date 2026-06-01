@@ -13,20 +13,6 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * VipBooking — UOMTheatre (إعادة هندسة - مقاعد متغيرة per-event)
- * ════════════════════════════════════════════════════════════════
- *
- * 🎯 التغيير المعماري:
- *   - مدير الإعلام يرى كل الـ 997 مقعد (بدل 52 ثابتة)
- *   - يضغط على أي مقعد متاح → يحجز كوفد
- *   - المقاعد المحجوزة كوفود = ملونة باسم الضيف
- *   - المقاعد المحجوزة من الجمهور = ملونة بلون مختلف (لو الفعالية منشورة سابقاً)
- *   - المتاحة = قابلة للضغط
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('حجز مقاعد الوفود')]
 class VipBooking extends BaseComponent
@@ -34,22 +20,15 @@ class VipBooking extends BaseComponent
     public int $eventId;
     public string $eventUuid = '';
 
-    // ==================== حقول الحجز الجديد ====================
     public string $guestName = '';
     public string $guestPhone = '';
     public int $selectedSeatId = 0;
 
-    // ==================== حقول التعديل ====================
     public ?int $editBookingId = null;
     public string $editGuestName = '';
     public string $editGuestPhone = '';
 
-    // ==================== حقول العرض ====================
     public ?array $viewBooking = null;
-
-    // ════════════════════════════════════════════════════════════
-    // ✨ Helpers أمنية
-    // ════════════════════════════════════════════════════════════
 
     protected function authorizeManageVip(): void
     {
@@ -81,7 +60,6 @@ class VipBooking extends BaseComponent
         $this->authorizeManageVip();
     }
 
-    // ==================== اختيار مقعد ====================
     public function selectSeat(int $seatId): void
     {
         $this->authorizeManageVip();
@@ -92,7 +70,6 @@ class VipBooking extends BaseComponent
             return;
         }
 
-        // 🎯 جديد: التأكد من أن المقعد متاح فعلاً (مش محجوز من قبل)
         $seat = Seat::find($seatId);
         if (!$seat) {
             $this->swalError('المقعد غير موجود');
@@ -109,7 +86,6 @@ class VipBooking extends BaseComponent
         $this->guestPhone = '';
     }
 
-    // ==================== حجز مقعد ====================
     public function bookSeat(): void
     {
         $this->authorizeManageVip();
@@ -169,7 +145,6 @@ class VipBooking extends BaseComponent
         }
     }
 
-    // ==================== فتح نافذة العرض ====================
     public function openViewBooking(int $reservationId): void
     {
         $this->authorizeManageVip();
@@ -190,7 +165,6 @@ class VipBooking extends BaseComponent
         $this->dispatch('open-modal', id: 'viewBookingModal');
     }
 
-    // ==================== فتح نافذة التعديل ====================
     public function openEditBooking(int $reservationId): void
     {
         $this->authorizeManageVip();
@@ -203,7 +177,6 @@ class VipBooking extends BaseComponent
         $this->dispatch('open-modal', id: 'editBookingModal');
     }
 
-    // ==================== حفظ التعديلات ====================
     public function updateBooking(): void
     {
         $this->authorizeManageVip();
@@ -234,7 +207,6 @@ class VipBooking extends BaseComponent
         }
     }
 
-    // ==================== طلب تأكيد إلغاء الحجز ====================
     public function requestCancelBooking(int $reservationId): void
     {
         $this->authorizeManageVip();
@@ -264,7 +236,6 @@ class VipBooking extends BaseComponent
         }
     }
 
-    // ==================== جلب الجالسين في 4 جهات ====================
     private function getNeighbors(int $eventId, $seat): array
     {
         if (!$seat) return [];
@@ -281,7 +252,7 @@ class VipBooking extends BaseComponent
             $neighbor = Reservation::with('seat')
                 ->where('event_id', $eventId)
                 ->where('status', '!=', 'cancelled')
-                ->where('type', 'vip_guest')   // 🎯 جيران الوفود فقط (بأسماء)
+                ->where('type', 'vip_guest')
                 ->whereHas('seat', fn($q) => $q
                     ->where('section_id', $seat->section_id)
                     ->where('row_number', $dir['row'])
@@ -299,7 +270,6 @@ class VipBooking extends BaseComponent
         return $neighbors;
     }
 
-    // ==================== رابط واتساب رسمي ====================
     public function getWhatsAppLink(int $reservationId): string
     {
         $this->authorizeManageVip();
@@ -359,36 +329,21 @@ class VipBooking extends BaseComponent
         return 'https://wa.me/' . $phone . '?text=' . urlencode($msg);
     }
 
-    // ====================================================================
-    // 🎯 Render — يجلب كل المقاعد + كل الحجوزات
-    // ====================================================================
     public function render()
     {
         $this->authorizeManageVip();
 
         $event = Event::with('status')->findOrFail($this->eventId);
 
-        // ════════════════════════════════════════════════════════════
-        // ✨ مُحدَّث: مقاعد الوفود = VIP ثابتة + مقاعد مستبعدة
-        // ════════════════════════════════════════════════════════════
-        // 1. المقاعد VIP الثابتة (52 مقعد - الصف 10 من Orchestra)
-        //    is_vip_reserved=true → دائماً متاحة للوفود
-        // 2. المقاعد التي يستبعدها مدير الإعلام (event_seat_availability)
-        //    is_public_available=false → إضافية للوفود
-        // ════════════════════════════════════════════════════════════
-
-        // (1) المقاعد VIP الثابتة (52 مقعد - الصف 10 من Orchestra)
         $vipFixedIds = Seat::where('is_vip_reserved', true)
             ->pluck('id')
             ->toArray();
 
-        // (2) المقاعد التي حددها مدير الإعلام لمنع حجزها من الجمهور
         $excludedIds = \App\Models\EventSeatAvailability::where('event_id', $this->eventId)
             ->where('is_public_available', false)
             ->pluck('seat_id')
             ->toArray();
 
-        // (3) المجموع — مقاعد متاحة لحجز الوفود
         $vipSeatIds = array_values(array_unique(array_merge($vipFixedIds, $excludedIds)));
 
         $allSeats = Seat::with('section')
@@ -398,7 +353,6 @@ class VipBooking extends BaseComponent
             ->orderBy('seat_number')
             ->get();
 
-        // الحجوزات النشطة (ضمن مقاعد الوفود فقط)
         $allReservations = Reservation::where('event_id', $this->eventId)
             ->whereIn('seat_id', $vipSeatIds)
             ->where('status', '!=', 'cancelled')

@@ -1,8 +1,5 @@
 <div>
 
-{{-- ════════════════════════════════════════════════════
-     ✨ شريط البحث والترويسة
-     ════════════════════════════════════════════════════ --}}
 <div class="card-custom p-3 mb-3">
     <div class="row g-3 align-items-center">
         <div class="col-md-6">
@@ -29,12 +26,8 @@
     </div>
 </div>
 
-{{-- ════════════════════════════════════════════════════
-     ✨ بطاقات الفعاليات (Grid)
-     ════════════════════════════════════════════════════ --}}
 @if($events->count() > 0)
 
-{{-- شريط الإجمالي --}}
 <div class="d-flex justify-content-between align-items-center mb-3 px-2">
     <small class="text-muted">
         <i class="bi bi-collection"></i>
@@ -69,12 +62,12 @@
             'rejected'  => '#DC2626',
             default     => '#6B7280',
         };
-    @endphp
+@endphp
 
     <div class="col-lg-6 col-xl-4">
         <div class="vip-event-card">
 
-            {{-- ════ الترويسة: العنوان + الحالة ════ --}}
+            
             <div class="card-header-strip" style="background: linear-gradient(135deg, #0C4A6E, #075985);">
                 <div class="d-flex justify-content-between align-items-start gap-2">
                     <h6 class="card-title-text" title="{{ $event->title }}">
@@ -86,10 +79,10 @@
                 </div>
             </div>
 
-            {{-- ════ الجسم ════ --}}
+            
             <div class="card-body-content">
 
-                {{-- التواريخ --}}
+                
                 <div class="date-row">
                     <div class="date-block">
                         <i class="bi bi-calendar-event" style="color: #0C4A6E;"></i>
@@ -110,7 +103,7 @@
                     </div>
                 </div>
 
-                {{-- إحصائيات الحجز --}}
+                
                 <div class="booking-stats">
                     <div class="d-flex justify-content-between mb-2">
                         <small class="text-muted">
@@ -121,7 +114,7 @@
                         </strong>
                     </div>
 
-                    {{-- progress bar --}}
+                    
                     <div class="progress" style="height: 8px;">
                         <div class="progress-bar"
                              role="progressbar"
@@ -147,7 +140,7 @@
                     </div>
                 </div>
 
-                {{-- زر واحد فقط: إدارة الضيوف --}}
+                
                 <div class="card-actions">
                     <a href="{{ route('dashboard.vip-guests', $event->uuid) }}"
                        class="btn btn-vip-action btn-guests-action"
@@ -169,7 +162,6 @@
 
 @else
 
-{{-- لا توجد فعاليات --}}
 <div class="card-custom p-5 text-center">
     <i class="bi bi-calendar-x" style="font-size: 60px; color: #0369A1; opacity: 0.4;"></i>
     @if(!empty($searchTitle))
@@ -185,9 +177,6 @@
 
 @endif
 
-{{-- ════════════════════════════════════════════════════
-     ✨ تنسيقات البطاقات
-     ════════════════════════════════════════════════════ --}}
 <style>
     /* البطاقة الرئيسية */
     .vip-event-card {

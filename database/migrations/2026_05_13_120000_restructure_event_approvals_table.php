@@ -5,36 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * ════════════════════════════════════════════════════════════════════
- * Restructure event_approvals — UOMTheatre (PostgreSQL-safe)
- * ════════════════════════════════════════════════════════════════════
- *
- * 🎯 الهدف:
- *   تبسيط جدول event_approvals ليطابق التصميم الجديد:
- *   ✅ إضافة:    round_number, rejection_reason
- *   ❌ حذف:      user_id, role_id, note, approved_at, rejected_at
- *   🔒 إضافة:    UNIQUE(event_id, round_number)
- *
- * 🔧 إصلاح PostgreSQL:
- *   النسخة السابقة كانت تستخدم:
- *     • SHOW INDEX FROM ... ← MySQL only
- *     • DB::getDatabaseName() كـ schema ← غلط في PostgreSQL
- *
- *   هذي النسخة تستخدم native DDL:
- *     • DROP CONSTRAINT IF EXISTS  ← آمن في PostgreSQL
- *     • DROP COLUMN IF EXISTS      ← آمن في كلا
- *     • DROP INDEX IF EXISTS       ← آمن في PostgreSQL
- *
- * ════════════════════════════════════════════════════════════════════
- */
 return new class extends Migration
 {
     public function up(): void
     {
-        // ────────────────────────────────────────────────────────
-        // 1️⃣ إضافة round_number (idempotent)
-        // ────────────────────────────────────────────────────────
         if (!Schema::hasColumn('event_approvals', 'round_number')) {
             Schema::table('event_approvals', function (Blueprint $table) {
                 $table->unsignedTinyInteger('round_number')
@@ -44,9 +18,6 @@ return new class extends Migration
             });
         }
 
-        // ────────────────────────────────────────────────────────
-        // 2️⃣ إضافة rejection_reason (idempotent)
-        // ────────────────────────────────────────────────────────
         if (!Schema::hasColumn('event_approvals', 'rejection_reason')) {
             Schema::table('event_approvals', function (Blueprint $table) {
                 $table->text('rejection_reason')
@@ -56,9 +27,6 @@ return new class extends Migration
             });
         }
 
-        // ────────────────────────────────────────────────────────
-        // 3️⃣ ترحيل البيانات: note → rejection_reason
-        // ────────────────────────────────────────────────────────
         if (Schema::hasColumn('event_approvals', 'note')) {
             DB::table('event_approvals')
                 ->where('status', 'rejected')
@@ -69,9 +37,6 @@ return new class extends Migration
                 ]);
         }
 
-        // ────────────────────────────────────────────────────────
-        // 4️⃣ حذف سجلات theater_manager (مشاهد فقط الآن)
-        // ────────────────────────────────────────────────────────
         if (Schema::hasColumn('event_approvals', 'role_id')) {
             $theaterRoleId = DB::table('roles')
                 ->where('name', 'theater_manager')
@@ -84,40 +49,26 @@ return new class extends Migration
             }
         }
 
-        // ────────────────────────────────────────────────────────
-        // 5️⃣ حذف سجلات pending
-        // ────────────────────────────────────────────────────────
         DB::table('event_approvals')
             ->where('status', 'pending')
             ->delete();
 
-        // ────────────────────────────────────────────────────────
-        // 6️⃣ حذف الأعمدة القديمة (PostgreSQL-safe)
-        // ────────────────────────────────────────────────────────
-
-        // user_id: حذف FK + index + column
         $this->dropForeignKeyIfExists('event_approvals', 'event_approvals_user_id_foreign');
         $this->dropIndexIfExists('event_approvals', 'event_approvals_user_id_index');
         $this->dropColumnIfExists('event_approvals', 'user_id');
 
-        // role_id: حذف FK + index + column
         $this->dropForeignKeyIfExists('event_approvals', 'event_approvals_role_id_foreign');
         $this->dropIndexIfExists('event_approvals', 'event_approvals_role_id_index');
-        // كان فيه custom index قديم
+
         $this->dropIndexIfExists('event_approvals', 'event_approvals_role_id_status_index');
         $this->dropColumnIfExists('event_approvals', 'role_id');
 
-        // أعمدة بدون FK
         $this->dropColumnIfExists('event_approvals', 'note');
         $this->dropColumnIfExists('event_approvals', 'approved_at');
         $this->dropColumnIfExists('event_approvals', 'rejected_at');
 
-        // index قديم محتمل
         $this->dropIndexIfExists('event_approvals', 'unique_event_role_approval');
 
-        // ────────────────────────────────────────────────────────
-        // 7️⃣ إضافة UNIQUE constraint (idempotent)
-        // ────────────────────────────────────────────────────────
         if (!$this->indexExists('event_approvals', 'event_approvals_event_round_unique')) {
             Schema::table('event_approvals', function (Blueprint $table) {
                 $table->unique(
@@ -130,10 +81,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        // 1) حذف UNIQUE
         $this->dropIndexIfExists('event_approvals', 'event_approvals_event_round_unique');
 
-        // 2) إعادة الأعمدة القديمة
         Schema::table('event_approvals', function (Blueprint $table) {
             if (!Schema::hasColumn('event_approvals', 'user_id')) {
                 $table->foreignId('user_id')
@@ -164,47 +113,32 @@ return new class extends Migration
             }
         });
 
-        // 3) حذف الأعمدة الجديدة
         $this->dropColumnIfExists('event_approvals', 'round_number');
         $this->dropColumnIfExists('event_approvals', 'rejection_reason');
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // ✨ Helpers آمنة لـ MySQL و PostgreSQL
-    // ════════════════════════════════════════════════════════════════
-
-    /**
-     * حذف FK constraint لو موجود (PostgreSQL & MySQL)
-     */
     protected function dropForeignKeyIfExists(string $table, string $constraintName): void
     {
         $driver = DB::getDriverName();
 
         try {
             if ($driver === 'pgsql') {
-                // PostgreSQL: native DDL
                 DB::statement("ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$constraintName}");
             } elseif ($driver === 'mysql') {
-                // MySQL: نفحص أولاً
                 if ($this->mysqlForeignKeyExists($table, $constraintName)) {
                     DB::statement("ALTER TABLE `{$table}` DROP FOREIGN KEY `{$constraintName}`");
                 }
             }
         } catch (\Throwable $e) {
-            // تجاهل بصمت لو FK غير موجود (يجي من بعض إصدارات MySQL)
         }
     }
 
-    /**
-     * حذف index لو موجود (PostgreSQL & MySQL)
-     */
     protected function dropIndexIfExists(string $table, string $indexName): void
     {
         $driver = DB::getDriverName();
 
         try {
             if ($driver === 'pgsql') {
-                // PostgreSQL: DROP INDEX IF EXISTS
                 DB::statement("DROP INDEX IF EXISTS {$indexName}");
             } elseif ($driver === 'mysql') {
                 if ($this->mysqlIndexExists($table, $indexName)) {
@@ -212,13 +146,9 @@ return new class extends Migration
                 }
             }
         } catch (\Throwable $e) {
-            // تجاهل
         }
     }
 
-    /**
-     * حذف عمود لو موجود (PostgreSQL & MySQL)
-     */
     protected function dropColumnIfExists(string $table, string $column): void
     {
         if (!Schema::hasColumn($table, $column)) {
@@ -229,7 +159,6 @@ return new class extends Migration
 
         try {
             if ($driver === 'pgsql') {
-                // PostgreSQL: DROP COLUMN IF EXISTS مع CASCADE لإزالة الـ FK تلقائياً
                 DB::statement("ALTER TABLE {$table} DROP COLUMN IF EXISTS {$column} CASCADE");
             } elseif ($driver === 'mysql') {
                 Schema::table($table, function (Blueprint $t) use ($column) {
@@ -237,13 +166,9 @@ return new class extends Migration
                 });
             }
         } catch (\Throwable $e) {
-            // log فقط، لا نوقف العملية
         }
     }
 
-    /**
-     * فحص وجود index (MySQL & PostgreSQL)
-     */
     protected function indexExists(string $table, string $indexName): bool
     {
         $driver = DB::getDriverName();
@@ -263,9 +188,6 @@ return new class extends Migration
         return false;
     }
 
-    /**
-     * فحص FK في MySQL فقط
-     */
     protected function mysqlForeignKeyExists(string $table, string $constraintName): bool
     {
         try {
@@ -285,9 +207,6 @@ return new class extends Migration
         }
     }
 
-    /**
-     * فحص index في MySQL فقط
-     */
     protected function mysqlIndexExists(string $table, string $indexName): bool
     {
         try {

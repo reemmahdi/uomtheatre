@@ -7,7 +7,7 @@
         <p>لوحة التحكم</p>
     </div>
 
-    {{-- رسالة خطأ موحّدة (أنظف بصرياً) --}}
+    
     @if($errorMessage)
         <div class="alert alert-danger">
             <i class="bi bi-exclamation-circle"></i> {{ $errorMessage }}

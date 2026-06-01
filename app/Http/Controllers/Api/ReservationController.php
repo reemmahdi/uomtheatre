@@ -10,18 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * ReservationController — UOMTheatre API (إعادة هندسة)
- * ════════════════════════════════════════════════════════════════
- *
- * 🎯 التغيير المعماري:
- *   - حذف فحص is_vip_reserved (مقاعد الوفود تحدد per-event)
- *   - حذف فحص event_seat_availability (deprecated)
- *   - الفحص الوحيد: هل المقعد محجوز (vip_guest أو regular)؟
- *
- * ════════════════════════════════════════════════════════════════
- */
 class ReservationController extends Controller
 {
     public function myReservations(Request $request): JsonResponse
@@ -59,9 +47,6 @@ class ReservationController extends Controller
                 $event = Event::lockForUpdate()->findOrFail($request->event_id);
                 $seat  = Seat::lockForUpdate()->findOrFail($request->seat_id);
 
-                // ────────────────────────────────────────
-                // فحوصات الفعالية
-                // ────────────────────────────────────────
                 if (!$event->isPublished()) {
                     throw new \RuntimeException('الفعالية غير متاحة للحجز');
                 }
@@ -74,10 +59,6 @@ class ReservationController extends Controller
                     throw new \RuntimeException('انتهت هذه الفعالية');
                 }
 
-                // ────────────────────────────────────────
-                // 🎯 الفحص الوحيد للمقعد: هل محجوز؟
-                // (يشمل vip_guest و regular)
-                // ────────────────────────────────────────
                 $existingReservation = Reservation::where('event_id', $event->id)
                     ->where('seat_id', $seat->id)
                     ->where('status', '!=', 'cancelled')
@@ -91,9 +72,6 @@ class ReservationController extends Controller
                     throw new \RuntimeException('هذا المقعد محجوز، اختاري مقعداً آخر');
                 }
 
-                // ────────────────────────────────────────
-                // فحص حجز المستخدم لنفس الفعالية مسبقاً
-                // ────────────────────────────────────────
                 $userReservation = Reservation::where('user_id', $request->user()->id)
                     ->where('event_id', $request->event_id)
                     ->where('status', '!=', 'cancelled')

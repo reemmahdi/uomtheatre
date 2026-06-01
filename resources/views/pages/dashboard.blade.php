@@ -11,19 +11,15 @@
     $user = Auth::user();
     $roleName = $user->role?->name;
 
-    // ✨ بناء الـ base query حسب الدور
     $baseQuery = Event::query();
 
     if ($roleName === 'event_manager') {
-        // مدير الإعلام: فعالياته فقط
         $baseQuery->where('created_by', $user->id);
     }
 
-    // ✨ status IDs lookup
     $statusIds = Status::whereIn('name', ['draft', 'added', 'active', 'published', 'rejected', 'cancelled', 'closed', 'end'])
         ->pluck('id', 'name');
 
-    // ✨ إحصائيات الـ 5 الأساسية
     $stats = [
         'draft'     => (clone $baseQuery)->where('status_id', $statusIds['draft']     ?? 0)->count(),
         'added'     => (clone $baseQuery)->where('status_id', $statusIds['added']     ?? 0)->count(),
@@ -32,17 +28,8 @@
         'total'     => (clone $baseQuery)->count(),
     ];
 
-    // ════════════════════════════════════════════════════════
-    // ✨ الفعالية الحالية (نسبة الحضور)
-    // ════════════════════════════════════════════════════════
-    //   - الأولوية 1: فعالية جارية الآن (start ≤ now ≤ end)
-    //   - الأولوية 2: أقرب فعالية منشورة قادمة
-    //   - نحسب من الـ baseQuery (مدير الإعلام يشوف فعالياته فقط)
-    // ════════════════════════════════════════════════════════
-
     $publishedStatusId = $statusIds['published'] ?? 0;
 
-    // محاولة 1: فعالية جارية الآن
     $currentEvent = (clone $baseQuery)
         ->where('status_id', $publishedStatusId)
         ->where('start_datetime', '<=', now())
@@ -50,7 +37,6 @@
         ->orderBy('start_datetime', 'desc')
         ->first();
 
-    // محاولة 2: لو ما فيه فعالية جارية، نأخذ الأقرب القادمة
     if (!$currentEvent) {
         $currentEvent = (clone $baseQuery)
             ->where('status_id', $publishedStatusId)
@@ -59,10 +45,9 @@
             ->first();
     }
 
-    // حساب نسبة الحضور (الحاضرين فعلياً / الحجوزات المؤكدة)
     $attendanceRate = 0;
     $currentEventTitle = null;
-    $currentEventStatus = null;  // "ongoing" أو "upcoming" أو null
+    $currentEventStatus = null;
     $checkedInCount = 0;
     $reservedCount = 0;
 
@@ -76,7 +61,6 @@
         $currentEventStatus = $currentEvent->isOngoing() ? 'ongoing' : 'upcoming';
     }
 
-    // ✨ النص حسب الدور
     $roleDescriptions = [
         'super_admin'        => 'مرحباً بك مدير النظام. لديك صلاحيات كاملة على إدارة المستخدمين والفعاليات والصلاحيات.',
         'event_manager'      => 'بصفتك مسؤول الفعاليات في النظام، مهمتك إنشاء الفعاليات وإرسالها لمكتب رئاسة الجامعة للموافقة، ثم نشرها للجمهور وحجز مقاعد الوفود.',
@@ -91,12 +75,10 @@
 
 <div class="container-fluid p-3">
 
-    {{-- ════════════════════════════════════════════════════
-         ✨ الصف الأول: 3 بطاقات - مرحلة العمل (workflow)
-         ════════════════════════════════════════════════════ --}}
+    
     <div class="row g-3 mb-3">
 
-        {{-- 📝 المسودات --}}
+        
         <div class="col-md-4">
             <div class="stat-card" style="border-bottom: 4px solid #64748b;">
                 <div class="d-flex align-items-center justify-content-between">
@@ -113,7 +95,7 @@
             </div>
         </div>
 
-        {{-- ⏳ المرسلة للرئاسة --}}
+        
         <div class="col-md-4">
             <div class="stat-card" style="border-bottom: 4px solid #f59e0b;">
                 <div class="d-flex align-items-center justify-content-between">
@@ -130,7 +112,7 @@
             </div>
         </div>
 
-        {{-- ✅ النشطة --}}
+        
         <div class="col-md-4">
             <div class="stat-card" style="border-bottom: 4px solid #15803D;">
                 <div class="d-flex align-items-center justify-content-between">
@@ -152,12 +134,10 @@
 
     </div>
 
-    {{-- ════════════════════════════════════════════════════
-         ✨ الصف الثاني: 3 بطاقات - الملخص + الفعالية الحالية
-         ════════════════════════════════════════════════════ --}}
+    
     <div class="row g-3 mb-3">
 
-        {{-- 📢 المنشورة --}}
+        
         <div class="col-md-4">
             <div class="stat-card" style="border-bottom: 4px solid #0C4A6E;">
                 <div class="d-flex align-items-center justify-content-between">
@@ -177,7 +157,7 @@
             </div>
         </div>
 
-        {{-- 📊 الإجمالي --}}
+        
         <div class="col-md-4">
             <div class="stat-card" style="border-bottom: 4px solid #C9A530;">
                 <div class="d-flex align-items-center justify-content-between">
@@ -197,7 +177,7 @@
             </div>
         </div>
 
-        {{-- 👥 نسبة الحضور للفعالية الحالية --}}
+        
         <div class="col-md-4">
             <div class="stat-card" style="border-bottom: 4px solid #DC2626;">
                 <div class="d-flex align-items-center justify-content-between">
@@ -241,9 +221,7 @@
 
     </div>
 
-    {{-- ════════════════════════════════════════════════════
-         ✨ بطاقة "دورك في النظام"
-         ════════════════════════════════════════════════════ --}}
+    
     <div class="card-custom p-4">
         <div class="d-flex gap-3 align-items-start">
             <div style="background: linear-gradient(135deg, #0C4A6E, #075985); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">

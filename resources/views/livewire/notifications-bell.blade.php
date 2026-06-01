@@ -1,6 +1,6 @@
 <div class="wa-bell-wrapper" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
 
-    {{-- ─── أيقونة الجرس ─── --}}
+    
     <button type="button"
             class="wa-bell-btn"
             @click="open = !open"
@@ -11,10 +11,10 @@
         @endif
     </button>
 
-    {{-- ─── القائمة المنسدلة ─── --}}
+    
     <div class="wa-bell-dropdown" x-show="open" x-cloak x-transition.opacity.duration.150ms @click.stop>
 
-        {{-- رأس القائمة --}}
+        
         <div class="wa-bell-header">
             <div class="wa-bell-title">
                 <i class="bi bi-bell-fill"></i>
@@ -35,21 +35,21 @@
             </div>
         </div>
 
-        {{-- قائمة الإشعارات --}}
+        
         <div class="wa-bell-list">
             @forelse($notifications as $notif)
             <div class="wa-bell-item {{ $notif->is_read ? '' : 'wa-bell-item-unread' }}"
                  wire:click="markAsRead({{ $notif->id }})">
 
-                {{-- ✨ مُصحَّح: types تطابق Notification::TYPE_* constants الجديدة --}}
+                
                 <div class="wa-bell-icon wa-bell-icon-{{ $notif->type }}">
                     @switch($notif->type)
                         @case(\App\Models\Notification::TYPE_APPROVAL_REQUEST)
-                        @case('approval_requested') {{-- legacy: للإشعارات القديمة في DB --}}
+                        @case('approval_requested') 
                             <i class="bi bi-clipboard-check-fill"></i>
                             @break
                         @case(\App\Models\Notification::TYPE_EVENT_APPROVED)
-                        @case('approvals_complete') {{-- legacy --}}
+                        @case('approvals_complete') 
                             <i class="bi bi-check-circle-fill"></i>
                             @break
                         @case(\App\Models\Notification::TYPE_EVENT_REJECTED)
@@ -66,18 +66,18 @@
                     @endswitch
                 </div>
 
-                {{-- محتوى الإشعار --}}
+                
                 <div class="wa-bell-content">
                     <div class="wa-bell-item-title">{{ $notif->title }}</div>
                     <div class="wa-bell-item-msg">{{ $notif->message }}</div>
                     <div class="wa-bell-item-time">
                         <i class="bi bi-clock"></i>
-                        {{-- ✨ nullsafe على created_at --}}
+                        
                         {{ $notif->created_at?->diffForHumans() ?? '—' }}
                     </div>
                 </div>
 
-                {{-- نقطة "غير مقروء" --}}
+                
                 @if(!$notif->is_read)
                 <span class="wa-bell-unread-dot"></span>
                 @endif

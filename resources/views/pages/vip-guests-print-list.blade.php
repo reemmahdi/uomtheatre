@@ -4,7 +4,7 @@
 @section('content')
 <div class="print-page">
 
-    {{-- ════ Header (يظهر في الطباعة) ════ --}}
+    
     <div class="header">
         <div class="logo-circle">
             <img src="{{ asset('logo.png') }}" alt="logo" onerror="this.style.display='none'">
@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    {{-- ════ معلومات الفعالية ════ --}}
+    
     <div class="event-info">
         <div class="info-grid">
             <div><strong>الفعالية:</strong> {{ $event->title }}</div>
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    {{-- ════ زر طباعة (لا يطبع نفسه) ════ --}}
+    
     <div class="no-print" style="text-align: center; margin: 20px 0;">
         <button onclick="window.print()" class="btn btn-print">
             🖨️ طباعة الجدول
@@ -36,7 +36,7 @@
         </a>
     </div>
 
-    {{-- ════ الجدول ════ --}}
+    
     <table class="guests-table">
         <thead>
             <tr>
@@ -60,7 +60,7 @@
                     @php
                         $phone = preg_replace('/[^0-9]/', '', $booking->guest_phone ?? '');
                         if (str_starts_with($phone, '0')) $phone = '964' . substr($phone, 1);
-                    @endphp
+@endphp
                     <a href="https://wa.me/{{ $phone }}" target="_blank" class="wa-btn">
                         💬 فتح
                     </a>
@@ -70,7 +70,7 @@
         </tbody>
     </table>
 
-    {{-- ════ Footer ════ --}}
+    
     <div class="footer">
         طُبع في: {{ now()->format('Y-m-d H:i') }} | إدارة مسرح جامعة الموصل
     </div>

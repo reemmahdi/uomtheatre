@@ -1,15 +1,12 @@
 @php
     use App\Models\Event;
     use App\Models\Status;
-    
-    // ✨ جلب الفعاليات المتاحة للعرض في الخارطة
-    // الحالات: مضافة، نشطة، منشورة (بعد حذف under_review)
+
     $availableStatusIds = Status::whereIn('name', ['added', 'active', 'published'])->pluck('id');
     $events = Event::whereIn('status_id', $availableStatusIds)
         ->orderBy('start_datetime', 'desc')
         ->get();
-    
-    // الفعالية المختارة من URL
+
     $selectedEventId = request()->query('event_id');
     $selectedEvent = $selectedEventId ? Event::find($selectedEventId) : ($events->first() ?? null);
     if (!$selectedEventId && $selectedEvent) {
@@ -793,7 +790,6 @@
   /* إخفاء Sidebar الإحصائيات */
   aside.sidebar { display: none !important; }
 
-
   /* Event Selector */
   .event-selector {
     background: #FFFFFF;
@@ -839,7 +835,6 @@
 </head>
 <body>
 
-{{-- Event Selector --}}
 <div class="event-selector">
   <label for="eventSelect">
     <i class="bi bi-calendar-event"></i>
@@ -858,7 +853,7 @@
             $evtDate   = $evtDt->format('Y-m-d');
             $evtTimeText = " ({$evtDate} - {$evtHour12}:{$evtMin} {$evtPeriod})";
         }
-      @endphp
+@endphp
       <option value="{{ $evt->id }}" {{ $selectedEventId == $evt->id ? 'selected' : '' }}>
         {{ $evt->title }}{{ $evtTimeText }}
       </option>
@@ -873,13 +868,11 @@
   @endif
 </div>
 
-{{-- Hidden data for JS --}}
 @if($selectedEventId)
   <script>window.SELECTED_EVENT_ID = {{ $selectedEventId }};</script>
 @else
   <script>window.SELECTED_EVENT_ID = null;</script>
 @endif
-
 
 <div class="app">
 
@@ -900,7 +893,6 @@
     <div class="event-meta">
       @if($selectedEvent && $selectedEvent->start_datetime)
         @php
-          // أسماء الأيام والأشهر بالعربية
           $arabicDays = [
               'Saturday'  => 'السبت',
               'Sunday'    => 'الأحد',
@@ -931,11 +923,10 @@
           $month   = $arabicMonths[(int)$startDt->format('n')] ?? '';
           $year    = $startDt->format('Y');
 
-          // الوقت بنظام 12 ساعة عربي
           $hour12  = $startDt->format('g');
           $minute  = $startDt->format('i');
           $period  = $startDt->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
-        @endphp
+@endphp
         <span class="pill">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           {{ $dayName }} {{ $dayNum }} {{ $month }} {{ $year }}
@@ -1406,7 +1397,6 @@ if (window.SELECTED_EVENT_ID) {
     })
     .catch(err => console.error('Failed to load reservations:', err));
 }
-
 
 </script>
 <script>

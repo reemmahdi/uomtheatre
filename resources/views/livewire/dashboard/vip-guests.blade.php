@@ -1,6 +1,6 @@
 <div>
 
-{{-- ✨ عنوان الفعالية --}}
+
 <div class="card-custom p-4 mb-4 event-title-card">
     <div class="d-flex align-items-center gap-3">
         <div class="event-icon-circle">
@@ -20,7 +20,7 @@
     </div>
 </div>
 
-{{-- ✨ قائمة الوفود --}}
+
 @if($bookings->count() > 0)
 <div class="card-custom p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -34,7 +34,7 @@
                 <i class="bi bi-whatsapp"></i> إرسال للكل
             </button>
 
-            {{-- ✨ زر طباعة قائمة الواتساب --}}
+            
             <a href="{{ route('dashboard.vip-guests.print-list', $event->uuid) }}"
                target="_blank"
                class="btn btn-sm"
@@ -42,7 +42,7 @@
                 <i class="bi bi-printer-fill"></i> طباعة القائمة
             </a>
 
-            {{-- ✨ زر طباعة الملصقات --}}
+            
             <a href="{{ route('dashboard.vip-guests.print-stickers', $event->uuid) }}"
                target="_blank"
                class="btn btn-sm"
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    {{-- ملاحظة واتساب --}}
+    
     <div class="alert alert-info py-2 mb-3 small">
         <i class="bi bi-info-circle"></i>
         <strong>ملاحظة:</strong> تأكد من تسجيل دخولك في
@@ -75,7 +75,8 @@
             </thead>
             <tbody>
                 @foreach($bookings as $booking)
-                @php $waLink = $this->getWhatsAppLink($booking->id); @endphp
+                @php $waLink = $this->getWhatsAppLink($booking->id);
+@endphp
                 <tr>
                     <td class="text-center"><strong style="color: #0C4A6E;">{{ $loop->iteration }}</strong></td>
                     <td><strong>{{ $booking->guest_name }}</strong></td>
@@ -90,7 +91,7 @@
                     <td class="text-center">القسم {{ $booking->seat->section->name }}</td>
                     <td class="text-center">
                         <div class="d-flex gap-2 justify-content-center">
-                            {{-- 🟢 إرسال واتساب --}}
+                            
                             <a href="{{ $waLink }}"
                                target="_blank"
                                rel="noopener"
@@ -101,7 +102,7 @@
                                 <i class="bi bi-whatsapp"></i>
                             </a>
 
-                            {{-- ✏️ تعديل --}}
+                            
                             <button type="button"
                                     wire:click="openEditBooking({{ $booking->id }})"
                                     class="btn-action-small btn-edit-small"
@@ -109,7 +110,7 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
 
-                            {{-- ❌ إلغاء --}}
+                            
                             <button type="button"
                                     wire:click="requestCancelBooking({{ $booking->id }})"
                                     class="btn-action-small btn-delete-small"
@@ -125,9 +126,9 @@
     </div>
 </div>
 
-{{-- ════════════════════════════════════════════════════════════════ --}}
-{{--  Modal: إرسال دعوات الواتساب الجماعي                           --}}
-{{-- ════════════════════════════════════════════════════════════════ --}}
+
+
+
 <div class="modal fade" id="sendAllWhatsAppModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -139,7 +140,7 @@
             </div>
 
             <div class="modal-body p-0">
-                {{-- شريط التقدم + زر فتح الكل --}}
+                
                 <div class="wa-progress-section p-3 border-bottom">
                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                         <strong style="color: #065f46;">
@@ -175,10 +176,11 @@
                     </div>
                 </div>
 
-                {{-- قائمة الضيوف --}}
+                
                 <div class="wa-guests-list">
                     @foreach($bookings as $booking)
-                    @php $waLink = $this->getWhatsAppLink($booking->id); @endphp
+                    @php $waLink = $this->getWhatsAppLink($booking->id);
+@endphp
                     <div class="wa-guest-item" data-booking-id="{{ $booking->id }}">
                         <div class="wa-guest-number">{{ $loop->iteration }}</div>
                         <div class="wa-guest-info">
@@ -374,7 +376,7 @@
 </script>
 
 @else
-{{-- لا يوجد ضيوف محجوزين --}}
+
 <div class="card-custom p-5 text-center mb-4">
     <i class="bi bi-people" style="font-size: 3rem; color: #cbd5e1;"></i>
     <p class="mt-3 text-muted mb-3">لم يتم حجز أي مقعد وفود لهذه الفعالية بعد.</p>
@@ -386,14 +388,14 @@
 </div>
 @endif
 
-{{-- زر الرجوع --}}
+
 <div class="text-center mt-3">
     <a href="{{ route('dashboard.vip-events') }}" class="btn btn-outline-primary">
         <i class="bi bi-arrow-right"></i> الرجوع للفعاليات
     </a>
 </div>
 
-{{-- نافذة تعديل بيانات الضيف --}}
+
 <div class="modal fade" id="editBookingModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -427,7 +429,7 @@
     </div>
 </div>
 
-{{-- التنسيقات --}}
+
 <style>
     .event-title-card {
         background: linear-gradient(135deg, #0C4A6E 0%, #075985 100%);
@@ -611,10 +613,7 @@
     }
 </style>
 
-{{-- ════════════════════════════════════════════════════════════════
-     🔧 JavaScript Bridge: ربط Livewire events بـ Bootstrap modals
-     السبب: dispatch('open-modal') من Livewire لا يفتح الـ modal تلقائياً
-     ════════════════════════════════════════════════════════════════ --}}
+
 <script>
 document.addEventListener('livewire:initialized', () => {
 

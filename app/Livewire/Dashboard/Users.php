@@ -10,26 +10,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * Users — UOMTheatre (مُحدّث - إصلاحات Claude)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات:
- *   🔴 إزالة hardcoded role_id=6 → Role::USER بشكل ديناميكي
- *   🔴 authorize() في كل method (مش فقط render)
- *   🟡 nullsafe على role
- *   🟡 redirect في mount بدل render
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('إدارة المستخدمين')]
 class Users extends BaseComponent
 {
-    /**
-     * ✨ helper مشترك: التحقق من super_admin قبل أي إجراء حساس
-     */
     protected function authorizeSuperAdmin(): void
     {
         if (!Auth::user()?->isSuperAdmin()) {
@@ -37,20 +21,14 @@ class Users extends BaseComponent
         }
     }
 
-    /**
-     * ✨ مُحسّن: redirect في mount بدل render
-     */
     public function mount(): void
     {
         $this->authorizeSuperAdmin();
     }
 
-    // ════════════════════════════════════════════════════════════
-    // طلب تأكيد تغيير الحالة
-    // ════════════════════════════════════════════════════════════
     public function requestToggleStatus(int $id): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         $user = User::findOrFail($id);
 
@@ -70,13 +48,10 @@ class Users extends BaseComponent
         );
     }
 
-    // ════════════════════════════════════════════════════════════
-    // تنفيذ تغيير الحالة بعد التأكيد
-    // ════════════════════════════════════════════════════════════
     #[On('confirmToggleStatus')]
     public function confirmToggleStatus($id): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check (event-based methods حساسة)
+        $this->authorizeSuperAdmin();
 
         try {
             $user = User::findOrFail($id);
@@ -95,14 +70,10 @@ class Users extends BaseComponent
         }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Render
-    // ════════════════════════════════════════════════════════════
     public function render()
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
-        // ✨ مُصحَّح: استخدام Role::USER بدل hardcoded 6
         $userRoleId = Role::where('name', Role::USER)->value('id');
 
         return view('livewire.dashboard.users', [

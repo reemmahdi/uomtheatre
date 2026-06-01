@@ -6,18 +6,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-/**
- * ════════════════════════════════════════════════════════════
- * User Model — UOMTheatre (مُحدّث للمرحلة 1.أ)
- * ════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات في هذه النسخة (إصلاحات Claude):
- *   - استخدام nullsafe operator (?->) في كل role checks
- *   - cache للصلاحيات لتجنّب مشكلة N+1 query
- *   - تحميل eager للعلاقة role.permissions في hasPermission
- *
- * ════════════════════════════════════════════════════════════
- */
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable;
@@ -47,15 +35,8 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * ✨ Cache داخلي للصلاحيات (يمنع N+1 query)
-     * يُملأ في أول استدعاء لـ hasPermission ويُعاد استخدامه
-     */
     protected ?array $cachedPermissions = null;
 
-    // ════════════════════════════════════════════════════════
-    // Relationships
-    // ════════════════════════════════════════════════════════
     public function role()
     {
         return $this->belongsTo(Role::class);
@@ -71,17 +52,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
-    /**
-     * العلاقة مع موافقات الفعاليات
-     */
     public function approvals()
     {
         return $this->hasMany(EventApproval::class);
     }
 
-    // ════════════════════════════════════════════════════════
-    // Role Helpers (مع nullsafe operator)
-    // ════════════════════════════════════════════════════════
     public function isSuperAdmin(): bool
     {
         return $this->role?->name === Role::SUPER_ADMIN;
@@ -107,10 +82,6 @@ class User extends Authenticatable
         return $this->role?->name === Role::UNIVERSITY_OFFICE;
     }
 
-    /**
-     * ✨ مُصحَّح: حماية من null role
-     * (سابقاً كان يفترض أن role موجود دائماً)
-     */
     public function isAdmin(): bool
     {
         $roleName = $this->role?->name;
@@ -122,23 +93,8 @@ class User extends Authenticatable
         return (bool) $this->is_active;
     }
 
-    // ════════════════════════════════════════════════════════
-    // ✨ Permission Helpers (مع cache لمنع N+1)
-    // ════════════════════════════════════════════════════════
-
-    /**
-     * ✨ التحقق ما إذا كان المستخدم يملك صلاحية معيّنة
-     *
-     * استخدام:
-     *   if (Auth::user()->hasPermission('events.create')) { ... }
-     *
-     * ✨ التحسين: في أول استدعاء يُحمَّل role + permissions معاً (eager)،
-     * ثم تُحفَظ في cachedPermissions داخل الـ instance.
-     * كل استدعاءات لاحقة = صفر queries.
-     */
     public function hasPermission(string $permissionName): bool
     {
-        // إذا الدور غير محمّل، نحمّله مع صلاحياته دفعة واحدة
         if (!$this->relationLoaded('role')) {
             $this->load('role.permissions');
         } elseif ($this->role && !$this->role->relationLoaded('permissions')) {
@@ -149,12 +105,10 @@ class User extends Authenticatable
             return false;
         }
 
-        // super_admin له كل الصلاحيات تلقائياً
         if ($this->role->name === Role::SUPER_ADMIN) {
             return true;
         }
 
-        // أول مرة فقط: نملأ الـ cache من collection محمّلة (بدون query إضافي)
         if ($this->cachedPermissions === null) {
             $this->cachedPermissions = $this->role->permissions
                 ->pluck('name')
@@ -164,9 +118,6 @@ class User extends Authenticatable
         return in_array($permissionName, $this->cachedPermissions, true);
     }
 
-    /**
-     * ✨ التحقق من عدة صلاحيات (يجب امتلاك واحدة على الأقل)
-     */
     public function hasAnyPermission(array $permissions): bool
     {
         foreach ($permissions as $perm) {
@@ -177,9 +128,6 @@ class User extends Authenticatable
         return false;
     }
 
-    /**
-     * ✨ التحقق من عدة صلاحيات (يجب امتلاك جميعها)
-     */
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $perm) {
@@ -190,10 +138,6 @@ class User extends Authenticatable
         return true;
     }
 
-    /**
-     * ✨ مفيد لو احتاجت تنظيف الـ cache يدوياً
-     * (مثلاً بعد تحديث الصلاحيات في Permissions screen)
-     */
     public function clearPermissionsCache(): void
     {
         $this->cachedPermissions = null;

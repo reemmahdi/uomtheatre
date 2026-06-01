@@ -10,18 +10,6 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * VipGuests — UOMTheatre (مُحدّث - إصلاحات Claude)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات:
- *   🔴 authorize() في كل method
- *   🔴 getReservationForThisEvent: يمنع IDOR بين الفعاليات
- *   🟡 nullsafe على relationships
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('قائمة ضيوف الوفود')]
 class VipGuests extends BaseComponent
@@ -35,9 +23,6 @@ class VipGuests extends BaseComponent
 
     public ?array $viewBooking = null;
 
-    /**
-     * ✨ helper: التحقق من صلاحية إدارة الوفود
-     */
     protected function authorizeManageVip(): void
     {
         $event = Event::findOrFail($this->eventId);
@@ -46,9 +31,6 @@ class VipGuests extends BaseComponent
         }
     }
 
-    /**
-     * ✨ helper: التأكد أن الحجز ينتمي لهذه الفعالية
-     */
     protected function getReservationForThisEvent(int $reservationId): Reservation
     {
         $res = Reservation::with(['seat.section', 'event'])->findOrFail($reservationId);

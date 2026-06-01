@@ -6,18 +6,6 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * ════════════════════════════════════════════════════════════
- * DatabaseSeeder — UOMTheatre (إعادة هندسة)
- * ════════════════════════════════════════════════════════════
- *
- * 🎯 التعديل المعماري:
- *   - is_vip_reserved = false لكل المقاعد (محايد)
- *     السبب: مقاعد الوفود تُحدد per-event من جدول reservations
- *   - is_vip للأقسام = false لكل الأقسام (legacy - لا تأثير عملي)
- *
- * ════════════════════════════════════════════════════════════
- */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
@@ -113,10 +101,6 @@ class DatabaseSeeder extends Seeder
         $this->command->info("✅ super_admin: {$email}");
     }
 
-    /**
-     * 🎯 الأقسام - is_vip = false لكل الأقسام
-     * (legacy column - لا تأثير على الـ logic الجديد)
-     */
     protected function seedSections(): void
     {
         $sections = [
@@ -134,7 +118,7 @@ class DatabaseSeeder extends Seeder
                 ['id' => $section['id']],
                 [
                     'name'        => $section['name'],
-                    'is_vip'      => false,   // 🎯 محايد - الـ VIP يحدد per-event
+                    'is_vip'      => false,
                     'total_seats' => $section['total_seats'],
                     'total_rows'  => $section['total_rows'],
                     'updated_at'  => $now,
@@ -145,10 +129,6 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✅ 6 أقسام (is_vip محايد)');
     }
 
-    /**
-     * 🎯 المقاعد - is_vip_reserved = false لكل المقاعد
-     * (محايد - الـ VIP يحدد per-event)
-     */
     protected function seedSeats(): void
     {
         if (DB::table('seats')->count() > 0) {
@@ -182,7 +162,7 @@ class DatabaseSeeder extends Seeder
                         'label'           => $sectionName . '-'
                                           . str_pad($rowNumber, 2, '0', STR_PAD_LEFT) . '-'
                                           . str_pad($seatNum, 2, '0', STR_PAD_LEFT),
-                        'is_vip_reserved' => false,   // 🎯 كله false - VIP per-event
+                        'is_vip_reserved' => false,
                         'created_at'      => $now,
                         'updated_at'      => $now,
                     ];

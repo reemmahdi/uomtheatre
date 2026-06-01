@@ -1,18 +1,6 @@
-{{-- ════════════════════════════════════════════════════════════════
-     شاشة تحديد المقاعد المتاحة — UOMTheatre (تصميم محدّث)
-
-     ✨ التغييرات:
-       - نفس FAN math من seats-map المعتمدة
-       - viewBox="-450 50 2600 1500"
-       - حذف "خشبة المسرح" المنفصلة (مدمجة داخل SVG)
-       - Legend واضح بالألوان
-       - keys بصيغة "A-01-01" لتتطابق مع DB
-       - VIP محمي (غير قابل للاستبعاد)
-     ════════════════════════════════════════════════════════════════ --}}
 
 <div>
 
-{{-- ✨ شريط العنوان والإجراءات --}}
 <div class="card-custom p-3 mb-3">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
@@ -38,7 +26,6 @@
     </div>
 </div>
 
-{{-- ✨ الإحصائيات (3 بطاقات) --}}
 <div class="row g-3 mb-3">
     <div class="col-md-4">
         <div class="stat-card" style="border-bottom: 4px solid #22C55E;">
@@ -57,17 +44,17 @@
         </div>
     </div>
     <div class="col-md-4">
-        <div class="stat-card" style="border-bottom: 4px solid #EF4444;">
+        <div class="stat-card" style="border-bottom: 4px solid #C9A530;">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="number" style="color: #EF4444;" id="excludedCount">0</div>
+                    <div class="number" style="color: #A88729;" id="excludedCount">0</div>
                     <div class="label">
-                        <i class="bi bi-x-circle-fill" style="color: #EF4444;"></i>
-                        مستبعد (يظهر محجوزاً)
+                        <i class="bi bi-star-fill" style="color: #C9A530;"></i>
+                        مقاعد الوفود (52 ثابتة + المضافة)
                     </div>
                 </div>
-                <div class="icon" style="background: #fef2f2; color: #EF4444;">
-                    <i class="bi bi-slash-circle"></i>
+                <div class="icon" style="background: #fef9e7; color: #A88729;">
+                    <i class="bi bi-star-fill"></i>
                 </div>
             </div>
         </div>
@@ -90,11 +77,10 @@
     </div>
 </div>
 
-{{-- ✨ أدوات سريعة + Legend --}}
 <div class="card-custom p-3 mb-3">
     <div class="row g-3 align-items-center">
 
-        {{-- أدوات الاستبعاد --}}
+        
         <div class="col-md-7">
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <small class="fw-bold text-muted">أدوات سريعة:</small>
@@ -115,23 +101,19 @@
             </div>
         </div>
 
-        {{-- Legend + Info Box --}}
+        
         <div class="col-md-5">
             <div class="d-flex justify-content-end gap-3 flex-wrap mb-2" style="font-size: 13px;">
                 <span>
                     <span style="display: inline-block; width: 14px; height: 14px; background: #22C55E; border-radius: 50%; vertical-align: middle; border: 1.5px solid #16A34A;"></span>
-                    متاح
-                </span>
-                <span>
-                    <span style="display: inline-block; width: 14px; height: 14px; background: #EF4444; border-radius: 50%; vertical-align: middle; border: 1.5px solid #DC2626;"></span>
-                    مستبعد
+                    متاح للجمهور
                 </span>
                 <span>
                     <span style="display: inline-block; width: 14px; height: 14px; background: #C9A530; border-radius: 50%; vertical-align: middle; border: 1.5px solid #A88729;"></span>
-                    VIP
+                    مقاعد الوفود
                 </span>
             </div>
-            {{-- ✨ Info box للمقعد المحدد --}}
+            
             <div id="seatInfoBox" class="text-end" style="font-size: 13px; padding: 8px 12px; background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0; min-height: 38px; display: flex; align-items: center; justify-content: flex-end; color: #64748b;">
                 اختر مقعداً لعرض تفاصيله
             </div>
@@ -139,14 +121,13 @@
     </div>
 </div>
 
-{{-- ✨ خريطة المسرح --}}
 <div class="card-custom p-3" style="background: linear-gradient(180deg, #F8FAFC, #EEF2F7);">
     <div id="mapWrapper" style="position: relative; border-radius: 12px; min-height: 600px; overflow: auto;">
 
-        {{-- نفس الـ viewBox من الخريطة المعتمدة --}}
+        
         <svg id="mapSvg" width="100%" viewBox="-450 50 2600 1700" preserveAspectRatio="xMidYMid meet" style="max-height: 750px; user-select: none;">
 
-            {{-- gradients --}}
+            
             <defs>
                 <radialGradient id="stageGlow" cx="50%" cy="0%" r="80%">
                     <stop offset="0%" stop-color="#FCD981" stop-opacity="0.4"/>
@@ -154,23 +135,23 @@
                 </radialGradient>
             </defs>
 
-            {{-- ضوء المسرح --}}
+            
             <ellipse cx="850" cy="320" rx="900" ry="280" fill="url(#stageGlow)" pointer-events="none"/>
 
-            {{-- شريط المسرح داخل SVG (برغندي رسمي) --}}
-            <rect x="200" y="280" width="1300" height="50" rx="8" fill="#7B1E2F" pointer-events="none"/>
+            
+            <rect x="200" y="280" width="1300" height="50" rx="8" fill="#0C4A6E" pointer-events="none"/>
             <text x="850" y="313" text-anchor="middle" fill="#fff" font-weight="700" font-size="28" pointer-events="none">
                 خشبة المسرح
             </text>
 
-            {{-- مجموعة المقاعد --}}
+            
             <g id="seatsGroup"></g>
 
-            {{-- مجموعة labels الأقسام --}}
+            
             <g id="labelsGroup"></g>
         </svg>
 
-        {{-- مؤشر تحميل --}}
+        
         <div id="loadingOverlay" style="position: absolute; inset: 0; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center; border-radius: 12px;">
             <div style="text-align: center;">
                 <div class="spinner-border" style="color: #0C4A6E; width: 50px; height: 50px;"></div>
@@ -180,7 +161,6 @@
     </div>
 </div>
 
-{{-- ✨ JavaScript --}}
 @push('scripts')
 <script>
 (function() {
@@ -213,7 +193,7 @@
 
     const COLORS = {
         available: { fill: "#22C55E", stroke: "#16A34A" },
-        excluded:  { fill: "#EF4444", stroke: "#DC2626" },
+        excluded:  { fill: "#C9A530", stroke: "#A88729" },
         vip:       { fill: "#C9A530", stroke: "#A88729" },
     };
 
@@ -222,6 +202,7 @@
     let savedExcludedKeys = new Set();
     let totalNonVip = 0;
     let totalVip = 0;
+    let vipCountFromDB = 0;  // ✨ عدد المقاعد VIP من DB (52 ثابت)
 
     const seatsGroup = document.getElementById('seatsGroup');
     const labelsGroup = document.getElementById('labelsGroup');
@@ -261,8 +242,8 @@
             cfg.rowSeats.forEach((seatCount, rIdx) => {
                 const r = rIdx + 1;
                 const radius = radiusStart + rIdx * rowGap;
-                // 🔧 VIP فقط الصف 10 من Orchestra (D, E, F البالكوني صارت عادية)
-                const isVip = !isBalc && r === 10;
+                // ✨ VIP محلياً: الصف العاشر من Orchestra (A, B, C)
+                const isVipLocal = !isBalc && r === 10;
 
                 for (let i = 0; i < seatCount; i++) {
                     const t = seatCount === 1 ? 0.5 : i / (seatCount - 1);
@@ -280,39 +261,37 @@
                     circle.setAttribute("r", isBalc ? 14 : 13);
                     circle.setAttribute("data-key", key);
                     circle.setAttribute("data-section", name);
+                    circle.setAttribute("data-row", r);
+                    circle.setAttribute("data-num", i+1);
 
-                    if (isVip) {
+                    // ✨ تحديد لون VIP/متاح
+                    if (isVipLocal) {
                         circle.style.fill = COLORS.vip.fill;
                         circle.style.stroke = COLORS.vip.stroke;
-                        circle.style.cursor = "pointer";
-                        circle.setAttribute("data-vip", "true");
-                        circle.setAttribute("data-row", r);
-                        circle.setAttribute("data-num", i+1);
-                        totalVip++;
-
-                        const title = document.createElementNS(SVG_NS, "title");
-                        title.textContent = `${name}-${r}-${i+1} (VIP)`;
-                        circle.appendChild(title);
-
-                        // ✨ VIP: عرض معلومات فقط (لا استبعاد)
-                        circle.addEventListener('click', () => showSeatInfo(name, r, i+1, 'vip'));
+                        circle.setAttribute('data-vip', 'true');
                     } else {
                         circle.style.fill = COLORS.available.fill;
                         circle.style.stroke = COLORS.available.stroke;
-                        circle.style.cursor = "pointer";
-                        circle.setAttribute("data-row", r);
-                        circle.setAttribute("data-num", i+1);
-                        totalNonVip++;
+                    }
+                    circle.style.cursor = "pointer";
 
-                        const title = document.createElementNS(SVG_NS, "title");
-                        title.textContent = `${name}-${r}-${i+1}`;
-                        circle.appendChild(title);
+                    const title = document.createElementNS(SVG_NS, "title");
+                    title.textContent = isVipLocal
+                        ? `${name}-${r}-${i+1} (VIP)`
+                        : `${name}-${r}-${i+1}`;
+                    circle.appendChild(title);
 
-                        circle.addEventListener('click', () => {
+                    // ✨ الـ click handler يفحص الـ VIP state ديناميكياً
+                    circle.addEventListener('click', () => {
+                        if (circle.getAttribute('data-vip') === 'true') {
+                            // VIP: عرض فقط (لا استبعاد)
+                            showSeatInfo(name, r, i+1, 'vip');
+                        } else {
                             toggleSeat(key);
                             showSeatInfo(name, r, i+1, excludedKeys.has(key) ? 'excluded' : 'available');
-                        });
-                    }
+                        }
+                    });
+
                     circle.style.strokeWidth = "1.5";
                     circle.style.transition = "all .15s";
 
@@ -322,7 +301,7 @@
             });
         });
 
-        console.log(`✓ Built ${Object.keys(seats).length} seats (${totalNonVip} non-VIP, ${totalVip} VIP)`);
+        console.log(`✓ Built ${Object.keys(seats).length} seats. VIP will be loaded from DB.`);
     }
 
     // ✨ عرض معلومات المقعد في info box
@@ -332,8 +311,8 @@
 
         const statusInfo = {
             available: { color: '#16A34A', bg: '#dcfce7', icon: 'bi-check-circle-fill', text: 'متاح للجمهور' },
-            excluded:  { color: '#DC2626', bg: '#fef2f2', icon: 'bi-x-circle-fill', text: 'مستبعد (محجوز)' },
-            vip:       { color: '#A88729', bg: '#fef9e7', icon: 'bi-shield-fill', text: 'VIP' },
+            excluded:  { color: '#A88729', bg: '#fef9e7', icon: 'bi-star-fill',          text: 'مقعد وفد (مستبعد)' },
+            vip:       { color: '#A88729', bg: '#fef9e7', icon: 'bi-star-fill',          text: 'VIP — مقعد وفد ثابت' },
         };
         const info = statusInfo[status] || statusInfo.available;
 
@@ -384,10 +363,13 @@
     }
 
     function updateStats() {
-        const excluded = excludedKeys.size;
-        const available = totalNonVip - excluded;
+        const userExcluded = excludedKeys.size;
+        // ✨ المستبعد = VIP الثابتة (52) + ما يستبعده مدير الإعلام
+        const totalExcluded = vipCountFromDB + userExcluded;
+        // ✨ المتاح للجمهور = totalNonVip - userExcluded
+        const available = totalNonVip - userExcluded;
         document.getElementById('availableCount').textContent = available;
-        document.getElementById('excludedCount').textContent = excluded;
+        document.getElementById('excludedCount').textContent = totalExcluded;
     }
 
     function updateSaveButton() {
@@ -420,6 +402,25 @@
             if (!res.ok) throw new Error('فشل التحميل: ' + res.status);
             const data = await res.json();
 
+            // ✨ مُحدَّث: تطبيق المقاعد VIP من DB (is_vip_reserved=true)
+            (data.vip_seat_keys || []).forEach(key => {
+                if (seats[key]) {
+                    seats[key].setAttribute('data-vip', 'true');
+                    seats[key].style.fill = COLORS.vip.fill;
+                    seats[key].style.stroke = COLORS.vip.stroke;
+
+                    // تحديث الـ tooltip
+                    const title = seats[key].querySelector('title');
+                    if (title) title.textContent = title.textContent + ' (VIP)';
+                }
+            });
+
+            // ✨ حساب totalNonVip بناءً على VIP من DB
+            const vipCount = (data.vip_seat_keys || []).length;
+            vipCountFromDB = vipCount;  // ✨ تخزين عدد VIP للـ stats
+            totalNonVip = Object.keys(seats).length - vipCount;
+
+            // تطبيق المقاعد المستبعدة (تجاهل VIP)
             (data.excluded_seat_keys || []).forEach(key => {
                 if (seats[key] && seats[key].dataset.vip !== 'true') {
                     excludedKeys.add(key);
@@ -428,6 +429,8 @@
                     seats[key].style.stroke = COLORS.excluded.stroke;
                 }
             });
+
+            console.log(`✓ Loaded: ${vipCount} VIP, ${excludedKeys.size} excluded, totalNonVip=${totalNonVip}`);
 
             updateStats();
             updateSaveButton();

@@ -10,12 +10,9 @@
     </div>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--  ✨ شريط البحث والفلاتر                        --}}
-{{-- ══════════════════════════════════════════════ --}}
 <div class="card-custom p-3 mb-4 filters-bar">
     <div class="row g-2 align-items-end">
-        {{-- بحث بالعنوان --}}
+        
         <div class="col-md-4 position-relative">
             <label class="form-label small fw-bold mb-1">
                 <i class="bi bi-search"></i> البحث باسم الفعالية
@@ -27,7 +24,7 @@
                    placeholder="ابدأ بكتابة اسم الفعالية..."
                    autocomplete="off">
 
-            {{-- ✨ قائمة الاقتراحات (Autocomplete) --}}
+            
             @if($showSuggestions && count($suggestions) > 0)
             <div class="autocomplete-dropdown" wire:click.outside="hideSuggestions">
                 @foreach($suggestions as $suggestion)
@@ -48,7 +45,7 @@
             @endif
         </div>
 
-        {{-- فلتر الحالة (✨ أسماء عربية ثابتة - بدون under_review) --}}
+        
         <div class="col-md-3">
             <label class="form-label small fw-bold mb-1">
                 <i class="bi bi-flag"></i> الحالة
@@ -66,7 +63,7 @@
                         'rejected'  => 'مرفوضة',
                         'end'       => 'منتهية',
                     ];
-                @endphp
+@endphp
                 @foreach($allStatuses as $st)
                     @if(isset($statusLabels[$st->name]))
                     <option value="{{ $st->name }}">{{ $statusLabels[$st->name] }}</option>
@@ -75,7 +72,7 @@
             </select>
         </div>
 
-        {{-- من تاريخ --}}
+        
         <div class="col-md-2">
             <label class="form-label small fw-bold mb-1">
                 <i class="bi bi-calendar-event"></i> من تاريخ
@@ -86,7 +83,7 @@
                    class="form-control form-control-sm">
         </div>
 
-        {{-- إلى تاريخ --}}
+        
         <div class="col-md-2">
             <label class="form-label small fw-bold mb-1">
                 <i class="bi bi-calendar-check"></i> إلى تاريخ
@@ -97,7 +94,7 @@
                    class="form-control form-control-sm">
         </div>
 
-        {{-- زر مسح الفلاتر --}}
+        
         <div class="col-md-1">
             <button wire:click="resetFilters"
                     class="btn btn-sm btn-outline-secondary w-100"
@@ -108,9 +105,6 @@
     </div>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--  ✨ شريط نتائج البحث                              --}}
-{{-- ══════════════════════════════════════════════ --}}
 <div class="d-flex justify-content-between align-items-center mb-3 px-2">
     <div class="text-muted">
         @if($searchTitle || $filterStatus || $filterDateFrom || $filterDateTo)
@@ -127,9 +121,6 @@
     </div>
 </div>
 
-{{-- ══════════════════════════════════════════════ --}}
-{{--  ✨ الجدول الجديد - 6 أعمدة منظمة             --}}
-{{-- ══════════════════════════════════════════════ --}}
 <div class="card-custom p-0">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0 events-table">
@@ -153,14 +144,14 @@
                     $sLabel = $statusNames[$sName] ?? $sName;
                     $isCancelled = ($sName === 'cancelled');
                     $isPaused = $event->is_booking_paused;
-                @endphp
+@endphp
                 <tr wire:key="event-{{ $event->id }}" class="@if($isCancelled) row-cancelled @elseif($isPaused) row-paused @endif">
-                    {{-- # --}}
+                    
                     <td class="text-center">
                         <strong class="row-number">{{ $events->firstItem() + $loop->index }}</strong>
                     </td>
 
-                    {{-- عنوان الفعالية --}}
+                    
                     <td>
                         <div class="event-title-cell">
                             <strong class="event-title-text @if($isCancelled) cancelled-title @endif">
@@ -171,13 +162,13 @@
                             @if($event->description)
                             <small class="text-muted d-block mt-1">{{ \Illuminate\Support\Str::limit($event->description, 60) }}</small>
                             @endif
-                            {{-- سبب الإلغاء --}}
+                            
                             @if($isCancelled && $event->cancellation_reason)
                             <small class="text-muted fst-italic d-block mt-1">
                                 <i class="bi bi-info-circle"></i> سبب الإلغاء: {{ \Illuminate\Support\Str::limit($event->cancellation_reason, 60) }}
                             </small>
                             @endif
-                            {{-- تنبيه الإيقاف المؤقت --}}
+                            
                             @if($isPaused && !$isCancelled)
                             <small class="text-warning fst-italic d-block mt-1">
                                 <i class="bi bi-pause-fill"></i> الحجز متوقف مؤقتاً
@@ -189,33 +180,33 @@
                         </div>
                     </td>
 
-                    {{-- ✨ موعد الانطلاق --}}
+                    
                     <td class="text-center">
                         @php
                             $startHour12 = $event->start_datetime->format('g');
                             $startMin    = $event->start_datetime->format('i');
                             $startPeriod = $event->start_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
-                        @endphp
+@endphp
                         <div class="date-cell">
                             <div class="date-day" dir="ltr">{{ $event->start_datetime->format('Y-m-d') }}</div>
                             <div class="date-time">{{ $startHour12 }}:{{ $startMin }} {{ $startPeriod }}</div>
                         </div>
                     </td>
 
-                    {{-- ✨ موعد الاختتام --}}
+                    
                     <td class="text-center">
                         @php
                             $endHour12 = $event->end_datetime->format('g');
                             $endMin    = $event->end_datetime->format('i');
                             $endPeriod = $event->end_datetime->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
-                        @endphp
+@endphp
                         <div class="date-cell">
                             <div class="date-day" dir="ltr">{{ $event->end_datetime->format('Y-m-d') }}</div>
                             <div class="date-time">{{ $endHour12 }}:{{ $endMin }} {{ $endPeriod }}</div>
                         </div>
                     </td>
 
-                    {{-- الحالة --}}
+                    
                     <td class="text-center">
                         <div class="status-stack">
                             <span class="status-badge status-badge-{{ $sName }}">
@@ -230,12 +221,12 @@
                         </div>
                     </td>
 
-                    {{-- ══════════════════════════════════════════════ --}}
-                    {{--  ✨ خلية الإجراءات                              --}}
-                    {{-- ══════════════════════════════════════════════ --}}
+                    
+                    
+                    
                     <td class="text-center">
                         <div class="actions-group">
-                            {{-- 1. عرض التفاصيل (دائماً) --}}
+                            
                             <button type="button"
                                     class="btn-action btn-action-view"
                                     wire:click="viewEvent({{ $event->id }})"
@@ -243,8 +234,8 @@
                                 <i class="bi bi-eye"></i>
                             </button>
 
-                            {{-- ✨ مدير الإعلام: تعديل + إرسال للموافقة --}}
-                            {{-- 🔧 مُحدَّث: يظهر للمسودات + الفعاليات المرفوضة (لإعادة الإرسال) --}}
+                            
+                            
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
                                 @if(in_array($sName, ['draft', 'rejected']))
                                 <button type="button"
@@ -262,7 +253,7 @@
                                 @endif
                             @endif
 
-                            {{-- ✨ مدير الإعلام: نشر / إغلاق / وفود --}}
+                            
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
                                 @if(in_array($sName, ['active', 'published']))
                                 <a href="{{ route('dashboard.vip-booking', $event->uuid) }}"
@@ -270,7 +261,7 @@
                                    title="إدارة مقاعد الوفود">
                                     <i class="bi bi-star-fill"></i>
                                 </a>
-                                {{-- ✨ جديد: تحديد المقاعد المتاحة للجمهور --}}
+                                
                                 <a href="{{ route('dashboard.seat-availability', $event->uuid) }}"
                                    class="btn-action btn-action-seats"
                                    title="تحديد المقاعد المتاحة للجمهور">
@@ -295,7 +286,7 @@
                                     <i class="bi bi-lock-fill"></i>
                                 </button>
 
-                                {{-- زر الإيقاف/الاستئناف --}}
+                                
                                 @if(!$isPaused)
                                 <button type="button"
                                         class="btn-action btn-action-pause"
@@ -314,7 +305,7 @@
                                 @endif
                             @endif
 
-                            {{-- زر الإلغاء --}}
+                            
                             @if(!in_array($sName, ['cancelled', 'end', 'closed']))
                             <button type="button"
                                     class="btn-action btn-action-cancel"
@@ -347,7 +338,7 @@
         </table>
     </div>
 
-    {{-- ✨ روابط التصفّح --}}
+    
     @if($events->hasPages())
     <div class="pagination-wrapper p-3 border-top">
         <div class="pagination-links-only d-flex justify-content-center">
@@ -357,12 +348,6 @@
     @endif
 </div>
 
-
-{{-- ══════════════════════════════════════════════ --}}
-{{--  Modals                                         --}}
-{{-- ══════════════════════════════════════════════ --}}
-
-{{-- نافذة عرض التفاصيل --}}
 <div class="modal fade" id="viewEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -373,12 +358,12 @@
             <div class="modal-body">
                 @if(!empty($showEvent))
 
-                {{-- عنوان الفعالية أولاً --}}
+                
                 <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #e0f2fe, #f0f9ff); border-right: 4px solid #0C4A6E;">
                     <h5 style="color: #0C4A6E; font-weight: 700; margin: 0;">{{ $showEvent['title'] }}</h5>
                 </div>
 
-                {{-- تنبيه الإلغاء --}}
+                
                 @if(($showEvent['status_name'] ?? '') === 'cancelled')
                 <div class="alert alert-danger border-danger mb-3">
                     <h6 class="alert-heading mb-2">
@@ -394,7 +379,7 @@
                 </div>
                 @endif
 
-                {{-- تنبيه الإيقاف --}}
+                
                 @if(!empty($showEvent['is_booking_paused']))
                 <div class="alert alert-warning border-warning mb-3">
                     <h6 class="alert-heading mb-2">
@@ -426,7 +411,6 @@
     </div>
 </div>
 
-{{-- نافذة إنشاء فعالية --}}
 <div class="modal fade" id="createEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -474,7 +458,6 @@
                         <div class="col-md-5 mb-2">
                             <label class="form-label fw-bold" style="color: #0C4A6E;"><i class="bi bi-clock"></i> الوقت <span class="text-danger">*</span></label>
                             @php
-                                // تقسيم الوقت الحالي إلى ساعة/دقيقة/فترة
                                 $currentTime = $start_time ?? '';
                                 $h24 = $currentTime ? (int)substr($currentTime, 0, 2) : null;
                                 $mm  = $currentTime ? substr($currentTime, 3, 2) : '';
@@ -484,7 +467,7 @@
                                     $h12 = $h24 % 12;
                                     if ($h12 === 0) $h12 = 12;
                                 }
-                            @endphp
+@endphp
                             <div class="d-flex gap-2 align-items-center">
                                 <select wire:model.live="start_hour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
@@ -533,7 +516,7 @@
                                     $h12e = $h24e % 12;
                                     if ($h12e === 0) $h12e = 12;
                                 }
-                            @endphp
+@endphp
                             <div class="d-flex gap-2 align-items-center">
                                 <select wire:model.live="end_hour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
@@ -569,7 +552,6 @@
     </div>
 </div>
 
-{{-- نافذة تعديل فعالية --}}
 <div class="modal fade" id="editEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -618,7 +600,7 @@
                                     $eh12 = $eh24 % 12;
                                     if ($eh12 === 0) $eh12 = 12;
                                 }
-                            @endphp
+@endphp
                             <div class="d-flex gap-2 align-items-center">
                                 <select wire:model.live="editStartHour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
@@ -662,7 +644,7 @@
                                     $eeh12 = $eeh24 % 12;
                                     if ($eeh12 === 0) $eeh12 = 12;
                                 }
-                            @endphp
+@endphp
                             <div class="d-flex gap-2 align-items-center">
                                 <select wire:model.live="editEndHour" class="form-select" style="background: #fff; flex: 1; min-width: 70px;">
                                     <option value="">ساعة</option>
@@ -697,7 +679,6 @@
     </div>
 </div>
 
-{{-- نافذة إلغاء الفعالية --}}
 <div class="modal fade" id="cancelEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -764,10 +745,6 @@
     </div>
 </div>
 
-
-{{-- ══════════════════════════════════════════════ --}}
-{{--  ✨ تنسيقات الجدول - باليتة Midnight Ocean    --}}
-{{-- ══════════════════════════════════════════════ --}}
 <style>
     /* ════════ متغيرات اللوحة الرئيسية ════════ */
     .events-table {
@@ -1254,7 +1231,6 @@
         }
     }
 </style>
-
 
 <script>
 document.addEventListener('livewire:initialized', () => {

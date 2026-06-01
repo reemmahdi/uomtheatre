@@ -10,25 +10,12 @@ use App\Models\Status;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * DashboardController — UOMTheatre API (مُحدّث - إصلاحات Claude)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات:
- *   🔴 إزالة hardcoded role_id=6 → Role::USER ديناميكي
- *   🟡 إزالة magic numbers (997, 52) → Event::TOTAL_SEATS + config
- *   🟡 nullsafe على relationships
- *
- * ════════════════════════════════════════════════════════════════
- */
 class DashboardController extends Controller
 {
     public function eventDashboard($id): JsonResponse
     {
         $event = Event::with('status')->findOrFail($id);
 
-        // ✨ استخدام Event::TOTAL_SEATS بدل magic number
         $totalSeats = defined(Event::class . '::TOTAL_SEATS') ? Event::TOTAL_SEATS : 997;
 
         $reserved   = $event->reservedSeatsCount();
@@ -54,7 +41,6 @@ class DashboardController extends Controller
     {
         $publishedStatus = Status::where('name', Status::PUBLISHED)->first();
 
-        // ✨ مُصحَّح: ديناميكي بدل hardcoded 6
         $userRoleId = Role::where('name', Role::USER)->value('id');
 
         $totalSeats = defined(Event::class . '::TOTAL_SEATS') ? Event::TOTAL_SEATS : 997;

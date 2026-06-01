@@ -9,46 +9,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * EventLifecycleService — UOMTheatre (جديد)
- * ════════════════════════════════════════════════════════════════
- *
- * 🎯 الهدف:
- *   إدارة دورة حياة الفعالية ما بعد الموافقة:
- *
- *   - publish()      ACTIVE → PUBLISHED  (مدير الإعلام يضغط "نشر")
- *   - cancel()       PUBLISHED/ACTIVE → CANCELLED  (إلغاء بسبب)
- *   - pauseBooking() إيقاف الحجز مؤقتاً (مع الإبقاء على الحالة)
- *   - resumeBooking() استئناف الحجز
- *
- * 🔄 سير الحياة الكامل:
- *
- *   DRAFT → ADDED → REJECTED → (تعديل) → ADDED → ...
- *                ↓
- *                ACTIVE → publish() → PUBLISHED → close → END
- *                                  ↓
- *                                  cancel() → CANCELLED
- *
- * 💡 الفرق بين CANCEL و REJECTED:
- *   - REJECTED: رفضها مكتب الرئاسة (قبل النشر)
- *   - CANCELLED: ألغاها مدير الإعلام (بعد النشر عادة)
- *
- * ════════════════════════════════════════════════════════════════
- */
 class EventLifecycleService
 {
-    // ════════════════════════════════════════════════════════════
-    // النشر (Publish)
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * نشر الفعالية للجمهور
-     *
-     * - الفعالية يجب أن تكون بحالة ACTIVE (وافقت الرئاسة)
-     * - يسجّل published_at + published_by
-     * - يرسل إشعارات (إن أمكن)
-     */
     public function publish(Event $event, ?User $user = null): array
     {
         $user = $user ?? Auth::user();
@@ -56,7 +18,6 @@ class EventLifecycleService
         return DB::transaction(function () use ($event, $user) {
             $event = Event::lockForUpdate()->findOrFail($event->id);
 
-            // التحقق من الجاهزية
             if (!$event->isReadyToPublish()) {
                 return [
                     'success' => false,
@@ -67,14 +28,12 @@ class EventLifecycleService
             $oldStatusId = $event->status_id;
             $publishedStatus = Status::where('name', Status::PUBLISHED)->firstOrFail();
 
-            // تحديث الفعالية
             $event->update([
                 'status_id'    => $publishedStatus->id,
                 'published_at' => now(),
                 'published_by' => $user?->id,
             ]);
 
-            // سجل التغيير
             EventLog::create([
                 'event_id'      => $event->id,
                 'user_id'       => $user?->id ?? Auth::id(),
@@ -82,7 +41,6 @@ class EventLifecycleService
                 'new_status_id' => $publishedStatus->id,
             ]);
 
-            // إشعار الجمهور والموظفين
             $this->safeNotify('notifyEventPublished', $event);
 
             return [
@@ -92,17 +50,6 @@ class EventLifecycleService
         });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // الإلغاء (Cancel)
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * إلغاء الفعالية
-     *
-     * - يقبل الإلغاء من: ACTIVE, PUBLISHED, CLOSED
-     * - يحفظ سبب الإلغاء وتاريخه
-     * - يرسل إشعارات للحاجزين (إن أمكن)
-     */
     public function cancel(Event $event, ?string $reason = null, ?User $user = null): array
     {
         $user = $user ?? Auth::user();
@@ -139,7 +86,6 @@ class EventLifecycleService
                 'new_status_id' => $cancelledStatus->id,
             ]);
 
-            // إشعار الحاجزين والموظفين
             $this->safeNotify('notifyEventCancelled', $event, $reason);
 
             return [
@@ -149,17 +95,6 @@ class EventLifecycleService
         });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // إيقاف/استئناف الحجز (Pause/Resume Booking)
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * إيقاف الحجز مؤقتاً للفعالية (بدون تغيير الحالة)
-     *
-     * مفيد لـ:
-     *   - تعديل وقت الفعالية مؤقتاً
-     *   - مراجعة الحجوزات قبل الفعالية
-     */
     public function pauseBooking(Event $event): array
     {
         return DB::transaction(function () use ($event) {
@@ -191,9 +126,6 @@ class EventLifecycleService
         });
     }
 
-    /**
-     * استئناف الحجز للفعالية
-     */
     public function resumeBooking(Event $event): array
     {
         return DB::transaction(function () use ($event) {
@@ -218,13 +150,6 @@ class EventLifecycleService
         });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Internal Helpers
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * استدعاء آمن لـ NotificationService
-     */
     protected function safeNotify(string $method, ...$args): void
     {
         try {

@@ -11,18 +11,6 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * Permissions — UOMTheatre (مُحدّث - إصلاحات Claude)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات:
- *   🔴 authorize() في كل method (أمن حساس - تعديل صلاحيات النظام!)
- *   🟡 إصلاح N+1 في loadRolePermissions
- *   🟡 مسح permission cache بعد الحفظ
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('إدارة الصلاحيات')]
 class Permissions extends BaseComponent
@@ -30,9 +18,6 @@ class Permissions extends BaseComponent
     public array $rolePermissions = [];
     public bool $hasChanges = false;
 
-    /**
-     * ✨ helper مشترك: التحقق من super_admin
-     */
     protected function authorizeSuperAdmin(): void
     {
         if (!Auth::user()?->isSuperAdmin()) {
@@ -46,14 +31,10 @@ class Permissions extends BaseComponent
         $this->loadRolePermissions();
     }
 
-    /**
-     * ✨ مُحسّن: نقل Permission::pluck خارج اللوب (كان N+1)
-     */
     protected function loadRolePermissions(): void
     {
         $this->rolePermissions = [];
 
-        // ✨ مرة واحدة قبل اللوب (بدل في كل iteration!)
         $allPermissionIds = Permission::pluck('id')->all();
 
         $roles = Role::with('permissions')->get();
@@ -72,7 +53,7 @@ class Permissions extends BaseComponent
 
     public function toggle(int $roleId, int $permissionId): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         if (!isset($this->rolePermissions[$roleId][$permissionId])) {
             return;
@@ -84,7 +65,7 @@ class Permissions extends BaseComponent
 
     public function selectAllForRole(int $roleId): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         if (!isset($this->rolePermissions[$roleId])) {
             return;
@@ -100,7 +81,7 @@ class Permissions extends BaseComponent
 
     public function deselectAllForRole(int $roleId): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         if (!isset($this->rolePermissions[$roleId])) {
             return;
@@ -116,7 +97,7 @@ class Permissions extends BaseComponent
 
     public function requestSave(): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         if (!$this->hasChanges) {
             $this->swalToast('لا توجد تغييرات للحفظ');
@@ -130,13 +111,10 @@ class Permissions extends BaseComponent
         );
     }
 
-    /**
-     * ✨ تنفيذ الحفظ مع authorize check (مهم - event-based methods حساسة!)
-     */
     #[On('confirmSave')]
     public function confirmSave(): void
     {
-        $this->authorizeSuperAdmin();   // ✨ critical authorize check!
+        $this->authorizeSuperAdmin();
 
         try {
             DB::transaction(function () {
@@ -153,7 +131,6 @@ class Permissions extends BaseComponent
                 }
             });
 
-            // ✨ مسح cache الصلاحيات للمستخدم الحالي (لو موجودة في User Model)
             if (method_exists(Auth::user(), 'clearPermissionsCache')) {
                 Auth::user()->clearPermissionsCache();
             }
@@ -167,7 +144,7 @@ class Permissions extends BaseComponent
 
     public function requestReset(): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
 
         if (!$this->hasChanges) {
             return;
@@ -183,7 +160,7 @@ class Permissions extends BaseComponent
     #[On('confirmReset')]
     public function confirmReset(): void
     {
-        $this->authorizeSuperAdmin();   // ✨ authorize check
+        $this->authorizeSuperAdmin();
         $this->loadRolePermissions();
         $this->swalToast('تم استعادة الصلاحيات الأصلية');
     }

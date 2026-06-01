@@ -1,7 +1,4 @@
-/**
- * SweetAlert2 Custom Styles - UOMTheatre
- * Midnight Ocean Palette + Cairo/Tajawal fonts
- */
+
 
 .swal-rtl {
     direction: rtl;
@@ -20,7 +17,6 @@
     font-size: 16px;
 }
 
-/* Buttons */
 .swal-rtl .swal2-confirm,
 .swal-rtl .swal2-cancel {
     font-family: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
@@ -37,7 +33,6 @@
     box-shadow: 0 4px 12px rgba(12, 74, 110, 0.3);
 }
 
-/* Main popup */
 .swal-rtl.swal2-popup {
     border-radius: 16px;
     padding: 2rem 1.5rem;
@@ -45,7 +40,6 @@
     border-top: 4px solid #E4C05E;
 }
 
-/* Toast */
 .swal-toast-custom {
     border-radius: 12px !important;
     font-family: 'Tajawal', 'Cairo', sans-serif !important;
@@ -59,7 +53,6 @@
     padding: 0 0.5rem !important;
 }
 
-/* Icons */
 .swal-rtl .swal2-icon.swal2-success {
     border-color: #0C4A6E !important;
     color: #0C4A6E !important;
@@ -80,7 +73,6 @@
     color: #0369A1 !important;
 }
 
-/* Animation */
 .swal2-show {
     animation: swalFadeIn 0.3s ease-out !important;
 }
@@ -96,7 +88,6 @@
     }
 }
 
-/* Timer progress bar */
 .swal-rtl .swal2-timer-progress-bar {
     background: linear-gradient(90deg, #0C4A6E, #E4C05E) !important;
     height: 4px !important;

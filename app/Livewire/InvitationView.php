@@ -22,14 +22,10 @@ class InvitationView extends Component
     public bool $notFound = false;
     public array $neighbors = [];
 
-    /**
-     * تُستدعى عند تحميل الصفحة، تستقبل qr_code من الرابط
-     */
     public function mount(string $qrCode)
     {
         $this->qrCode = $qrCode;
 
-        // البحث عن الحجز بـ qr_code
         $this->reservation = Reservation::with(['event.status', 'seat.section', 'event.creator'])
             ->where('qr_code', $qrCode)
             ->where('status', '!=', 'cancelled')
@@ -40,18 +36,11 @@ class InvitationView extends Component
             return;
         }
 
-        // ✨ توليد QR كصورة SVG باستخدام endroid/qr-code 6.0.9
         $this->qrImage = $this->generateQrCode($qrCode);
 
-        // حساب الجالسين في 4 جهات
         $this->neighbors = $this->calculateNeighbors();
     }
 
-    /**
-     * توليد رمز QR كـ SVG وإرجاعه كـ base64
-     *
-     * متوافق مع endroid/qr-code v6.0.9 (لا يحتاج GD)
-     */
     private function generateQrCode(string $data): string
     {
         try {
@@ -76,9 +65,6 @@ class InvitationView extends Component
         }
     }
 
-    /**
-     * حساب الجالسين في الجهات الأربع
-     */
     private function calculateNeighbors(): array
     {
         if (!$this->reservation) return [];

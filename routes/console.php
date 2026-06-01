@@ -7,31 +7,10 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
-/*
-|--------------------------------------------------------------------------
-| Console Routes — UOMTheatre (مُحدّث - إصلاحات Claude)
-|--------------------------------------------------------------------------
-|
-| ✨ التعديلات:
-|   - إضافة scheduled task لإنهاء الفعاليات التي تجاوز end_datetime
-|   - (ينقل المنطق من Events.php Livewire — كان يُنفّذ في كل render!)
-|
-| لتشغيل الـ scheduler يدوياً (للاختبار):
-|   php artisan schedule:run
-|
-| لتشغيله تلقائياً (production):
-|   - على Linux: cron job كل دقيقة:
-|     * * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
-|   - على Windows (XAMPP محلي): استخدمي Task Scheduler
-|   - على Laravel Cloud: مفعّل تلقائياً
-|
-*/
-
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// ✨ جديد: إنهاء الفعاليات التي تجاوزت end_datetime
 Artisan::command('events:auto-end', function () {
     $endStatus = Status::where('name', Status::END)->first();
     if (!$endStatus) {
@@ -59,7 +38,7 @@ Artisan::command('events:auto-end', function () {
 
         EventLog::create([
             'event_id'      => $event->id,
-            'user_id'       => null,   // ✨ null = نظامي (مش user محدد)
+            'user_id'       => null,
             'old_status_id' => $oldStatusId,
             'new_status_id' => $endStatus->id,
         ]);
@@ -71,7 +50,6 @@ Artisan::command('events:auto-end', function () {
     return 0;
 })->purpose('Auto-end expired events (active/published → end)');
 
-// ⏰ تشغيل تلقائي كل 15 دقيقة
 Schedule::command('events:auto-end')
     ->everyFifteenMinutes()
     ->withoutOverlapping()

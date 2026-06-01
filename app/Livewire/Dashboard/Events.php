@@ -21,7 +21,6 @@ class Events extends BaseComponent
 
     protected $paginationTheme = 'bootstrap';
 
-    // ==================== Create Properties ====================
     public string $title = '';
     public string $description = '';
     public string $start_date = '';
@@ -29,15 +28,13 @@ class Events extends BaseComponent
     public string $end_date = '';
     public string $end_time = '';
 
-    // ✨ حقول الوقت المنفصلة (للإنشاء) - 12 ساعة
-    public string $start_hour = '';      // 1-12
-    public string $start_minute = '';    // 00, 05, 10, ..., 55
-    public string $start_period = '';    // AM/PM
+    public string $start_hour = '';
+    public string $start_minute = '';
+    public string $start_period = '';
     public string $end_hour = '';
     public string $end_minute = '';
     public string $end_period = '';
 
-    // ==================== Edit Properties ====================
     public int $editId = 0;
     public string $editTitle = '';
     public string $editDescription = '';
@@ -46,7 +43,6 @@ class Events extends BaseComponent
     public string $editEndDate = '';
     public string $editEndTime = '';
 
-    // ✨ حقول الوقت المنفصلة (للتعديل) - 12 ساعة
     public string $editStartHour = '';
     public string $editStartMinute = '';
     public string $editStartPeriod = '';
@@ -54,7 +50,6 @@ class Events extends BaseComponent
     public string $editEndMinute = '';
     public string $editEndPeriod = '';
 
-    // ==================== Cancel Properties ====================
     public int $cancelEventId = 0;
     public string $cancelReason = '';
     public bool $isCancelingPublished = false;
@@ -63,37 +58,28 @@ class Events extends BaseComponent
 
     public array $showEvent = [];
 
-    // ==================== Search & Filter Properties ====================
     public string $searchTitle = '';
     public string $filterStatus = '';
     public string $filterDateFrom = '';
     public string $filterDateTo = '';
     public bool $showSuggestions = false;
 
-    /**
-     * ✨ الحالات المعروضة في الفلتر (بعد حذف under_review)
-     * هذه القائمة مرتبة حسب workflow الفعاليات
-     */
     private const VISIBLE_STATUSES = [
-        'draft',      // مسودة
-        'added',      // مضافة
-        'active',     // نشطة
-        'published',  // منشورة
-        'closed',     // مغلقة
-        'cancelled',  // ملغاة
-        'end',        // منتهية
+        'draft',
+        'added',
+        'active',
+        'published',
+        'closed',
+        'cancelled',
+        'end',
     ];
 
-    /**
-     * إعادة تعيين كل الفلاتر
-     */
     public function resetFilters(): void
     {
         $this->reset(['searchTitle', 'filterStatus', 'filterDateFrom', 'filterDateTo']);
         $this->showSuggestions = false;
         $this->resetPage();
 
-        // ✨ إطلاق حدث لمسح Flatpickr في الـ JavaScript
         $this->dispatch('filters-reset');
     }
 
@@ -130,7 +116,6 @@ class Events extends BaseComponent
         $this->resetPage();
     }
 
-    // ==================== Helper: دمج التاريخ والوقت ====================
     private function combineDateTime(string $date, string $time): string
     {
         if (strlen($time) === 5) {
@@ -139,23 +124,21 @@ class Events extends BaseComponent
         return $date . ' ' . $time;
     }
 
-    // ==================== ✨ دمج الساعة/الدقيقة/الفترة → وقت 24 ساعة ====================
     private function buildTime24(string $hour, string $minute, string $period): string
     {
         if (empty($hour) || empty($minute) || empty($period)) {
             return '';
         }
         $h = (int) $hour;
-        // تحويل من 12 إلى 24
+
         if ($period === 'AM') {
             if ($h === 12) $h = 0;
-        } else { // PM
+        } else {
             if ($h !== 12) $h += 12;
         }
         return str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . $minute;
     }
 
-    // ✨ تحديث start_time عند تغيير أي من الحقول الثلاثة (إنشاء)
     public function updatedStartHour(): void   { $this->syncStartTime(); }
     public function updatedStartMinute(): void { $this->syncStartTime(); }
     public function updatedStartPeriod(): void { $this->syncStartTime(); }
@@ -172,7 +155,6 @@ class Events extends BaseComponent
         $this->end_time = $this->buildTime24($this->end_hour, $this->end_minute, $this->end_period);
     }
 
-    // ✨ تحديث editStartTime/editEndTime (تعديل)
     public function updatedEditStartHour(): void   { $this->syncEditStartTime(); }
     public function updatedEditStartMinute(): void { $this->syncEditStartTime(); }
     public function updatedEditStartPeriod(): void { $this->syncEditStartTime(); }
@@ -189,11 +171,6 @@ class Events extends BaseComponent
         $this->editEndTime = $this->buildTime24($this->editEndHour, $this->editEndMinute, $this->editEndPeriod);
     }
 
-    // ==================== إنهاء تلقائي للفعاليات المنتهية ====================
-    /**
-     * يحوّل الفعاليات النشطة/المنشورة التي تجاوز end_datetime الوقت الحالي
-     * إلى حالة "end" تلقائياً.
-     */
     private function autoEndExpiredEvents(): void
     {
         try {
@@ -230,7 +207,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== التحقق من منطقية التاريخ ====================
     private function validateDatetimeLogic(string $startDatetime, string $endDatetime): ?string
     {
         $now = now();
@@ -246,7 +222,6 @@ class Events extends BaseComponent
         return null;
     }
 
-    // ==================== إنشاء فعالية ====================
     public function createEvent()
     {
         $this->authorize('create', Event::class);
@@ -308,7 +283,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== عرض التفاصيل ====================
     public function viewEvent(int $id)
     {
         $event = Event::with(['status', 'creator'])->findOrFail($id);
@@ -321,7 +295,6 @@ class Events extends BaseComponent
         if ($minutes > 0) $durationText .= "{$minutes} دقيقة";
         if (empty($durationText)) $durationText = 'غير محدد';
 
-        // ✨ تنسيق التاريخ والوقت بنظام 12 ساعة عربي
         $formatArabic12 = function ($dt) {
             if (!$dt) return null;
             $h12 = $dt->format('g');
@@ -347,11 +320,9 @@ class Events extends BaseComponent
             'paused_at'           => $event->paused_at ? $formatArabic12($event->paused_at) : null,
         ];
 
-        // ✨ فتح الـ modal بعد ما البيانات جاهزة (لا race condition)
         $this->dispatch('open-view-modal');
     }
 
-    // ==================== فتح نافذة التعديل ====================
     public function openEdit(int $id)
     {
         $event = Event::findOrFail($id);
@@ -366,15 +337,12 @@ class Events extends BaseComponent
         $this->editEndDate   = $event->end_datetime->format('Y-m-d');
         $this->editEndTime   = $event->end_datetime->format('H:i');
 
-        // ✨ تقسيم الوقت إلى ساعة/دقيقة/فترة لعرضها في القوائم المنسدلة
         $this->splitTime12($event->start_datetime, 'editStart');
         $this->splitTime12($event->end_datetime, 'editEnd');
 
-        // ✨ فتح الـ modal بعد ما البيانات جاهزة (لا race condition)
         $this->dispatch('open-edit-modal');
     }
 
-    // ✨ تقسيم datetime إلى ساعة/دقيقة/فترة (12 ساعة)
     private function splitTime12($datetime, string $prefix): void
     {
         if (!$datetime) return;
@@ -389,7 +357,6 @@ class Events extends BaseComponent
         $this->{$prefix . 'Period'} = $period;
     }
 
-    // ==================== تحديث فعالية ====================
     public function updateEvent()
     {
         $event = Event::findOrFail($this->editId);
@@ -439,7 +406,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== فتح نافذة الإلغاء ====================
     public function openCancelModal(int $eventId)
     {
         $event = Event::with('status')->findOrFail($eventId);
@@ -456,7 +422,6 @@ class Events extends BaseComponent
             ->count();
     }
 
-    // ==================== تنفيذ الإلغاء مع السبب ====================
     public function confirmCancelEvent()
     {
         $this->validate([
@@ -499,7 +464,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== طلب تأكيد إيقاف الحجز ====================
     public function requestPauseBooking(int $eventId)
     {
         $event = Event::findOrFail($eventId);
@@ -513,7 +477,6 @@ class Events extends BaseComponent
         );
     }
 
-    // ==================== تنفيذ إيقاف الحجز ====================
     #[On('confirmPauseBooking')]
     public function confirmPauseBooking($id = null)
     {
@@ -539,7 +502,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== طلب تأكيد استئناف الحجز ====================
     public function requestResumeBooking(int $eventId)
     {
         $event = Event::findOrFail($eventId);
@@ -553,7 +515,6 @@ class Events extends BaseComponent
         );
     }
 
-    // ==================== تنفيذ استئناف الحجز ====================
     #[On('confirmResumeBooking')]
     public function confirmResumeBooking($id = null)
     {
@@ -579,13 +540,8 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== طلب تأكيد تغيير الحالة ====================
-    /**
-     * ✨ مُحدَّث للمرحلة 1.ج: رسائل تعكس الـ workflow الجديد
-     */
     public function requestChangeStatus(int $eventId, string $newStatusName)
     {
-        // ✨ مُحدَّث: رسالة مخصصة للفعاليات المرفوضة (إعادة إرسال)
         $event = Event::find($eventId);
         $isResubmit = $event && $event->status?->name === Status::REJECTED;
 
@@ -613,7 +569,6 @@ class Events extends BaseComponent
         );
     }
 
-    // ==================== تنفيذ تغيير الحالة بعد التأكيد ====================
     #[On('confirmChangeStatus')]
     public function confirmChangeStatus($id = null)
     {
@@ -636,11 +591,7 @@ class Events extends BaseComponent
         try {
             $event = Event::findOrFail($eventId);
 
-            // ✨ ════════════════════════════════════════════════════════
-            // ✨ المرحلة 1.ج: استخدام Service للموافقات عند الإرسال
-            // ✨ ════════════════════════════════════════════════════════
             if ($newStatusName === Status::ADDED) {
-                // استخدام Service لإنشاء سجلات الموافقة المتوازية
                 $service = app(EventApprovalService::class);
                 $service->sendForApproval($event);
 
@@ -648,9 +599,6 @@ class Events extends BaseComponent
                 return;
             }
 
-            // ════════════════════════════════════════════════════════
-            // باقي الانتقالات (publish, closed) — منطق قديم
-            // ════════════════════════════════════════════════════════
             $oldStatusId = $event->status_id;
             $newStatus   = Status::where('name', $newStatusName)->first();
 
@@ -659,7 +607,6 @@ class Events extends BaseComponent
                 return;
             }
 
-            // منع نشر فعالية انتهى وقتها
             if ($newStatusName === 'published' && $event->end_datetime->isPast()) {
                 $this->swalError('لا يمكن نشر فعالية انتهى وقتها');
                 return;
@@ -693,7 +640,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== حذف فعالية ====================
     public function deleteEvent(int $id)
     {
         try {
@@ -708,49 +654,34 @@ class Events extends BaseComponent
         }
     }
 
-    // ==================== Render ====================
     public function render()
     {
         $this->authorize('viewAny', Event::class);
 
         $roleName = Auth::user()->role->name;
 
-        // الفحص التلقائي قبل عرض القائمة
         $this->autoEndExpiredEvents();
 
-        // ✨ بناء الاستعلام مع الفلاتر
         $query = Event::with(['status', 'creator']);
 
-        // ════════════════════════════════════════════════════════════
-        // ✨ 🆕 فلترة بالدور (محدّثة للمرحلة 1.ج):
-        //    - مدير الإعلام: ينشئ ويعدل ويرسل للموافقة → يرى فعالياته (كل الحالات)
-        //    - مدير المسرح: يعرض الفعاليات للمتابعة (بعد الموافقة)
-        //    - مكتب الرئيس: يعرض الفعاليات للمتابعة (بعد الموافقة)
-        //    ملاحظة: الموافقة الفعلية في شاشة "الفعاليات بانتظار موافقتي"
-        // ════════════════════════════════════════════════════════════
         if ($roleName === 'event_manager') {
-            // مدير الإعلام يرى فعالياته فقط (كل الحالات)
             $query->where('created_by', Auth::id());
         } elseif ($roleName === 'theater_manager') {
-            // مدير المسرح يرى الفعاليات اللي وافق عليها (للمتابعة)
             $draftStatusId = Status::where('name', 'draft')->value('id');
             if ($draftStatusId) {
                 $query->where('status_id', '!=', $draftStatusId);
             }
         } elseif ($roleName === 'university_office') {
-            // مكتب الرئيس يرى الفعاليات بعد الموافقات (للمتابعة)
             $draftStatusId = Status::where('name', 'draft')->value('id');
             if ($draftStatusId) {
                 $query->where('status_id', '!=', $draftStatusId);
             }
         }
 
-        // البحث بالعنوان
         if (!empty($this->searchTitle)) {
             $query->where('title', 'like', '%' . $this->searchTitle . '%');
         }
 
-        // الفلتر بالحالة
         if (!empty($this->filterStatus)) {
             $statusObj = Status::where('name', $this->filterStatus)->first();
             if ($statusObj) {
@@ -758,32 +689,18 @@ class Events extends BaseComponent
             }
         }
 
-        // ════════════════════════════════════════════════════════════
-        // ✨ 🆕 فلترة بالتاريخ (محسّنة)
-        // المنطق: إذا كان نطاق الفعالية يتقاطع مع نطاق الفلترة المختار
-        // ════════════════════════════════════════════════════════════
-
-        // الفلتر بتاريخ البدء (من): الفعالية تبدأ في أو بعد هذا التاريخ
         if (!empty($this->filterDateFrom)) {
             $query->whereDate('start_datetime', '>=', $this->filterDateFrom);
         }
 
-        // الفلتر بتاريخ الانتهاء (إلى): الفعالية تبدأ في أو قبل هذا التاريخ
-        // (يمكن أن تنتهي بعده، لكن المهم أن تبدأ ضمن النطاق)
         if (!empty($this->filterDateTo)) {
             $query->whereDate('start_datetime', '<=', $this->filterDateTo);
         }
 
-        // ════════════════════════════════════════════════════════════
-        // ✨ 🆕 الترتيب الذكي (محدّث للمرحلة 1.ج):
-        //    - مدير الإعلام: المسودات أولاً (للعمل عليها)، ثم الأحدث
-        //    - باقي الأدوار: الأحدث أولاً
-        // ════════════════════════════════════════════════════════════
         if ($roleName === 'event_manager') {
             $draftId  = Status::where('name', 'draft')->value('id');
             $activeId = Status::where('name', 'active')->value('id');
 
-            // المسودات أولاً (للإكمال)، ثم النشطة (للنشر)، ثم البقية
             $query->orderByRaw(
                 'CASE
                     WHEN status_id = ? THEN 1
@@ -798,26 +715,21 @@ class Events extends BaseComponent
 
         $events = $query->paginate(10);
 
-        // ✨ 🆕 الحالات المعروضة في الفلتر (بعد حذف under_review)
-        // ملاحظة: نرتّب في PHP بدل SQL لتوافق MySQL + PostgreSQL
         $statusesCollection = Status::whereIn('name', self::VISIBLE_STATUSES)->get();
 
-        // ترتيب حسب VISIBLE_STATUSES (متوافق مع كل قواعد البيانات)
         $allStatuses = collect(self::VISIBLE_STATUSES)
             ->map(fn($name) => $statusesCollection->firstWhere('name', $name))
             ->filter()
             ->values();
 
-        // ✨ اقتراحات Autocomplete (مع فلترة الدور)
         $suggestions = [];
         if ($this->showSuggestions && !empty($this->searchTitle)) {
             $suggestionQuery = Event::where('title', 'like', '%' . $this->searchTitle . '%');
 
-            // مدير الإعلام يرى اقتراحات فعالياته فقط
             if ($roleName === 'event_manager') {
                 $suggestionQuery->where('created_by', Auth::id());
             }
-            // باقي الأدوار: لا يرون المسودات
+
             elseif (in_array($roleName, ['theater_manager', 'university_office'])) {
                 $draftStatusId = Status::where('name', 'draft')->value('id');
                 if ($draftStatusId) {

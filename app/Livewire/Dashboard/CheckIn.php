@@ -9,18 +9,6 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * CheckIn — UOMTheatre (مُحدّث - إصلاحات Claude)
- * ════════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات:
- *   🔴 authorize() قبل scan
- *   🔴 redirect في mount بدل render
- *   🟡 nullsafe + constants
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('تسجيل الحضور')]
 class CheckIn extends BaseComponent
@@ -30,9 +18,6 @@ class CheckIn extends BaseComponent
     public string $messageType = '';
     public array $checkInData = [];
 
-    /**
-     * ✨ helper: التحقق من صلاحية scan
-     */
     protected function authorizeScan(): void
     {
         $user = Auth::user();
@@ -41,9 +26,6 @@ class CheckIn extends BaseComponent
         }
     }
 
-    /**
-     * ✨ مُحسّن: redirect في mount بدل render
-     */
     public function mount(): void
     {
         $this->authorizeScan();
@@ -51,7 +33,7 @@ class CheckIn extends BaseComponent
 
     public function scan(): void
     {
-        $this->authorizeScan();   // ✨ authorize check (مهم - methods حساسة)
+        $this->authorizeScan();
 
         $this->validate(
             ['qrCode' => 'required|string'],
@@ -83,7 +65,6 @@ class CheckIn extends BaseComponent
             return;
         }
 
-        // ✨ استخدام Policy (موجودة في ReservationPolicy::checkIn)
         if (!Auth::user()->can('checkIn', $res)) {
             $this->message = 'غير مصرح لك بتسجيل هذا الحضور';
             $this->messageType = 'danger';
@@ -94,7 +75,6 @@ class CheckIn extends BaseComponent
         $this->message = 'تم تسجيل الحضور بنجاح ✅';
         $this->messageType = 'success';
 
-        // ✨ nullsafe على relationships
         $this->checkInData = [
             'name'    => $res->user?->name ?? $res->guest_name ?? 'ضيف',
             'event'   => $res->event?->title ?? '—',

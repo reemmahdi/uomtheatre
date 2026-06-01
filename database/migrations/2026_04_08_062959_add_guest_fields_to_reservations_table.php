@@ -9,9 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('reservations', function (Blueprint $table) {
-            // اسم الضيف (للوفود)
             $table->string('guest_name')->nullable()->after('type');
-            // رقم جوال الضيف (للوفود)
+
             $table->string('guest_phone')->nullable()->after('guest_name');
         });
     }

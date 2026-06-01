@@ -6,19 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * إضافة عمود سبب الإلغاء لجدول الفعاليات
-     *
-     * الحقل:
-     * - cancellation_reason: سبب إلغاء الفعالية (اختياري - nullable)
-     * - cancelled_at: تاريخ الإلغاء (تلقائي)
-     *
-     * استخدام:
-     * عند إلغاء فعالية، يُحفظ السبب هنا ويظهر في:
-     * - جدول الفعاليات
-     * - نافذة تفاصيل الفعالية
-     * - إشعارات الإلغاء (لاحقاً)
-     */
     public function up(): void
     {
         Schema::table('events', function (Blueprint $table) {

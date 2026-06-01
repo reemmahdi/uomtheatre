@@ -1,6 +1,5 @@
 <div>
 
-{{-- معلومات الفعالية الملغاة --}}
 <div class="card-custom p-4 mb-4" style="border-right: 5px solid #DC2626; background: linear-gradient(135deg, #fef2f2, #ffffff);">
     <div class="d-flex justify-content-between align-items-start">
         <div>
@@ -27,7 +26,7 @@
         </a>
     </div>
 
-    {{-- سبب الإلغاء --}}
+    
     @if($event->cancellation_reason)
     <div class="alert alert-warning mt-3 mb-0">
         <h6 class="alert-heading mb-2">
@@ -42,7 +41,6 @@
     @endif
 </div>
 
-{{-- إحصائيات الإشعارات --}}
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card-custom p-3">
@@ -72,7 +70,6 @@
     </div>
 </div>
 
-{{-- زر الإرسال الجماعي --}}
 @if($vipBookings->count() > 0)
 <div class="card-custom p-4 mb-4" style="background: linear-gradient(135deg, #d1fae5, #ffffff);">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -107,7 +104,6 @@
 </div>
 @endif
 
-{{-- جدول الوفود --}}
 @if($vipBookings->count() > 0)
 <div class="card-custom p-4">
     <h6 class="mb-3"><i class="bi bi-list-ul"></i> قائمة الوفود المتأثرين</h6>
@@ -125,7 +121,8 @@
             </thead>
             <tbody>
                 @foreach($vipBookings as $booking)
-                @php $cancelLink = $this->getCancellationWhatsAppLink($booking->id); @endphp
+                @php $cancelLink = $this->getCancellationWhatsAppLink($booking->id);
+@endphp
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td><strong>{{ $booking->guest_name }}</strong></td>
@@ -163,7 +160,6 @@
 </div>
 @endif
 
-{{-- معاينة الرسالة الرسمية --}}
 @if($vipBookings->count() > 0)
 <div class="card-custom p-4 mt-4">
     <h6 class="mb-3"><i class="bi bi-eye"></i> معاينة الرسالة المُرسلة</h6>
@@ -200,7 +196,6 @@
 </div>
 @endif
 
-{{-- JavaScript للإرسال الجماعي --}}
 <script>
 function sendAllCancellationNotifications() {
     const links = document.querySelectorAll('.wa-cancel-link');

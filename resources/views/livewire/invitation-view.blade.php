@@ -1,9 +1,7 @@
 <div>
 
 @if($notFound)
-    {{-- ════════════════════════════════════════
-         حالة: الدعوة غير موجودة أو ملغاة
-         ════════════════════════════════════════ --}}
+    
     <div class="invitation-error-page">
         <div class="error-card">
             <div class="error-icon">
@@ -15,12 +13,10 @@
         </div>
     </div>
 @else
-    {{-- ════════════════════════════════════════
-         صفحة الدعوة الرئيسية (تصميم جديد - مبسّط وأنيق)
-         ════════════════════════════════════════ --}}
+    
     <div class="invitation-page">
 
-        {{-- تنبيه إذا كانت الفعالية ملغاة --}}
+        
         @if($reservation->event->status->name === 'cancelled')
         <div class="cancelled-banner">
             <i class="bi bi-exclamation-triangle-fill"></i>
@@ -35,7 +31,7 @@
 
         <div class="invitation-card">
 
-            {{-- ✨ الترويسة المبسطة --}}
+            
             <div class="card-header">
                 <div class="logo-circle">
                     <img src="{{ asset('images/logo.png') }}"
@@ -46,13 +42,13 @@
                 <p class="theatre-name">قاعة الدكتور محمود الجليلي</p>
             </div>
 
-            {{-- ✨ شارة "دعوة" --}}
+            
             <div class="invitation-badge">
                 <i class="bi bi-envelope-paper-heart-fill"></i>
                 دعوة كريمة
             </div>
 
-            {{-- ✨ اسم الضيف --}}
+            
             <div class="guest-section">
                 <p class="greeting">السلام عليكم ورحمة الله وبركاته</p>
                 <p class="honorific">الأستاذ/ة الفاضل/ة</p>
@@ -60,14 +56,14 @@
                 <p class="invitation-text">يسعدنا دعوتكم لحضور</p>
             </div>
 
-            {{-- ✨ اسم الفعالية --}}
+            
             <div class="event-title-section">
                 <h3 class="event-title">{{ $reservation->event->title }}</h3>
             </div>
 
-            {{-- ✨ تفاصيل الموعد والمكان --}}
+            
             <div class="info-cards">
-                {{-- التاريخ --}}
+                
                 <div class="info-card">
                     <div class="info-icon"><i class="bi bi-calendar-event"></i></div>
                     <div class="info-content">
@@ -76,7 +72,7 @@
                     </div>
                 </div>
 
-                {{-- الوقت --}}
+                
                 <div class="info-card">
                     <div class="info-icon"><i class="bi bi-clock"></i></div>
                     <div class="info-content">
@@ -86,13 +82,13 @@
                                 $hour = (int) $reservation->event->start_datetime->format('G');
                                 $period = $hour < 12 ? 'صباحاً' : 'مساءً';
                                 $time12 = $reservation->event->start_datetime->format('h:i');
-                            @endphp
+@endphp
                             {{ $time12 }} <span class="period">{{ $period }}</span>
                         </div>
                     </div>
                 </div>
 
-                {{-- المكان --}}
+                
                 <div class="info-card">
                     <div class="info-icon"><i class="bi bi-geo-alt-fill"></i></div>
                     <div class="info-content">
@@ -102,7 +98,7 @@
                 </div>
             </div>
 
-            {{-- ✨ معلومات المقعد - بصورة أوضح --}}
+            
             <div class="seat-section">
                 <div class="seat-label-top">
                     <i class="bi bi-bookmark-star-fill"></i> مقعدكم المخصص
@@ -125,7 +121,7 @@
                 </div>
             </div>
 
-            {{-- ✨ رمز QR - أوضح وأكبر --}}
+            
             <div class="qr-section">
                 <div class="qr-label">
                     <i class="bi bi-qr-code-scan"></i> رمز الدخول
@@ -139,7 +135,7 @@
                 </p>
             </div>
 
-            {{-- ✨ التذييل المختصر --}}
+            
             <div class="card-footer">
                 <p class="footer-greeting">نتشرف بحضوركم الكريم</p>
                 <p class="footer-signature">إدارة مسرح جامعة الموصل</p>
@@ -147,7 +143,7 @@
 
         </div>
 
-        {{-- ✨ زر طباعة (للضيف لو حاب يطبع الدعوة) --}}
+        
         <div class="action-buttons">
             <button onclick="window.print()" class="action-btn">
                 <i class="bi bi-printer"></i> طباعة الدعوة
@@ -157,9 +153,6 @@
     </div>
 @endif
 
-{{-- ════════════════════════════════════════
-     التنسيقات - مبسطة، عصرية، Mobile-First
-     ════════════════════════════════════════ --}}
 <style>
     /* خلفية الصفحة */
     body {

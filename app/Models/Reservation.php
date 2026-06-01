@@ -5,18 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-/**
- * ════════════════════════════════════════════════════════════
- * Reservation Model — UOMTheatre (مُحدّث)
- * ════════════════════════════════════════════════════════════
- *
- * ✨ التعديلات في هذه النسخة (إصلاحات Claude):
- *   - تصحيح ticketData: event_date → start_datetime (الحقل الصحيح)
- *   - استبدال boot() بـ booted() (أأمن مع traits)
- *   - حماية ticketData() من null relationships
- *
- * ════════════════════════════════════════════════════════════
- */
 class Reservation extends Model
 {
     protected $fillable = [
@@ -35,10 +23,6 @@ class Reservation extends Model
         'checked_in_at' => 'datetime',
     ];
 
-    /**
-     * ✨ مُصحَّح: استخدام booted() بدل boot()
-     * booted() لا تتطلب parent::boot() ولا تتعارض مع الـ traits
-     */
     protected static function booted(): void
     {
         static::creating(function ($reservation) {
@@ -48,9 +32,6 @@ class Reservation extends Model
         });
     }
 
-    // ════════════════════════════════════════════════════════
-    // Relationships
-    // ════════════════════════════════════════════════════════
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -66,9 +47,6 @@ class Reservation extends Model
         return $this->belongsTo(Seat::class);
     }
 
-    // ════════════════════════════════════════════════════════
-    // Actions
-    // ════════════════════════════════════════════════════════
     public function checkIn(): void
     {
         $this->update([
@@ -84,12 +62,6 @@ class Reservation extends Model
         ]);
     }
 
-    /**
-     * ✨ مُصحَّح:
-     *   - event_date → start_datetime (الحقل الموجود فعلياً)
-     *   - استخدام nullsafe operator (?->) لكل العلاقات
-     *   - إضافة event_end للسماح بطباعة وقت النهاية على التذكرة
-     */
     public function ticketData(): array
     {
         return [

@@ -10,21 +10,6 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * SeatAvailability — UOMTheatre
- * ════════════════════════════════════════════════════════════════
- *
- * شاشة تحديد المقاعد المتاحة للجمهور.
- *
- * المنطق:
- *   - تعرض خريطة المسرح كاملة (945 مقعد + 52 VIP)
- *   - مدير الإعلام يضغط مقعداً → يستبعده/يعيد إتاحته
- *   - مقاعد VIP محمية (لا يمكن تعديلها هنا)
- *   - زر حفظ يُرسل التغييرات لـ DB
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('تحديد المقاعد المتاحة')]
 class SeatAvailability extends BaseComponent
@@ -37,7 +22,6 @@ class SeatAvailability extends BaseComponent
         $this->eventUuid = $eventUuid;
         $this->event = Event::where('uuid', $eventUuid)->firstOrFail();
 
-        // التحقق من الصلاحيات
         if (!Auth::user()->can('manageVipSeats', $this->event)) {
             abort(403, 'غير مصرح لك');
         }
@@ -46,7 +30,6 @@ class SeatAvailability extends BaseComponent
             abort(403, 'يمكن تحديد المقاعد فقط للفعاليات النشطة');
         }
 
-        // التهيئة لو لم تكن مهيأة
         $service = app(EventSeatAvailabilityService::class);
         if (!$service->isInitialized($this->event)) {
             $service->initializeForEvent($this->event);

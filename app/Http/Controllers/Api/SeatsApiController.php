@@ -9,10 +9,6 @@ use Illuminate\Http\JsonResponse;
 
 class SeatsApiController extends Controller
 {
-    /**
-     * إرجاع الحجوزات للخارطة
-     * GET /api/seats/{eventId}
-     */
     public function show(int $eventId): JsonResponse
     {
         $event = Event::with('status')->find($eventId);
@@ -24,14 +20,12 @@ class SeatsApiController extends Controller
             ], 404);
         }
 
-        // جلب حجوزات VIP فقط (type=vip_guest)
         $reservations = Reservation::with('seat.section')
             ->where('event_id', $eventId)
             ->where('type', 'vip_guest')
             ->where('status', '!=', 'cancelled')
             ->get();
 
-        // بناء خريطة الحجوزات
         $reservationsMap = [];
 
         foreach ($reservations as $reservation) {
@@ -40,7 +34,6 @@ class SeatsApiController extends Controller
                 continue;
             }
 
-            // المفتاح: "A-10-5" (يطابق ID في الخارطة)
             $key = "{$seat->section->name}-{$seat->row_number}-{$seat->seat_number}";
 
             $reservationsMap[$key] = [

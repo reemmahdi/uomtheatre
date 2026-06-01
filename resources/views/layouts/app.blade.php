@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    {{-- CSRF meta tag (مطلوب للـ AJAX/fetch) --}}
+    
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    {{-- عنوان مخصص لتبويب المتصفح بناءً على الصفحة الحالية --}}
+    
     @php
         $browserTitle = $title ?? match(request()->route()?->getName()) {
             'dashboard'                            => 'الرئيسية',
@@ -24,33 +24,33 @@
             'dashboard.stats'                      => 'الإحصائيات',
             default                                => 'لوحة التحكم',
         };
-    @endphp
+@endphp
 
     <title>{{ $browserTitle }} — {{ config('theatre.name') }}</title>
 
-    {{-- Favicon --}}
+    
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 
-    {{-- Bootstrap --}}
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-    {{-- Dashboard Styles --}}
+    
     <link href="{{ asset('css/dashboard.css') }}" rel="stylesheet">
 
-    {{-- SweetAlert2 --}}
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="{{ asset('css/sweet-alert-custom.css') }}">
 
-    {{-- Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/material_blue.css">
 
     @livewireStyles
 </head>
 <body>
-    {{-- nullsafe على role + early redirect لو null --}}
+    
     @php
         $authUser = auth()->user();
         $roleName = $authUser?->role?->name;
@@ -60,12 +60,12 @@
             auth()->logout();
             return redirect()->route('login')->send();
         }
-    @endphp
+@endphp
 
-    {{-- Mobile Overlay --}}
+    
     <div class="mobile-overlay" id="mobileOverlay"></div>
 
-    {{-- Sidebar --}}
+    
     <div class="sidebar" id="mainSidebar">
 
         <button class="mobile-close-btn d-md-none" id="mobileCloseBtn" aria-label="إغلاق">
@@ -100,7 +100,7 @@
             </a>
             @endif
 
-            {{-- إدارة الفعاليات: super_admin + theater_manager (مشاهد) + event_manager --}}
+            
             @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::THEATER_MANAGER, \App\Models\Role::EVENT_MANAGER], true))
             <a href="{{ route('dashboard.events') }}" data-title="{{ $roleName === \App\Models\Role::THEATER_MANAGER ? 'متابعة الفعاليات' : 'إدارة الفعاليات' }}" class="nav-link {{ request()->routeIs('dashboard.events') ? 'active' : '' }}">
                 <i class="bi bi-calendar-event"></i>
@@ -114,12 +114,10 @@
             </a>
             @endif
 
-            {{-- ✨ مُحدَّث: شاشة الموافقات لمكتب الرئاسة + سوبر أدمن فقط --}}
-            {{--    (مدير المسرح صار مشاهد فقط، يدخل من إدارة الفعاليات) --}}
+            
+            
             @if(in_array($roleName, [\App\Models\Role::SUPER_ADMIN, \App\Models\Role::UNIVERSITY_OFFICE], true))
             @php
-                // cache لمدة دقيقة لتجنب query في كل request
-                // ✨ مُحدَّث: نعد الفعاليات في حالة "added" (بدل الـ approvals المعلقة)
                 $cacheKey = 'pending_events_count_' . ($authUser->id);
                 $pendingEventsCount = \Illuminate\Support\Facades\Cache::remember(
                     $cacheKey,
@@ -131,7 +129,7 @@
                             : 0;
                     }
                 );
-            @endphp
+@endphp
             <a href="{{ route('dashboard.event-approvals') }}" data-title="بانتظار موافقتي" class="nav-link {{ request()->routeIs('dashboard.event-approvals') ? 'active' : '' }}">
                 <i class="bi bi-clipboard-check-fill"></i>
                 <span class="nav-text">
@@ -170,7 +168,7 @@
             @endif
 
             <hr style="border-color: rgba(228, 192, 94, 0.25); margin: 15px 20px;">
-            {{-- ✨ مُحدَّث: link مباشر بدل form لتجنب 403 عند انتهاء CSRF token --}}
+            
             <a href="{{ route('dashboard.logout') }}" data-title="تسجيل خروج" class="nav-link mx-3" style="cursor:pointer; color: #ffcdd2;">
                 <i class="bi bi-box-arrow-right"></i><span class="nav-text">تسجيل خروج</span>
             </a>
@@ -192,7 +190,7 @@
                 </h5>
             </div>
             <div class="d-flex align-items-center" style="gap: 8px;">
-                {{-- جرس الإشعارات --}}
+                
                 <livewire:notifications-bell />
 
                 <span class="text-muted topbar-user-info">
@@ -208,14 +206,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    {{-- ✨ مُحدَّث: Livewire 3 يحمل Alpine.js تلقائياً
-         إضافة Alpine CDN منفصلاً تسبب "Multiple instances of Alpine" --}}
+    
     @livewireScripts
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('js/sweet-alert-helper.js') }}"></script>
 
-    {{-- Flatpickr - مكتبة تواريخ وأوقات احترافية --}}
+    
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ar.js"></script>
 

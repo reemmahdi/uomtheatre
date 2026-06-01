@@ -14,35 +14,20 @@ use Livewire\Attributes\Title;
 class EventCancellationNotices extends BaseComponent
 {
     public int $eventId;
-    public string $eventUuid = '';  // ✨ جديد: للحماية ضد IDOR
+    public string $eventUuid = '';
 
-    /**
-     * ✨ تعديل: يستقبل UUID بدل ID رقمي (حماية ضد IDOR)
-     */
     public function mount(string $eventUuid)
     {
-        // 🛡️ التحقق من شكل UUID صحيح
         if (!preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $eventUuid)) {
             abort(404, 'معرّف الفعالية غير صحيح');
         }
 
-        // 🛡️ البحث عن الفعالية بـ UUID
         $event = Event::where('uuid', $eventUuid)->firstOrFail();
 
         $this->eventUuid = $eventUuid;
         $this->eventId = $event->id;
     }
 
-    /**
-     * توليد رابط WhatsApp لإشعار إلغاء الفعالية
-     *
-     * يبني رسالة رسمية رصينة تحتوي:
-     * - تحية رسمية للضيف
-     * - إعلام بالإلغاء
-     * - تاريخ الفعالية
-     * - سبب الإلغاء
-     * - اعتذار رسمي
-     */
     public function getCancellationWhatsAppLink(int $reservationId): string
     {
         $res = Reservation::with(['event', 'seat.section'])->findOrFail($reservationId);
@@ -65,7 +50,6 @@ class EventCancellationNotices extends BaseComponent
         $msg .= $event->start_datetime->format('H:i');
         $msg .= ".\n\n";
 
-        // إضافة سبب الإلغاء إن وُجد
         if (!empty($event->cancellation_reason)) {
             $msg .= "*سبب الإلغاء:*\n";
             $msg .= "{$event->cancellation_reason}\n\n";
@@ -76,7 +60,6 @@ class EventCancellationNotices extends BaseComponent
         $msg .= "تفضلوا بقبول فائق الاحترام والتقدير،،،\n\n";
         $msg .= "*إدارة مسرح جامعة الموصل*";
 
-        // تنسيق رقم الهاتف للعراق
         $phone = preg_replace('/[^0-9]/', '', $res->guest_phone);
         if (str_starts_with($phone, '0')) {
             $phone = '964' . substr($phone, 1);
@@ -87,21 +70,17 @@ class EventCancellationNotices extends BaseComponent
 
     public function render()
     {
-        // التحقق من الصلاحيات
         if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
             return redirect()->route('dashboard');
         }
 
-        // جلب الفعالية الملغاة
         $event = Event::with('status')->findOrFail($this->eventId);
 
-        // التأكد أن الفعالية ملغاة
         if ($event->status->name !== 'cancelled') {
             session()->flash('error', 'هذه الفعالية ليست ملغاة');
             return redirect()->route('dashboard.events');
         }
 
-        // جلب الوفود المتأثرين
         $vipBookings = Reservation::with(['seat.section'])
             ->where('event_id', $this->eventId)
             ->where('type', 'vip_guest')

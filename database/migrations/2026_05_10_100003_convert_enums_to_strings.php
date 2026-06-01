@@ -5,30 +5,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * ════════════════════════════════════════════════════════════════════
- * Convert Enums to Strings — UOMTheatre (إصلاح Claude)
- * ════════════════════════════════════════════════════════════════════
- *
- * المشكلة:
- *   - enum في MySQL/PostgreSQL صعب التعديل
- *   - إضافة قيمة جديدة (مثل 'no_show', 'expired', 'refunded')
- *     تحتاج migration معقّد
- *   - PostgreSQL يخلق ENUM type منفصل صعب الإدارة
- *
- * ✅ الحل: تحويل enum إلى string(20) + validation في الكود
- *    البيانات نفسها تبقى كما هي (نفس النصوص)
- *
- * الأعمدة المُحوَّلة:
- *   - reservations.status: ['confirmed', 'cancelled', 'checked_in']
- *   - reservations.type:   ['regular', 'vip_guest']
- *   - event_approvals.status: ['pending', 'approved', 'rejected']
- *
- * 💡 لا تنسي إضافة validation في الـ Models أو Form Requests
- *    للحفاظ على نفس قيود enum.
- *
- * ════════════════════════════════════════════════════════════════════
- */
 return new class extends Migration
 {
     public function up(): void
@@ -36,7 +12,6 @@ return new class extends Migration
         $driver = DB::connection()->getDriverName();
 
         if ($driver === 'pgsql') {
-            // PostgreSQL: يحتاج USING clause للتحويل من enum إلى varchar
             DB::statement(
                 "ALTER TABLE reservations ALTER COLUMN status TYPE VARCHAR(20) USING status::text"
             );
@@ -58,7 +33,6 @@ return new class extends Migration
                 "ALTER TABLE event_approvals ALTER COLUMN status SET DEFAULT 'pending'"
             );
         } else {
-            // MySQL/MariaDB: change() يعمل مباشرة في Laravel 11+
             Schema::table('reservations', function (Blueprint $table) {
                 $table->string('status', 20)->default('confirmed')->change();
                 $table->string('type', 20)->default('regular')->change();
@@ -75,9 +49,6 @@ return new class extends Migration
         $driver = DB::connection()->getDriverName();
 
         if ($driver === 'pgsql') {
-            // PostgreSQL: استعادة enum (معقّد - نتركه varchar إذا rollback)
-            // ملاحظة: في PostgreSQL، استعادة الـ ENUM type تحتاج CREATE TYPE أولاً
-            // لذا في الـ down نكتفي بالعودة إلى varchar مع check constraint
             DB::statement("
                 ALTER TABLE reservations
                 ADD CONSTRAINT reservations_status_check
@@ -94,7 +65,6 @@ return new class extends Migration
                 CHECK (status IN ('pending', 'approved', 'rejected'))
             ");
         } else {
-            // MySQL: العودة إلى enum
             Schema::table('reservations', function (Blueprint $table) {
                 $table->enum('status', ['confirmed', 'cancelled', 'checked_in'])
                     ->default('confirmed')->change();

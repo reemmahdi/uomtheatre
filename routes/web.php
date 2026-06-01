@@ -3,32 +3,9 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes — UOMTheatre (تصميم جديد - موافق واحد)
-|--------------------------------------------------------------------------
-|
-| ✨ التعديلات في هذه النسخة:
-|   - حذف theater_manager من /dashboard/my-approvals
-|     (مدير المسرح صار "مشاهد فقط" بدون موافقة)
-|   - مدير المسرح يحتفظ بـ /dashboard/events للمتابعة (read-only)
-|     لكن منطق read-only يُطبَّق داخل Livewire component
-|
-*/
-
-// ═══════════════════════════════════════════════════════════
-// ✨ Routes العامة (بدون تسجيل دخول)
-// ═══════════════════════════════════════════════════════════
-
-// صفحة الدعوة الإلكترونية للوفود (آمنة - qr_code random + cancellation check)
 Route::get('/invitation/{qrCode}', \App\Livewire\InvitationView::class)
     ->name('invitation.show');
 
-// ═══════════════════════════════════════════════════════════
-// المصادقة
-// ═══════════════════════════════════════════════════════════
-
-// rate limiting على login (6 محاولات/دقيقة لكل IP)
 Route::middleware('throttle:6,1')->group(function () {
     Route::get('/login', function () {
         if (Auth::check()) {
@@ -38,8 +15,6 @@ Route::middleware('throttle:6,1')->group(function () {
     })->name('login');
 });
 
-// ✨ مُحدَّث: قبول GET و POST لتجنب 403/419 عند انتهاء CSRF token
-//    GET آمن هنا لأن أسوأ سيناريو هو تسجيل خروج المستخدم (مزعج لكن غير ضار)
 Route::match(['get', 'post'], '/logout', function () {
     Auth::logout();
     session()->invalidate();
@@ -47,47 +22,28 @@ Route::match(['get', 'post'], '/logout', function () {
     return redirect()->route('login')->with('success', 'تم تسجيل الخروج بنجاح');
 })->name('dashboard.logout');
 
-// ═══════════════════════════════════════════════════════════
-// 🛡️ لوحة التحكم - حماية بطبقتين:
-//    1. admin.web : التحقق من تسجيل الدخول + التفعيل + ليس role=user
-//    2. role:xxx  : التحقق من الدور المحدد لكل صفحة
-// ═══════════════════════════════════════════════════════════
-
 Route::middleware('admin.web')->group(function () {
-
-    // ── الصفحة الرئيسية: متاحة لكل الموظفين ──
     Route::get('/dashboard', fn() => view('pages.dashboard'))->name('dashboard');
 
-    // ── إدارة المستخدمين والموظفين: مدير النظام فقط ──
     Route::middleware('role:super_admin')->group(function () {
         Route::get('/dashboard/users', fn() => view('pages.users'))->name('dashboard.users');
         Route::get('/dashboard/staff', fn() => view('pages.staff'))->name('dashboard.staff');
 
-        // شاشة إدارة الصلاحيات (للسوبر أدمن فقط)
         Route::get('/dashboard/permissions', fn() => view('pages.page_permissions'))
             ->name('dashboard.permissions');
     });
 
-    // ── الفعاليات: مدير النظام + مدير المسرح (للمتابعة) + مدير الإعلام ──
-    // 💡 مدير المسرح يدخل لكن يشاهد فقط (read-only) - المنطق في Livewire
     Route::middleware('role:super_admin,theater_manager,event_manager')->group(function () {
         Route::get('/dashboard/events', fn() => view('pages.events'))->name('dashboard.events');
     });
 
-    // ── شاشة الموافقات: لمكتب الرئاسة + super_admin فقط ──
-    // ✨ مُحدَّث: حُذف theater_manager (ما عاد يوافق)
     Route::middleware('role:super_admin,university_office')->group(function () {
         Route::get('/dashboard/my-approvals', fn() => view('pages.page_event-approvals'))
             ->name('dashboard.event-approvals');
     });
 
-    // ──────────────────────────────────────────────────────
-    // 🛡️ UUID-based Event Routes (حماية ضد IDOR)
-    // ──────────────────────────────────────────────────────
-
     $uuidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
 
-    // ── حجز مقاعد الوفود: مدير النظام + مدير الإعلام فقط ──
     Route::middleware('role:super_admin,event_manager')->group(function () use ($uuidPattern) {
         Route::get('/dashboard/vip-events', fn() => view('pages.vip-events'))
             ->name('dashboard.vip-events');
@@ -98,7 +54,6 @@ Route::middleware('admin.web')->group(function () {
         ->where('eventUuid', $uuidPattern)
         ->name('dashboard.vip-booking');
 
-        // شاشة تحديد المقاعد المتاحة للجمهور
         Route::get('/dashboard/events/{eventUuid}/seat-availability',
             fn($eventUuid) => view('pages.page_seat-availability', ['eventUuid' => $eventUuid])
         )
@@ -118,31 +73,22 @@ Route::middleware('admin.web')->group(function () {
         ->name('dashboard.vip-guests');
     });
 
-    // ── تسجيل الحضور: مدير النظام + موظف الاستقبال فقط ──
     Route::middleware('role:super_admin,receptionist')->group(function () {
         Route::get('/dashboard/check-in', fn() => view('pages.checkin'))->name('dashboard.checkin');
     });
 
-    // ── شاشة العرض المباشر ──
     Route::middleware('role:super_admin,theater_manager,receptionist')->group(function () {
         Route::get('/dashboard/seats-display', fn() => view('pages.seats-display'))
             ->name('dashboard.seats-display');
     });
 
-    // ── الإحصائيات: مدير النظام + مكتب رئيس الجامعة فقط ──
     Route::middleware('role:super_admin,university_office')->group(function () {
         Route::get('/dashboard/stats', fn() => view('pages.stats'))->name('dashboard.stats');
     });
 
-    // ✨ /seats-map داخل admin.web (تجنب data leak)
     Route::get('/seats-map', fn() => view('seats-map'))->name('seats-map');
 
-    // ════════════════════════════════════════════════════════════
-    // ✨ صفحات طباعة قائمة الضيوف + الملصقات
-    // ════════════════════════════════════════════════════════════
     Route::middleware('role:super_admin,event_manager')->group(function () use ($uuidPattern) {
-
-        // طباعة قائمة الضيوف للواتساب
         Route::get('/dashboard/events/{eventUuid}/vip-guests/print-list', function (string $eventUuid) {
             $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
             if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) abort(403);
@@ -157,7 +103,6 @@ Route::middleware('admin.web')->group(function () {
             return view('pages.vip-guests-print-list', compact('event', 'bookings'));
         })->where('eventUuid', $uuidPattern)->name('dashboard.vip-guests.print-list');
 
-        // طباعة ملصقات المقاعد
         Route::get('/dashboard/events/{eventUuid}/vip-guests/print-stickers', function (string $eventUuid) {
             $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
             if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) abort(403);
@@ -173,25 +118,14 @@ Route::middleware('admin.web')->group(function () {
         })->where('eventUuid', $uuidPattern)->name('dashboard.vip-guests.print-stickers');
     });
 
-    // ════════════════════════════════════════════════════════════
-    // ✨ API endpoints لشاشة تحديد المقاعد المتاحة
-    // ════════════════════════════════════════════════════════════
-    //   - يستخدمها seat-availability.blade.php عبر fetch()
-    //   - محمية بصلاحية manageVipSeats (super_admin + event_manager)
-    //   - مفتاح المقعد = label (مثل "A-1-3")
-    // ════════════════════════════════════════════════════════════
     Route::middleware('role:super_admin,event_manager')->prefix('api/events')->group(function () use ($uuidPattern) {
-
-        // ── GET: جلب المقاعد المستبعدة + الإحصائيات ──
         Route::get('/{eventUuid}/availability', function (string $eventUuid) {
             $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
 
-            // التحقق من الصلاحية (defense in depth)
             if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) {
                 return response()->json(['error' => 'غير مصرح لك'], 403);
             }
 
-            // التحقق من حالة الفعالية
             if (!in_array($event->status?->name, ['active', 'published'], true)) {
                 return response()->json([
                     'error' => 'يمكن إدارة المقاعد فقط للفعاليات النشطة أو المنشورة'
@@ -200,12 +134,10 @@ Route::middleware('admin.web')->group(function () {
 
             $service = app(\App\Services\EventSeatAvailabilityService::class);
 
-            // التهيئة لو لزم
             if (!$service->isInitialized($event)) {
                 $service->initializeForEvent($event);
             }
 
-            // جلب الـ seat IDs المستبعدة + ترجمتها لـ labels (مثل "A-1-3")
             $excludedSeatIds = $service->getExcludedSeatIds($event);
 
             $excludedKeys = \App\Models\Seat::whereIn('id', $excludedSeatIds)
@@ -218,7 +150,6 @@ Route::middleware('admin.web')->group(function () {
             ]);
         })->where('eventUuid', $uuidPattern);
 
-        // ── POST: حفظ المقاعد المستبعدة ──
         Route::post('/{eventUuid}/availability/save', function (string $eventUuid, \Illuminate\Http\Request $request) {
             $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
 
@@ -232,7 +163,6 @@ Route::middleware('admin.web')->group(function () {
                 return response()->json(['error' => 'بيانات غير صحيحة'], 422);
             }
 
-            // ترجمة الـ keys (labels) إلى seat IDs
             $excludedSeatIds = \App\Models\Seat::whereIn('label', $excludedKeys)
                 ->pluck('id')
                 ->toArray();
@@ -261,7 +191,6 @@ Route::middleware('admin.web')->group(function () {
     });
 });
 
-// redirect ذكي حسب حالة المصادقة
 Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')

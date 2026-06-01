@@ -4,7 +4,7 @@
 @section('content')
 <div class="print-page">
 
-    {{-- ════ زر طباعة + رجوع (لا يطبع نفسه) ════ --}}
+    
     <div class="no-print" style="text-align: center; margin: 20px 0; padding: 20px; background: #F8FAFC; border-radius: 8px;">
         <h4 style="color: #0C4A6E; margin-bottom: 8px;">
             🏷️ ملصقات مقاعد الضيوف — {{ $event->title }}
@@ -21,17 +21,17 @@
         </a>
     </div>
 
-    {{-- ════ شبكة الملصقات ════ --}}
+    
     <div class="stickers-grid">
         @foreach($bookings as $booking)
         <div class="sticker">
-            {{-- شريط علوي مع الفعالية --}}
+            
             <div class="sticker-header">
                 <div class="event-name">{{ Str::limit($event->title, 30) }}</div>
                 <div class="event-date">{{ $event->start_datetime->format('Y-m-d') }}</div>
             </div>
 
-            {{-- محتوى الملصق --}}
+            
             <div class="sticker-body">
                 <div class="guest-label">السيد/ة الفاضل/ة</div>
                 <div class="guest-name">{{ $booking->guest_name }}</div>
@@ -51,13 +51,13 @@
                     </div>
                 </div>
 
-                {{-- شعار/badge --}}
+                
                 <div class="seat-code">
                     {{ $booking->seat?->section?->name }}-{{ str_pad($booking->seat?->row_number ?? 0, 2, '0', STR_PAD_LEFT) }}-{{ str_pad($booking->seat?->seat_number ?? 0, 2, '0', STR_PAD_LEFT) }}
                 </div>
             </div>
 
-            {{-- شريط سفلي --}}
+            
             <div class="sticker-footer">
                 مسرح جامعة الموصل
             </div>

@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
 
-            // الأعمدة الجديدة: بداية ونهاية الفعالية (datetime كامل)
             $table->dateTime('start_datetime');
             $table->dateTime('end_datetime');
 

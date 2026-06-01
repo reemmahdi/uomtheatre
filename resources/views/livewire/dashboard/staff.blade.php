@@ -23,7 +23,7 @@
                 @php
                     $roleColors = ['super_admin'=>'#e74c3c','event_manager'=>'#f39c12','theater_manager'=>'#2e75b6','receptionist'=>'#27ae60','university_office'=>'#8e44ad'];
                     $color = $roleColors[$member->role->name] ?? '#95a5a6';
-                @endphp
+@endphp
                 <tr>
                     <td>{{ $member->id }}</td>
                     <td><strong>{{ $member->name }}</strong></td>
@@ -57,7 +57,6 @@
     </div>
 </div>
 
-{{-- نافذة إضافة موظف --}}
 <div class="modal fade" id="createModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -71,7 +70,7 @@
                 <div class="mb-3"><label class="form-label fw-bold">الاسم <span class="text-danger">*</span></label><input type="text" wire:model="name" class="form-control" placeholder="الاسم الكامل"></div>
                 <div class="mb-3"><label class="form-label fw-bold">البريد <span class="text-danger">*</span></label><input type="email" wire:model="email" class="form-control" placeholder="example@uomosul.edu.iq"></div>
 
-                {{-- حقل كلمة المرور مع Strength Meter --}}
+                
                 <div class="mb-3">
                     <label class="form-label fw-bold">
                         كلمة المرور <span class="text-danger">*</span>
@@ -87,7 +86,7 @@
                         </button>
                     </div>
 
-                    {{-- Password Strength Meter --}}
+                    
                     <div class="password-strength-meter" x-data x-show="$wire.password && $wire.password.length > 0">
                         <div class="strength-bars">
                             <div class="strength-bar" data-level="1"></div>
@@ -99,7 +98,7 @@
                         <div class="strength-label"></div>
                     </div>
 
-                    {{-- قائمة شروط كلمة المرور --}}
+                    
                     <div class="password-requirements" x-data x-show="$wire.password && $wire.password.length > 0">
                         <div class="req-item" data-req="length">
                             <i class="bi bi-circle"></i> 12 رمز على الأقل
@@ -138,7 +137,6 @@
     </div>
 </div>
 
-{{-- نافذة تعديل موظف --}}
 <div class="modal fade" id="editModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog">
         <div class="modal-content">
@@ -155,7 +153,7 @@
                     <select wire:model="editRoleId" class="form-select">@foreach($roles as $role)<option value="{{ $role->id }}">{{ $role->display_name }}</option>@endforeach</select>
                 </div>
 
-                {{-- حقل تعديل كلمة المرور (اختياري) مع Strength Meter --}}
+                
                 <div class="mb-3">
                     <label class="form-label fw-bold">كلمة مرور جديدة (اختياري)</label>
                     <div class="password-input-wrapper">
@@ -169,7 +167,7 @@
                         </button>
                     </div>
 
-                    {{-- Password Strength Meter --}}
+                    
                     <div class="password-strength-meter" x-data x-show="$wire.editPassword && $wire.editPassword.length > 0">
                         <div class="strength-bars">
                             <div class="strength-bar" data-level="1"></div>
@@ -181,7 +179,7 @@
                         <div class="strength-label"></div>
                     </div>
 
-                    {{-- قائمة شروط كلمة المرور --}}
+                    
                     <div class="password-requirements" x-data x-show="$wire.editPassword && $wire.editPassword.length > 0">
                         <div class="req-item" data-req="length">
                             <i class="bi bi-circle"></i> 12 رمز على الأقل

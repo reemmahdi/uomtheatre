@@ -13,51 +13,13 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * EventApprovalService — UOMTheatre (تصميم جديد)
- * ════════════════════════════════════════════════════════════════
- *
- * 🎯 التصميم الجديد:
- *   - موافق واحد فقط (مكتب رئاسة الجامعة)
- *   - مدير المسرح يشاهد الفعالية فقط (بدون قرار)
- *   - السجل ينشأ فقط عند اتخاذ القرار
- *   - دعم دورات إعادة الإرسال (round_number) تتزايد تلقائياً
- *
- * 🔄 سير العمل:
- *
- *   مدير الإعلام:
- *     sendForApproval()  → DRAFT/REJECTED → ADDED
- *
- *   مكتب الرئاسة:
- *     approve()  → ADDED → ACTIVE (تنتظر زر النشر)
- *     reject()   → ADDED → REJECTED (سبب اختياري)
- *
- *   مدير الإعلام (بعد الرفض):
- *     resubmit() = sendForApproval() مرة ثانية → round++
- *
- * 🔒 Thread-safety:
- *   lockForUpdate لتجنّب race conditions عند الموافقة المتزامنة
- *
- * ════════════════════════════════════════════════════════════════
- */
 class EventApprovalService
 {
-    // ════════════════════════════════════════════════════════════
-    // إرسال فعالية للموافقة (أو إعادة إرسال بعد رفض)
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * إرسال الفعالية لمكتب الرئاسة للموافقة
-     *
-     * يقبل الفعاليات من حالة DRAFT (أول إرسال) أو REJECTED (إعادة إرسال)
-     */
     public function sendForApproval(Event $event): array
     {
         return DB::transaction(function () use ($event) {
             $event = Event::lockForUpdate()->findOrFail($event->id);
 
-            // يجوز الإرسال من draft (أول مرة) أو rejected (resubmit)
             $allowedFromStatuses = [Status::DRAFT, Status::REJECTED];
             if (!in_array($event->status?->name, $allowedFromStatuses, true)) {
                 return [
@@ -66,12 +28,10 @@ class EventApprovalService
                 ];
             }
 
-            // تحديث حالة الفعالية إلى "added"
             $oldStatusId = $event->status_id;
             $addedStatus = Status::where('name', Status::ADDED)->firstOrFail();
             $event->update(['status_id' => $addedStatus->id]);
 
-            // تسجيل تغيير الحالة
             EventLog::create([
                 'event_id'      => $event->id,
                 'user_id'       => Auth::id(),
@@ -79,7 +39,6 @@ class EventApprovalService
                 'new_status_id' => $addedStatus->id,
             ]);
 
-            // ✨ مُحدَّث: إشعار مباشر لمكتب الرئاسة (موافق واحد)
             $this->notifyUniversityOfficeOfNewRequest($event);
 
             return [
@@ -89,24 +48,11 @@ class EventApprovalService
         });
     }
 
-    /**
-     * إعادة إرسال فعالية مرفوضة (alias لـ sendForApproval)
-     */
     public function resubmit(Event $event): array
     {
         return $this->sendForApproval($event);
     }
 
-    // ════════════════════════════════════════════════════════════
-    // موافقة مكتب الرئاسة
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * تسجيل موافقة مكتب الرئاسة على الفعالية
-     *
-     * - تنشئ سجل approval للدورة الحالية
-     * - تنقل الفعالية من ADDED → ACTIVE (تنتظر النشر اليدوي من مدير الإعلام)
-     */
     public function approve(Event $event): array
     {
         return DB::transaction(function () use ($event) {
@@ -119,10 +65,8 @@ class EventApprovalService
                 ];
             }
 
-            // حساب رقم الدورة الحالية (الموافقات الموجودة + 1)
             $thisRound = $this->nextRoundFor($event);
 
-            // إنشاء سجل الموافقة (لا decided_by لأن المكتب جهة واحدة)
             EventApproval::create([
                 'event_id'         => $event->id,
                 'round_number'     => $thisRound,
@@ -130,7 +74,6 @@ class EventApprovalService
                 'rejection_reason' => null,
             ]);
 
-            // نقل الفعالية إلى ACTIVE (تنتظر النشر)
             $oldStatusId = $event->status_id;
             $activeStatus = Status::where('name', Status::ACTIVE)->firstOrFail();
             $event->update(['status_id' => $activeStatus->id]);
@@ -142,7 +85,6 @@ class EventApprovalService
                 'new_status_id' => $activeStatus->id,
             ]);
 
-            // ✨ مُحدَّث: إشعار مباشر لمنشئ الفعالية بالموافقة
             $this->notifyCreatorOfApproval($event);
 
             return [
@@ -152,16 +94,6 @@ class EventApprovalService
         });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // رفض من مكتب الرئاسة
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * تسجيل رفض مكتب الرئاسة للفعالية
-     *
-     * - تنشئ سجل approval بحالة rejected
-     * - تنقل الفعالية إلى REJECTED (تعود لمدير الإعلام للتعديل)
-     */
     public function reject(Event $event, ?string $reason = null): array
     {
         return DB::transaction(function () use ($event, $reason) {
@@ -180,10 +112,9 @@ class EventApprovalService
                 'event_id'         => $event->id,
                 'round_number'     => $thisRound,
                 'status'           => EventApproval::STATUS_REJECTED,
-                'rejection_reason' => $reason,  // اختياري (nullable)
+                'rejection_reason' => $reason,
             ]);
 
-            // نقل الفعالية إلى REJECTED
             $oldStatusId = $event->status_id;
             $rejectedStatus = Status::where('name', Status::REJECTED)->firstOrFail();
             $event->update(['status_id' => $rejectedStatus->id]);
@@ -195,7 +126,6 @@ class EventApprovalService
                 'new_status_id' => $rejectedStatus->id,
             ]);
 
-            // ✨ مُحدَّث: إشعار مباشر لمنشئ الفعالية بالرفض
             $this->notifyCreatorOfRejection($event, $reason);
 
             return [
@@ -205,13 +135,6 @@ class EventApprovalService
         });
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Queries
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * جلب كل الفعاليات بانتظار قرار مكتب الرئاسة
-     */
     public function getPendingApprovals(): Collection
     {
         return Event::with(['creator', 'status'])
@@ -220,47 +143,22 @@ class EventApprovalService
             ->get();
     }
 
-    /**
-     * هل وافق مكتب الرئاسة على الفعالية في آخر دورة؟
-     *
-     * 💡 يحافظ على اسم الـ method القديم للتوافق مع الكود الموجود
-     */
     public function areAllApprovalsComplete(Event $event): bool
     {
         return $event->isApprovedByOffice();
     }
 
-    /**
-     * هل الفعالية معروضة على مكتب الرئاسة الآن؟
-     */
     public function hasPendingApproval(Event $event): bool
     {
         return $event->isPendingApproval();
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Internal Helpers
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * حساب رقم الدورة التالية للفعالية
-     *
-     * - أول مرة: 1
-     * - بعد رفض → resubmit: 2
-     * - بعد رفض ثاني → resubmit: 3
-     * - وهكذا...
-     */
     protected function nextRoundFor(Event $event): int
     {
         $maxRound = $event->approvals()->max('round_number') ?? 0;
         return $maxRound + 1;
     }
 
-    /**
-     * ✨ إشعار كل users بدور university_office بطلب موافقة جديد
-     *
-     * يُستدعى عند sendForApproval (أول مرة أو إعادة إرسال)
-     */
     protected function notifyUniversityOfficeOfNewRequest(Event $event): void
     {
         try {
@@ -311,9 +209,6 @@ class EventApprovalService
         }
     }
 
-    /**
-     * ✨ إشعار منشئ الفعالية بالموافقة
-     */
     protected function notifyCreatorOfApproval(Event $event): void
     {
         try {
@@ -333,9 +228,6 @@ class EventApprovalService
         }
     }
 
-    /**
-     * ✨ إشعار منشئ الفعالية بالرفض
-     */
     protected function notifyCreatorOfRejection(Event $event, ?string $reason): void
     {
         try {
@@ -362,12 +254,7 @@ class EventApprovalService
         }
     }
 
-    /**
-     * 🔒 محتفظ به للتوافق - لكنه فارغ حالياً
-     * (نستخدم methods مباشرة بدلاً من الـ NotificationService الخارجي)
-     */
     protected function safeNotify(string $method, ...$args): void
     {
-        // deprecated - kept for backward compatibility only
     }
 }

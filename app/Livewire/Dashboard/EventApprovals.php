@@ -12,40 +12,16 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 
-/**
- * ════════════════════════════════════════════════════════════════
- * EventApprovals — UOMTheatre (تصميم جديد + زر تفاصيل)
- * ════════════════════════════════════════════════════════════════
- *
- * شاشة "الفعاليات بانتظار موافقتي"
- *
- * 🎯 الميزات:
- *   - عرض الفعاليات بحالة "added"
- *   - 3 أزرار: تفاصيل 👁️ | موافقة ✅ | رفض ❌
- *   - modal تفاصيل: يعرض كل المعلومات + سجل الرفض السابق
- *   - rejection_reason اختياري
- *
- * ════════════════════════════════════════════════════════════════
- */
 #[Layout('layouts.app')]
 #[Title('الفعاليات بانتظار موافقتي')]
 class EventApprovals extends BaseComponent
 {
-    // ════════════════════════════════════════════════════════════
-    // حقول الرفض (modal)
-    // ════════════════════════════════════════════════════════════
     public ?int $rejectingEventId = null;
     public string $rejectionNote = '';
     public string $rejectingEventTitle = '';
 
-    // ════════════════════════════════════════════════════════════
-    // ✨ جديد: حقل عرض التفاصيل (modal)
-    // ════════════════════════════════════════════════════════════
     public ?int $viewingEventId = null;
 
-    // ════════════════════════════════════════════════════════════
-    // ✨ جديد: فتح نافذة التفاصيل
-    // ════════════════════════════════════════════════════════════
     public function openDetailsModal(int $eventId)
     {
         $this->viewingEventId = $eventId;
@@ -57,9 +33,6 @@ class EventApprovals extends BaseComponent
         $this->viewingEventId = null;
     }
 
-    // ════════════════════════════════════════════════════════════
-    // فتح نافذة الرفض
-    // ════════════════════════════════════════════════════════════
     public function openRejectModal(int $eventId)
     {
         $event = Event::with('status')->findOrFail($eventId);
@@ -81,9 +54,6 @@ class EventApprovals extends BaseComponent
         $this->reset(['rejectingEventId', 'rejectionNote', 'rejectingEventTitle']);
     }
 
-    // ════════════════════════════════════════════════════════════
-    // طلب تأكيد الموافقة
-    // ════════════════════════════════════════════════════════════
     public function requestApprove(int $eventId)
     {
         $event = Event::with('status')->findOrFail($eventId);
@@ -127,9 +97,6 @@ class EventApprovals extends BaseComponent
         }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // تنفيذ الرفض
-    // ════════════════════════════════════════════════════════════
     public function submitReject()
     {
         $this->validate([
@@ -157,9 +124,6 @@ class EventApprovals extends BaseComponent
         }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // Render
-    // ════════════════════════════════════════════════════════════
     public function render()
     {
         $user = Auth::user();
@@ -180,7 +144,6 @@ class EventApprovals extends BaseComponent
                 : 'مدير مكتب رئاسة الجامعة',
         ];
 
-        // ✨ جديد: تحميل تفاصيل الفعالية المعروضة (لو فيه)
         $viewingEvent = null;
         if ($this->viewingEventId) {
             $viewingEvent = Event::with(['creator', 'status', 'approvals'])

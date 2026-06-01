@@ -14,7 +14,6 @@ use Livewire\Attributes\Title;
 #[Title('مقاعد الوفود')]
 class VipEvents extends BaseComponent
 {
-    // ✨ البحث
     public string $searchTitle = '';
 
     public function render()
@@ -23,40 +22,33 @@ class VipEvents extends BaseComponent
             return redirect()->route('dashboard');
         }
 
-        // الفعاليات اللي ممكن نحجز لها وفود (مو مسودة ومو ملغاة)
         $excludeStatuses = Status::whereIn('name', ['draft', 'cancelled', 'end'])->pluck('id');
 
         $query = Event::with(['status', 'creator'])
             ->whereNotIn('status_id', $excludeStatuses);
 
-        // ✨ تطبيق فلتر البحث
         if (!empty($this->searchTitle)) {
             $query->where('title', 'like', '%' . $this->searchTitle . '%');
         }
 
-        // ✨ مُحدَّث: ترتيب حسب الإضافة (الأحدث أولاً) - id أكثر ثباتاً من created_at
         $events = $query->orderBy('id', 'desc')
             ->get()
             ->map(function ($event) {
-                // ✨ مقاعد VIP الثابتة (52 - الصف 10 من Orchestra)
                 $vipFixedIds = \App\Models\Seat::where('is_vip_reserved', true)
                     ->pluck('id')
                     ->toArray();
 
-                // ✨ المقاعد المستبعدة من الجمهور (يحددها مدير الإعلام)
                 $excludedIds = \App\Models\EventSeatAvailability::where('event_id', $event->id)
                     ->where('is_public_available', false)
                     ->pluck('seat_id')
                     ->toArray();
 
-                // ✨ المجموع: VIP ثابتة + مستبعدة = مقاعد الوفود
                 $vipSeatIds = array_values(array_unique(array_merge($vipFixedIds, $excludedIds)));
 
                 $event->total_vip_seats = count($vipSeatIds);
-                $event->vip_fixed_count = count($vipFixedIds);          // عدد الـ VIP الثابتة
-                $event->vip_extra_count = count($excludedIds);          // عدد المضافة
+                $event->vip_fixed_count = count($vipFixedIds);
+                $event->vip_extra_count = count($excludedIds);
 
-                // الحجوزات الفعلية ضمن مقاعد الوفود
                 $event->vip_booked = Reservation::where('event_id', $event->id)
                     ->where('type', 'vip_guest')
                     ->where('status', '!=', 'cancelled')

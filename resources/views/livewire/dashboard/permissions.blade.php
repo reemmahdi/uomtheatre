@@ -1,6 +1,5 @@
 <div>
 
-{{-- ✨ شريط الإحصائيات والإجراءات --}}
 <div class="card-custom p-3 mb-3">
     <div class="row g-2 align-items-center">
         <div class="col-md-6">
@@ -34,7 +33,6 @@
     </div>
 </div>
 
-{{-- ✨ تحذير قبل الحفظ --}}
 @if($hasChanges)
 <div class="alert mb-3" style="background: #FEF3C7; border-color: #F59E0B; color: #92400E;">
     <i class="bi bi-info-circle-fill"></i>
@@ -43,7 +41,6 @@
 </div>
 @endif
 
-{{-- ✨ شريط أدوات التحديد السريع --}}
 <div class="card-custom p-3 mb-3">
     <small class="text-muted d-block mb-2">
         <i class="bi bi-lightning-charge-fill" style="color: #f59e0b;"></i>
@@ -72,7 +69,6 @@
     </div>
 </div>
 
-{{-- ✨ الجدول الرئيسي للصلاحيات --}}
 <div class="card-custom p-0">
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle" style="font-size: 14px;">
@@ -91,14 +87,14 @@
             </thead>
             <tbody>
                 @foreach($permissions as $group => $perms)
-                {{-- صف العنوان لكل مجموعة --}}
+                
                 <tr style="background: #F0F9FF;">
                     <td colspan="{{ $roles->count() + 1 }}" style="padding: 12px 16px; font-weight: 700; color: #0C4A6E;">
                         {{ $groupLabels[$group] ?? '📌 ' . $group }}
                     </td>
                 </tr>
 
-                {{-- صفوف الصلاحيات --}}
+                
                 @foreach($perms as $permission)
                 <tr>
                     <td style="padding: 12px 16px;">
@@ -133,7 +129,6 @@
     </div>
 </div>
 
-{{-- ✨ تذييل المعلومات --}}
 <div class="mt-3 text-center">
     <small class="text-muted">
         <i class="bi bi-info-circle"></i>
@@ -142,9 +137,6 @@
     </small>
 </div>
 
-{{-- ════════════════════════════════════════════════════════════ --}}
-{{-- CSS مخصص للـ checkboxes --}}
-{{-- ════════════════════════════════════════════════════════════ --}}
 <style>
     /* تنسيق checkbox مخصص جميل */
     .permission-checkbox-wrapper {

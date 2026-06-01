@@ -1,9 +1,5 @@
 <div>
 
-{{-- ═══════════════════════════════════════════════════════════════
-     عنوان الفعالية + Banner التحذير
-     ═══════════════════════════════════════════════════════════════ --}}
-
 <div class="card-custom p-4 mb-4 event-title-card">
     <div class="d-flex align-items-center gap-3">
         <div class="event-icon-circle">
@@ -34,10 +30,6 @@
     </div>
 </div>
 @endif
-
-{{-- ═══════════════════════════════════════════════════════════════
-     إحصائيات + شرح الألوان
-     ═══════════════════════════════════════════════════════════════ --}}
 
 <div class="card-custom p-4 mb-4">
     <div class="row g-3 mb-3">
@@ -73,10 +65,6 @@
         <div class="legend-item"><span class="legend-color legend-available"></span> <strong>متاح</strong> — اضغط للحجز كوفد</div>
     </div>
 </div>
-
-{{-- ═══════════════════════════════════════════════════════════════
-     خريطة المقاعد - مقسمة حسب القسم
-     ═══════════════════════════════════════════════════════════════ --}}
 
 @foreach($seatsBySection as $sectionName => $sectionSeats)
 @php
@@ -115,10 +103,10 @@
                 $isVip = $reservation && $reservation->type === 'vip_guest';
                 $isPublic = $reservation && $reservation->type !== 'vip_guest';
                 $isAvailable = !$reservation;
-            @endphp
+@endphp
 
             @if($isVip)
-                {{-- 🟡 مقعد محجوز كوفد - قابل للضغط --}}
+                
                 <div class="seat-item-wrapper booked-wrapper"
                      wire:click="openViewBooking({{ $reservation->id }})"
                      title="{{ $seat->label }} - {{ $reservation->guest_name }}">
@@ -133,7 +121,7 @@
                 </div>
 
             @elseif($isPublic)
-                {{-- 🔴 محجوز من الجمهور - غير قابل للتعديل --}}
+                
                 <div class="seat-item-wrapper" title="{{ $seat->label }} - محجوز من الجمهور">
                     <div class="seat-item booked-public">
                         <div class="seat-chair">
@@ -145,7 +133,7 @@
                 </div>
 
             @else
-                {{-- ⚪ متاح --}}
+                
                 @if($event->is_booking_paused)
                     <div class="seat-item-wrapper" title="الحجز متوقف">
                         <div class="seat-item paused">
@@ -179,10 +167,6 @@
 </div>
 @endforeach
 
-{{-- ═══════════════════════════════════════════════════════════════
-     Modal: حجز مقعد جديد كوفد
-     ═══════════════════════════════════════════════════════════════ --}}
-
 <div wire:ignore.self class="modal fade" id="bookSeatModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -196,7 +180,8 @@
             <form wire:submit.prevent="bookSeat">
                 <div class="modal-body">
                     @if($selectedSeatId)
-                    @php $selSeat = \App\Models\Seat::with('section')->find($selectedSeatId); @endphp
+                    @php $selSeat = \App\Models\Seat::with('section')->find($selectedSeatId);
+@endphp
                     <div class="alert alert-info">
                         <i class="bi bi-info-circle"></i>
                         المقعد المختار: <strong>{{ $selSeat?->label }}</strong>
@@ -236,10 +221,6 @@
         </div>
     </div>
 </div>
-
-{{-- ═══════════════════════════════════════════════════════════════
-     Modal: عرض تفاصيل وفد
-     ═══════════════════════════════════════════════════════════════ --}}
 
 <div wire:ignore.self class="modal fade" id="viewBookingModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -293,10 +274,6 @@
     </div>
 </div>
 
-{{-- ═══════════════════════════════════════════════════════════════
-     Modal: تعديل وفد
-     ═══════════════════════════════════════════════════════════════ --}}
-
 <div wire:ignore.self class="modal fade" id="editBookingModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -331,10 +308,6 @@
         </div>
     </div>
 </div>
-
-{{-- ═══════════════════════════════════════════════════════════════
-     CSS
-     ═══════════════════════════════════════════════════════════════ --}}
 
 <style>
     /* عنوان الفعالية */
@@ -518,10 +491,6 @@
     .info-value { color: #1f2937; }
 </style>
 
-{{-- ════════════════════════════════════════════════════════════════
-     🔧 JavaScript Bridge: ربط Livewire events بـ Bootstrap modals
-     السبب: dispatch('open-modal') من Livewire لا يفتح الـ modal تلقائياً
-     ════════════════════════════════════════════════════════════════ --}}
 <script>
 document.addEventListener('livewire:initialized', () => {
 
