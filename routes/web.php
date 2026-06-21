@@ -144,8 +144,41 @@ Route::middleware('admin.web')->group(function () {
                 ->pluck('label')
                 ->toArray();
 
+            // ✅ كل المقاعد الحقيقية من قاعدة البيانات (عشان يرسمها الجافاسكربت)
+            $seats = \App\Models\Seat::with('section')
+                ->orderBy('section_id')
+                ->orderBy('row_number')
+                ->orderBy('seat_number')
+                ->get()
+                ->map(fn($s) => [
+                    'label'   => $s->label,
+                    'section' => $s->section->name,
+                    'row'     => (int) $s->row_number,
+                    'num'     => (int) $s->seat_number,
+                    'vip'     => (bool) $s->is_vip_reserved,
+                ])
+                ->values();
+
+            // ضيوف الوفود المحجوزون (label => [الاسم، الجوال])
+            $guests = \App\Models\Reservation::with('seat')
+                ->where('event_id', $event->id)
+                ->where('type', 'vip_guest')
+                ->where('status', '!=', 'cancelled')
+                ->get()
+                ->reduce(function ($acc, $r) {
+                    if ($r->seat && $r->seat->label) {
+                        $acc[$r->seat->label] = [
+                            'name'  => $r->guest_name,
+                            'phone' => $r->guest_phone,
+                        ];
+                    }
+                    return $acc;
+                }, []);
+
             return response()->json([
                 'excluded_seat_keys' => $excludedKeys,
+                'seats'              => $seats,
+                'guests'             => $guests,
                 'stats'              => $service->getStats($event),
             ]);
         })->where('eventUuid', $uuidPattern);
@@ -186,6 +219,67 @@ Route::middleware('admin.web')->group(function () {
                 'excluded_count' => count($excludedSeatIds),
                 'available_count' => count($availableSeatIds),
                 'stats'          => $service->getStats($event),
+            ]);
+        })->where('eventUuid', $uuidPattern);
+
+        // حجز ضيف وفد على مقعد (أو إلغاؤه إذا الاسم فارغ) — مطابق لنظام VipBooking
+        Route::post('/{eventUuid}/book-guest', function (string $eventUuid, \Illuminate\Http\Request $request) {
+            $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
+
+            if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) {
+                return response()->json(['error' => 'غير مصرح لك'], 403);
+            }
+
+            $label      = $request->input('label');
+            $guestName  = trim((string) $request->input('guest_name', ''));
+            $guestPhone = trim((string) $request->input('guest_phone', ''));
+
+            $seat = \App\Models\Seat::where('label', $label)->first();
+            if (!$seat) {
+                return response()->json(['error' => 'مقعد غير موجود'], 404);
+            }
+
+            // أي حجز نشط على هذا المقعد بهذه الفعالية
+            $existing = \App\Models\Reservation::where('event_id', $event->id)
+                ->where('seat_id', $seat->id)
+                ->where('status', '!=', 'cancelled')
+                ->first();
+
+            // اسم فارغ = إلغاء حجز الوفد
+            if ($guestName === '') {
+                if ($existing && $existing->type === 'vip_guest') {
+                    $existing->cancel();
+                }
+                return response()->json(['success' => true, 'booked' => false, 'label' => $label]);
+            }
+
+            if ($existing) {
+                // لا نسمح بالكتابة فوق حجز جمهور
+                if ($existing->type !== 'vip_guest') {
+                    return response()->json(['error' => 'هذا المقعد محجوز من قبل الجمهور'], 409);
+                }
+                $existing->update([
+                    'guest_name'  => $guestName,
+                    'guest_phone' => $guestPhone ?: null,
+                ]);
+            } else {
+                \App\Models\Reservation::create([
+                    'user_id'     => \Illuminate\Support\Facades\Auth::id(),
+                    'event_id'    => $event->id,
+                    'seat_id'     => $seat->id,
+                    'status'      => 'confirmed',
+                    'type'        => 'vip_guest',
+                    'guest_name'  => $guestName,
+                    'guest_phone' => $guestPhone ?: null,
+                ]);
+            }
+
+            return response()->json([
+                'success'     => true,
+                'booked'      => true,
+                'label'       => $label,
+                'guest_name'  => $guestName,
+                'guest_phone' => $guestPhone,
             ]);
         })->where('eventUuid', $uuidPattern);
     });

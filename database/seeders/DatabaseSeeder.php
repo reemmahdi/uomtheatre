@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(PermissionsSeeder::class);
 
-        $this->command->info('🎉 Seeding اكتمل');
+        $this->command->info(' Seeding اكتمل');
     }
 
     protected function seedRoles(): void

@@ -50,7 +50,7 @@
                     <div class="number" style="color: #A88729;" id="excludedCount">0</div>
                     <div class="label">
                         <i class="bi bi-star-fill" style="color: #C9A530;"></i>
-                        مقاعد الوفود (52 ثابتة + المضافة)
+                        مقاعد الوفود (52 ثابتة) + المستبعدة
                     </div>
                 </div>
                 <div class="icon" style="background: #fef9e7; color: #A88729;">
@@ -80,7 +80,6 @@
 <div class="card-custom p-3 mb-3">
     <div class="row g-3 align-items-center">
 
-        
         <div class="col-md-7">
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <small class="fw-bold text-muted">أدوات سريعة:</small>
@@ -101,7 +100,6 @@
             </div>
         </div>
 
-        
         <div class="col-md-5">
             <div class="d-flex justify-content-end gap-3 flex-wrap mb-2" style="font-size: 13px;">
                 <span>
@@ -113,7 +111,7 @@
                     مقاعد الوفود
                 </span>
             </div>
-            
+
             <div id="seatInfoBox" class="text-end" style="font-size: 13px; padding: 8px 12px; background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0; min-height: 38px; display: flex; align-items: center; justify-content: flex-end; color: #64748b;">
                 اختر مقعداً لعرض تفاصيله
             </div>
@@ -124,10 +122,8 @@
 <div class="card-custom p-3" style="background: linear-gradient(180deg, #F8FAFC, #EEF2F7);">
     <div id="mapWrapper" style="position: relative; border-radius: 12px; min-height: 600px; overflow: auto;">
 
-        
         <svg id="mapSvg" width="100%" viewBox="-450 50 2600 1700" preserveAspectRatio="xMidYMid meet" style="max-height: 750px; user-select: none;">
 
-            
             <defs>
                 <radialGradient id="stageGlow" cx="50%" cy="0%" r="80%">
                     <stop offset="0%" stop-color="#FCD981" stop-opacity="0.4"/>
@@ -135,23 +131,18 @@
                 </radialGradient>
             </defs>
 
-            
             <ellipse cx="850" cy="320" rx="900" ry="280" fill="url(#stageGlow)" pointer-events="none"/>
 
-            
             <rect x="200" y="280" width="1300" height="50" rx="8" fill="#0C4A6E" pointer-events="none"/>
             <text x="850" y="313" text-anchor="middle" fill="#fff" font-weight="700" font-size="28" pointer-events="none">
                 خشبة المسرح
             </text>
 
-            
             <g id="seatsGroup"></g>
 
-            
             <g id="labelsGroup"></g>
         </svg>
 
-        
         <div id="loadingOverlay" style="position: absolute; inset: 0; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center; border-radius: 12px;">
             <div style="text-align: center;">
                 <div class="spinner-border" style="color: #0C4A6E; width: 50px; height: 50px;"></div>
@@ -161,18 +152,51 @@
     </div>
 </div>
 
+<div class="modal fade" id="bookGuestModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg,#0C4A6E,#075985);">
+        <h5 class="modal-title text-white"><i class="bi bi-star-fill" style="color:#C9A530;"></i> حجز مقعد وفد</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 small text-muted">المقعد: <strong id="bgSeatLabel" style="color:#0C4A6E;"></strong></div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">اسم الضيف <span class="text-danger">*</span></label>
+          <input type="text" id="bgGuestName" class="form-control" placeholder="الاسم الكامل للضيف">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-bold">رقم الجوال</label>
+          <input type="text" id="bgGuestPhone" class="form-control" dir="ltr" placeholder="07701234567">
+        </div>
+        <div id="bgError" class="text-danger small mt-2" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="bgRemoveBtn" class="btn btn-outline-danger me-auto" style="display:none;">
+          <i class="bi bi-x-lg"></i> إلغاء الحجز
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+        <button type="button" id="bgSaveBtn" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ الحجز</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @push('scripts')
 <script>
 (function() {
     'use strict';
 
     const EVENT_UUID = @json($event->uuid);
-    const API_GET = `/api/events/${EVENT_UUID}/availability`;
+
+    // ✅ الرابط الصحيح: مسار الويب (جلسة المتصفّح) — بدون admin
+    const API_GET  = `/api/events/${EVENT_UUID}/availability`;
     const API_SAVE = `/api/events/${EVENT_UUID}/availability/save`;
+    const API_BOOK = `/api/events/${EVENT_UUID}/book-guest`;
 
     const SVG_NS = "http://www.w3.org/2000/svg";
 
-    // 🎯 نفس FAN math من الخريطة المعتمدة
+    // إعدادات المروحة (المواقع) — نفس الخريطة المعتمدة
     const FAN = {
         cx: 850,
         cy: -800,
@@ -182,13 +206,14 @@
         balcRowGap: 38,
     };
 
-    const SECTIONS = {
-        C: { angles: [-34, -16], rowSeats: [9,10,10,11,11,12,12,13,13,14,14,15,15,16,16], floor: "orchestra" },
-        B: { angles: [-12,  12], rowSeats: [13,14,14,15,15,16,16,17,17,18,18,19,19,20,20], floor: "orchestra" },
-        A: { angles: [ 16,  34], rowSeats: [9,10,10,11,11,12,12,13,13,14,14,15,15,16,16], floor: "orchestra" },
-        F: { angles: [-32, -16], rowSeats: [12,13,13,14,14,15,15,16], floor: "balcony" },
-        E: { angles: [-12,  12], rowSeats: [16,16,17,17,18,18,19,19], floor: "balcony" },
-        D: { angles: [ 16,  32], rowSeats: [12,13,13,14,14,15,15,16], floor: "balcony" },
+    // ✅ فقط زوايا كل قسم — أعداد المقاعد تجي من قاعدة البيانات
+    const SECTION_CONFIG = {
+        C: { angles: [-34, -16], floor: "orchestra" },
+        B: { angles: [-12,  12], floor: "orchestra" },
+        A: { angles: [ 16,  34], floor: "orchestra" },
+        F: { angles: [-32, -16], floor: "balcony" },
+        E: { angles: [-12,  12], floor: "balcony" },
+        D: { angles: [ 16,  32], floor: "balcony" },
     };
 
     const COLORS = {
@@ -201,23 +226,107 @@
     const excludedKeys = new Set();
     let savedExcludedKeys = new Set();
     let totalNonVip = 0;
-    let totalVip = 0;
-    let vipCountFromDB = 0;  // ✨ عدد المقاعد VIP من DB (52 ثابت)
+    let vipCount = 0;
+    const guests = {}; // label => { name, phone }
+    let bgCurrentLabel = null; // المقعد المفتوح حالياً في نافذة الحجز
 
     const seatsGroup = document.getElementById('seatsGroup');
     const labelsGroup = document.getElementById('labelsGroup');
 
-    function buildSeats() {
-        ["C", "B", "A", "F", "E", "D"].forEach(name => {
-            const cfg = SECTIONS[name];
+    // ✅ يبني المقاعد من البيانات الحقيقية القادمة من قاعدة البيانات
+    function buildSeats(dbSeats) {
+        // (1) احسب عدد المقاعد الحقيقي لكل صف في كل قسم
+        const layout = {};
+        dbSeats.forEach(s => {
+            if (!layout[s.section]) layout[s.section] = {};
+            layout[s.section][s.row] = Math.max(layout[s.section][s.row] || 0, s.num);
+        });
+
+        // (2) ارسم كل مقعد حقيقي في مكانه (نفس رياضيات المروحة)
+        dbSeats.forEach(s => {
+            const cfg = SECTION_CONFIG[s.section];
+            if (!cfg) return;
+
             const isBalc = cfg.floor === "balcony";
             const radiusStart = isBalc ? FAN.balcRadiusStart : FAN.orchRadiusStart;
             const rowGap = isBalc ? FAN.balcRowGap : FAN.orchRowGap;
             const [aStart, aEnd] = cfg.angles;
 
-            // label للقسم - بعد آخر صف بشوية
+            const seatCount = layout[s.section][s.row];
+            const radius = radiusStart + (s.row - 1) * rowGap;
+            const t = seatCount === 1 ? 0.5 : (s.num - 1) / (seatCount - 1);
+            const angDeg = aStart + t * (aEnd - aStart);
+            const angRad = angDeg * Math.PI / 180;
+            const x = FAN.cx + Math.sin(angRad) * radius;
+            const y = FAN.cy + Math.cos(angRad) * radius;
+
+            // VIP = من عمود is_vip_reserved في قاعدة البيانات (المصدر الوحيد للحقيقة)
+            const isVip = s.vip;
+
+            const key = s.label; // نستعمل label من قاعدة البيانات مباشرة
+
+            const circle = document.createElementNS(SVG_NS, "circle");
+            circle.setAttribute("cx", x);
+            circle.setAttribute("cy", y);
+            circle.setAttribute("r", isBalc ? 13 : 12);
+            circle.setAttribute("data-key", key);
+            circle.setAttribute("data-section", s.section);
+            circle.setAttribute("data-row", s.row);
+            circle.setAttribute("data-num", s.num);
+
+            if (isVip) {
+                circle.style.fill = COLORS.vip.fill;
+                circle.style.stroke = COLORS.vip.stroke;
+                circle.setAttribute('data-vip', 'true');
+            } else {
+                circle.style.fill = COLORS.available.fill;
+                circle.style.stroke = COLORS.available.stroke;
+            }
+            circle.style.cursor = "pointer";
+            circle.style.strokeWidth = "1.5";
+            circle.style.transition = "all .15s";
+
+            const title = document.createElementNS(SVG_NS, "title");
+            title.textContent = isVip ? `${key} (وفد)` : key;
+            circle.appendChild(title);
+
+            circle.addEventListener('click', () => {
+                if (circle.getAttribute('data-vip') === 'true') {
+                    openBookingModal(key);
+                    showSeatInfo(s.section, s.row, s.num, 'vip');
+                } else {
+                    toggleSeat(key);
+                    showSeatInfo(s.section, s.row, s.num, excludedKeys.has(key) ? 'excluded' : 'available');
+                }
+            });
+
+            seatsGroup.appendChild(circle);
+            seats[key] = circle;
+
+            if (isVip) vipCount++;
+        });
+
+        totalNonVip = Object.keys(seats).length - vipCount;
+
+        // (3) ارسم أسماء الأقسام
+        drawSectionLabels(layout);
+
+        console.log(`✓ Built ${Object.keys(seats).length} seats from DB. VIP=${vipCount}, totalNonVip=${totalNonVip}`);
+    }
+
+    // يرسم دائرة + حرف لكل قسم
+    function drawSectionLabels(layout) {
+        Object.keys(SECTION_CONFIG).forEach(name => {
+            if (!layout[name]) return;
+            const cfg = SECTION_CONFIG[name];
+            const isBalc = cfg.floor === "balcony";
+            const radiusStart = isBalc ? FAN.balcRadiusStart : FAN.orchRadiusStart;
+            const rowGap = isBalc ? FAN.balcRowGap : FAN.orchRowGap;
+            const [aStart, aEnd] = cfg.angles;
+
+            const rowCount = Math.max(...Object.keys(layout[name]).map(Number));
             const labelAng = ((aStart + aEnd) / 2) * Math.PI / 180;
-            const labelRadius = radiusStart + (cfg.rowSeats.length + 1) * rowGap;
+            const labelRadius = radiusStart + (rowCount + 1) * rowGap;
             const labelX = FAN.cx + Math.sin(labelAng) * labelRadius;
             const labelY = FAN.cy + Math.cos(labelAng) * labelRadius;
 
@@ -238,80 +347,16 @@
             labelText.setAttribute("font-size", "32");
             labelText.textContent = name;
             labelsGroup.appendChild(labelText);
-
-            cfg.rowSeats.forEach((seatCount, rIdx) => {
-                const r = rIdx + 1;
-                const radius = radiusStart + rIdx * rowGap;
-                // ✨ VIP محلياً: الصف العاشر من Orchestra (A, B, C)
-                const isVipLocal = !isBalc && r === 10;
-
-                for (let i = 0; i < seatCount; i++) {
-                    const t = seatCount === 1 ? 0.5 : i / (seatCount - 1);
-                    const angDeg = aStart + t * (aEnd - aStart);
-                    const angRad = (angDeg * Math.PI) / 180;
-                    const x = FAN.cx + Math.sin(angRad) * radius;
-                    const y = FAN.cy + Math.cos(angRad) * radius;
-
-                    // key بصيغة DB
-                    const key = `${name}-${String(r).padStart(2, '0')}-${String(i+1).padStart(2, '0')}`;
-
-                    const circle = document.createElementNS(SVG_NS, "circle");
-                    circle.setAttribute("cx", x);
-                    circle.setAttribute("cy", y);
-                    circle.setAttribute("r", isBalc ? 14 : 13);
-                    circle.setAttribute("data-key", key);
-                    circle.setAttribute("data-section", name);
-                    circle.setAttribute("data-row", r);
-                    circle.setAttribute("data-num", i+1);
-
-                    // ✨ تحديد لون VIP/متاح
-                    if (isVipLocal) {
-                        circle.style.fill = COLORS.vip.fill;
-                        circle.style.stroke = COLORS.vip.stroke;
-                        circle.setAttribute('data-vip', 'true');
-                    } else {
-                        circle.style.fill = COLORS.available.fill;
-                        circle.style.stroke = COLORS.available.stroke;
-                    }
-                    circle.style.cursor = "pointer";
-
-                    const title = document.createElementNS(SVG_NS, "title");
-                    title.textContent = isVipLocal
-                        ? `${name}-${r}-${i+1} (VIP)`
-                        : `${name}-${r}-${i+1}`;
-                    circle.appendChild(title);
-
-                    // ✨ الـ click handler يفحص الـ VIP state ديناميكياً
-                    circle.addEventListener('click', () => {
-                        if (circle.getAttribute('data-vip') === 'true') {
-                            // VIP: عرض فقط (لا استبعاد)
-                            showSeatInfo(name, r, i+1, 'vip');
-                        } else {
-                            toggleSeat(key);
-                            showSeatInfo(name, r, i+1, excludedKeys.has(key) ? 'excluded' : 'available');
-                        }
-                    });
-
-                    circle.style.strokeWidth = "1.5";
-                    circle.style.transition = "all .15s";
-
-                    seatsGroup.appendChild(circle);
-                    seats[key] = circle;
-                }
-            });
         });
-
-        console.log(`✓ Built ${Object.keys(seats).length} seats. VIP will be loaded from DB.`);
     }
 
-    // ✨ عرض معلومات المقعد في info box
     function showSeatInfo(section, row, num, status) {
         const box = document.getElementById('seatInfoBox');
         if (!box) return;
 
         const statusInfo = {
             available: { color: '#16A34A', bg: '#dcfce7', icon: 'bi-check-circle-fill', text: 'متاح للجمهور' },
-            excluded:  { color: '#A88729', bg: '#fef9e7', icon: 'bi-star-fill',          text: 'مقعد وفد (مستبعد)' },
+            excluded:  { color: '#A88729', bg: '#fef9e7', icon: 'bi-star-fill',          text: 'مقعد مستبعد' },
             vip:       { color: '#A88729', bg: '#fef9e7', icon: 'bi-star-fill',          text: 'VIP — مقعد وفد ثابت' },
         };
         const info = statusInfo[status] || statusInfo.available;
@@ -329,6 +374,95 @@
             </span>
         `;
     }
+
+    // يحدّث عنوان المقعد (الهوفر): يعرض الاسم إن كان محجوزاً
+    function updateSeatTitle(circle, label) {
+        let title = circle.querySelector('title');
+        if (!title) { title = document.createElementNS(SVG_NS, 'title'); circle.appendChild(title); }
+        const g = guests[label];
+        title.textContent = (g && g.name) ? `${label} — ${g.name}` : `${label} (وفد)`;
+    }
+
+    // يميّز المقعد المحجوز بصرياً (حدّ أغمق)
+    function markBooked(circle, isBooked) {
+        if (!circle) return;
+        circle.style.stroke = isBooked ? '#7A5C12' : COLORS.vip.stroke;
+        circle.style.strokeWidth = isBooked ? '2.5' : '1.5';
+    }
+
+    // يفتح نافذة الحجز لمقعد وفد
+    function openBookingModal(label) {
+        bgCurrentLabel = label;
+        const g = guests[label] || {};
+        document.getElementById('bgSeatLabel').textContent = label;
+        document.getElementById('bgGuestName').value  = g.name  || '';
+        document.getElementById('bgGuestPhone').value = g.phone || '';
+        document.getElementById('bgError').style.display = 'none';
+        document.getElementById('bgRemoveBtn').style.display = g.name ? 'inline-block' : 'none';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('bookGuestModal')).show();
+    }
+
+    // يحجز ضيفاً على مقعد وفد (أو يلغي الحجز إذا الاسم فارغ)
+    async function bookGuest(label, name, phone) {
+        const res = await fetch(API_BOOK, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=\"csrf-token\"]')?.content || '',
+            },
+            body: JSON.stringify({ label, guest_name: name, guest_phone: phone || '' })
+        });
+        if (!res.ok) {
+            let msg = 'فشل الحجز: ' + res.status;
+            try { const e = await res.json(); if (e.error) msg = e.error; } catch (_) {}
+            throw new Error(msg);
+        }
+        const data = await res.json();
+        const circle = seats[label];
+        if (data.booked) {
+            guests[label] = { name: data.guest_name, phone: data.guest_phone || '' };
+            if (circle) { updateSeatTitle(circle, label); markBooked(circle, true); }
+        } else {
+            delete guests[label];
+            if (circle) { updateSeatTitle(circle, label); markBooked(circle, false); }
+        }
+    }
+
+    // أزرار نافذة الحجز
+    document.getElementById('bgSaveBtn').addEventListener('click', async () => {
+        const name  = document.getElementById('bgGuestName').value.trim();
+        const phone = document.getElementById('bgGuestPhone').value.trim();
+        const errEl = document.getElementById('bgError');
+        if (!name) { errEl.textContent = 'اسم الضيف مطلوب'; errEl.style.display = 'block'; return; }
+        const btn = document.getElementById('bgSaveBtn');
+        btn.disabled = true;
+        try {
+            await bookGuest(bgCurrentLabel, name, phone);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('bookGuestModal')).hide();
+            if (window.SwalHelper?.success) SwalHelper.success('تم حفظ الحجز');
+        } catch (err) {
+            errEl.textContent = err.message; errEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('bgRemoveBtn').addEventListener('click', async () => {
+        if (!confirm('إلغاء حجز هذا المقعد؟')) return;
+        const btn = document.getElementById('bgRemoveBtn');
+        btn.disabled = true;
+        try {
+            await bookGuest(bgCurrentLabel, '', '');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('bookGuestModal')).hide();
+        } catch (err) {
+            document.getElementById('bgError').textContent = err.message;
+            document.getElementById('bgError').style.display = 'block';
+        } finally {
+            btn.disabled = false;
+        }
+    });
 
     function toggleSeat(key) {
         const seat = seats[key];
@@ -364,9 +498,7 @@
 
     function updateStats() {
         const userExcluded = excludedKeys.size;
-        // ✨ المستبعد = VIP الثابتة (52) + ما يستبعده مدير الإعلام
-        const totalExcluded = vipCountFromDB + userExcluded;
-        // ✨ المتاح للجمهور = totalNonVip - userExcluded
+        const totalExcluded = vipCount + userExcluded;
         const available = totalNonVip - userExcluded;
         document.getElementById('availableCount').textContent = available;
         document.getElementById('excludedCount').textContent = totalExcluded;
@@ -393,6 +525,7 @@
         return true;
     }
 
+    // ✅ يجيب البيانات أولاً، ثم يبني المقاعد منها، ثم يطبّق المستبعد
     async function loadData() {
         try {
             const res = await fetch(API_GET, {
@@ -402,25 +535,10 @@
             if (!res.ok) throw new Error('فشل التحميل: ' + res.status);
             const data = await res.json();
 
-            // ✨ مُحدَّث: تطبيق المقاعد VIP من DB (is_vip_reserved=true)
-            (data.vip_seat_keys || []).forEach(key => {
-                if (seats[key]) {
-                    seats[key].setAttribute('data-vip', 'true');
-                    seats[key].style.fill = COLORS.vip.fill;
-                    seats[key].style.stroke = COLORS.vip.stroke;
+            // ابنِ المقاعد من البيانات الحقيقية
+            buildSeats(data.seats || []);
 
-                    // تحديث الـ tooltip
-                    const title = seats[key].querySelector('title');
-                    if (title) title.textContent = title.textContent + ' (VIP)';
-                }
-            });
-
-            // ✨ حساب totalNonVip بناءً على VIP من DB
-            const vipCount = (data.vip_seat_keys || []).length;
-            vipCountFromDB = vipCount;  // ✨ تخزين عدد VIP للـ stats
-            totalNonVip = Object.keys(seats).length - vipCount;
-
-            // تطبيق المقاعد المستبعدة (تجاهل VIP)
+            // طبّق المقاعد المستبعدة المحفوظة
             (data.excluded_seat_keys || []).forEach(key => {
                 if (seats[key] && seats[key].dataset.vip !== 'true') {
                     excludedKeys.add(key);
@@ -428,6 +546,13 @@
                     seats[key].style.fill = COLORS.excluded.fill;
                     seats[key].style.stroke = COLORS.excluded.stroke;
                 }
+            });
+
+            // طبّق حجوزات الوفود على الخريطة (الاسم في الهوفر + تمييز المحجوز)
+            Object.assign(guests, data.guests || {});
+            Object.keys(guests).forEach(label => {
+                const circle = seats[label];
+                if (circle) { updateSeatTitle(circle, label); markBooked(circle, true); }
             });
 
             console.log(`✓ Loaded: ${vipCount} VIP, ${excludedKeys.size} excluded, totalNonVip=${totalNonVip}`);
@@ -458,6 +583,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrf,
                 },
+                // ✅ اسم الحقل الصحيح الذي يتوقّعه مسار الحفظ
                 body: JSON.stringify({ excluded_seat_keys: [...excludedKeys] })
             });
 
@@ -468,7 +594,7 @@
             updateSaveButton();
 
             if (window.SwalHelper?.success) {
-                SwalHelper.success(`تم حفظ التغييرات بنجاح (${data.excluded_count || excludedKeys.size} مقعد مستبعد)`);
+                SwalHelper.success(`تم حفظ التغييرات بنجاح (${data.excluded_count ?? excludedKeys.size} مقعد مستبعد)`);
             } else {
                 alert('تم حفظ التغييرات بنجاح');
             }
@@ -535,8 +661,7 @@
         btn.addEventListener('click', () => toggleSection(btn.dataset.section));
     });
 
-    // البداية
-    buildSeats();
+    // ✅ البداية: نجيب البيانات أولاً (loadData يستدعي buildSeats داخلياً)
     loadData();
 })();
 </script>

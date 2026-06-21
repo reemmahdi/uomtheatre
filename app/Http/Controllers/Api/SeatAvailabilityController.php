@@ -51,6 +51,19 @@ class SeatAvailabilityController extends Controller
             'vip_count'          => $vipCount,
             'excluded_count'     => $excludedCount,
             'available_count'    => $totalSeats - $vipCount - $excludedCount,
+            'seats'              => Seat::with('section')
+                ->orderBy('section_id')
+                ->orderBy('row_number')
+                ->orderBy('seat_number')
+                ->get()
+                ->map(fn($s) => [
+                    'label'   => $s->label,
+                    'section' => $s->section->name,
+                    'row'     => (int) $s->row_number,
+                    'num'     => (int) $s->seat_number,
+                    'vip'     => (bool) $s->is_vip_reserved,
+                ])
+                ->values(),
             'total_seats'        => $totalSeats,
         ]);
     }
