@@ -125,4 +125,33 @@ class ReservationController extends Controller
 
         return response()->json(['message' => 'تم إلغاء الحجز بنجاح']);
     }
+
+
+    /**
+     * تأكيد الحجز بعد تغيير موعد الفعالية — المستخدم يثبت قبوله
+     * الموعد الجديد فيبقى مقعده كما هو.
+     */
+    public function confirmChange(Request $request, int $id): JsonResponse
+    {
+        $reservation = Reservation::with(['event', 'seat'])
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        if ($reservation->status !== 'confirmed' || !$reservation->confirm_until) {
+            return response()->json(['message' => 'لا يوجد تغيير موعد بانتظار تأكيدك لهذا الحجز'], 422);
+        }
+        if ($reservation->change_confirmed_at) {
+            return response()->json(['message' => 'سبق أن أكدت حجزك — مقعدك مثبت'], 200);
+        }
+        if (now()->greaterThan($reservation->confirm_until)) {
+            return response()->json(['message' => 'انتهت مهلة التأكيد وسيُلغى الحجز تلقائياً'], 422);
+        }
+
+        $reservation->update(['change_confirmed_at' => now()]);
+
+        return response()->json([
+            'message' => 'تم تأكيد حجزك على الموعد الجديد — مقعدك مثبت',
+            'reservation_id' => $reservation->id,
+        ]);
+    }
 }

@@ -21,6 +21,7 @@ Route::get('/events', [EventController::class, 'publicIndex'])->name('api.events
 Route::get('/events/{id}', [EventController::class, 'show'])->name('api.events.show');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/reservations/{id}/confirm-change', [ReservationController::class, 'confirmChange']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
 

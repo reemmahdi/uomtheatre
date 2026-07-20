@@ -59,19 +59,23 @@ class EventController extends Controller
         return response()->json(['events' => $events]);
     }
 
-    public function publicIndex(): JsonResponse
+  
+public function publicIndex(): JsonResponse
     {
-        $publishedStatus = Status::where('name', Status::PUBLISHED)->first();
-        if (!$publishedStatus) {
+        // الظاهر للجمهور: المنشورة + المغلقة + المنتهية — الملغاة والمسودات تُخفى
+        $visibleStatusIds = Status::whereIn('name', ['published', 'closed', 'end'])
+            ->pluck('id');
+        if ($visibleStatusIds->isEmpty()) {
             return response()->json(['events' => []]);
         }
 
         $totalSeats = Seat::count();
 
         $events = Event::with(['status'])
-            ->where('status_id', $publishedStatus->id)
-            ->where('end_datetime', '>=', now())
-            ->orderBy('start_datetime', 'asc')
+            ->whereIn('status_id', $visibleStatusIds)
+            ->where('end_datetime', '>=', now()->subDays(7)) // المنتهية تبقى أسبوعاً ثم تختفي
+            ->orderByRaw('(end_datetime < NOW()) asc') // المنتهية تنزل آخر القائمة
+            ->orderByDesc('created_at') // الأحدث إضافةً أولاً
             ->get()
             ->map(function ($event) use ($totalSeats) {
                 $vipBooked = Reservation::where('event_id', $event->id)
@@ -100,6 +104,8 @@ class EventController extends Controller
                     'public_reserved' => $publicReserved,
                     'available'       => $availableForPublic,
                     'is_booking_paused' => (bool) $event->is_booking_paused,
+                    'has_ended'       => $event->end_datetime < now(),
+                    'status_name'     => $event->status?->name,
                 ];
             });
 

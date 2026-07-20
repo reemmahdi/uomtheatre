@@ -17,10 +17,16 @@ class Reservation extends Model
         'checked_in_at',
         'guest_name',
         'guest_phone',
+        'schedule_change_id',
+        'confirm_until',
+        'change_confirmed_at',
+        
     ];
 
     protected $casts = [
         'checked_in_at' => 'datetime',
+        'confirm_until'       => 'datetime',
+            'change_confirmed_at' => 'datetime',
     ];
 
     protected static function booted(): void
