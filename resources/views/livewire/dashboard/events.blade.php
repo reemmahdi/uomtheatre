@@ -262,6 +262,19 @@
                                     <i class="bi bi-star-fill"></i>
                                 </a>
                                 
+
+
+                                <button type="button"
+                                        class="btn-action btn-action-postpone"
+                                        wire:click="openPostpone({{ $event->id }})"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#postponeEventModal"
+                                        title="تأجيل الفعالية">
+                                    <i class="bi bi-calendar2-week"></i>
+                                </button>
+                                @endif
+
+                                @if(in_array($sName, ['draft', 'active']))
                                 <a href="{{ route('dashboard.seat-availability', $event->uuid) }}"
                                    class="btn-action btn-action-seats"
                                    title="تحديد المقاعد المتاحة للجمهور">
@@ -1005,6 +1018,16 @@
         color: #fff !important;
     }
 
+    /* زر التأجيل: كهرماني — تغيير موعد يمس الحاجزين */
+    .events-table .btn-action.btn-action-postpone {
+        color: #b45309 !important;
+        border-color: #b45309 !important;
+    }
+    .events-table .btn-action.btn-action-postpone:hover {
+        background: #b45309 !important;
+        color: #fff !important;
+    }
+
     /* زر الإلغاء: أحمر (الوحيد المتميّز - للخطر فقط) */
     .events-table .btn-action.btn-action-cancel {
         color: var(--c-danger) !important;
@@ -1431,5 +1454,130 @@ document.addEventListener('livewire:initialized', () => {
     });
 });
 </script>
+
+
+{{-- ===================== نافذة تأجيل الفعالية ===================== --}}
+<div class="modal fade" id="postponeEventModal" tabindex="-1" wire:ignore.self>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar2-week"></i>
+                    تأجيل: {{ $this->postponeEventTitle }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                @if($this->postponeReservationsCount > 0)
+                    <div class="alert alert-warning py-2 small">
+                        سيصل إشعار لـ <b>{{ $this->postponeReservationsCount }}</b> حاجزاً،
+                        ولديهم <b>24 ساعة</b> لتأكيد حجوزهم على الموعد الجديد —
+                        غير المؤكد يُلغى تلقائياً ويتحرر مقعده.
+                        <br>مقاعد الوفود لا تتأثر وتبقى مثبتة.
+                    </div>
+                @else
+                    <div class="alert alert-secondary py-2 small">
+                        لا توجد حجوزات جمهور حالياً — سيُحدَّث الموعد فقط.
+                    </div>
+                @endif
+
+                <div class="mb-3">
+                    <label class="form-label">عنوان الفعالية</label>
+                    <input type="text" class="form-control" wire:model.blur="postponeTitle">
+                    @error('postponeTitle') <div class="text-danger small">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">الوصف</label>
+                    <textarea class="form-control" rows="2" wire:model.blur="postponeDescription"></textarea>
+                    @error('postponeDescription') <div class="text-danger small">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">تاريخ البدء الجديد</label>
+                    <input type="date" class="form-control" wire:model="postponeStartDate">
+                    @error('postponeStartDate') <div class="text-danger small">{{ $message }}</div> @enderror
+                </div>
+
+                <label class="form-label">وقت البدء الجديد</label>
+                <div class="row g-2 mb-1">
+                    <div class="col-4">
+                        <select class="form-select" wire:model.live="postponeStartHour">
+                            <option value="">الساعة</option>
+                            @for($h = 1; $h <= 12; $h++)
+                                <option value="{{ $h }}">{{ $h }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select class="form-select" wire:model.live="postponeStartMinute">
+                            <option value="">الدقيقة</option>
+                            @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
+                                <option value="{{ $m }}">{{ $m }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select class="form-select" wire:model.live="postponeStartPeriod">
+                            <option value="">--</option>
+                            <option value="AM">صباحاً</option>
+                            <option value="PM">مساءً</option>
+                        </select>
+                    </div>
+                </div>
+                @error('postponeStartTime') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+
+                <div class="mb-3 mt-3">
+                    <label class="form-label">تاريخ الانتهاء الجديد</label>
+                    <input type="date" class="form-control" wire:model="postponeEndDate">
+                    @error('postponeEndDate') <div class="text-danger small">{{ $message }}</div> @enderror
+                </div>
+
+                <label class="form-label">وقت الانتهاء الجديد</label>
+                <div class="row g-2 mb-1">
+                    <div class="col-4">
+                        <select class="form-select" wire:model.live="postponeEndHour">
+                            <option value="">الساعة</option>
+                            @for($h = 1; $h <= 12; $h++)
+                                <option value="{{ $h }}">{{ $h }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select class="form-select" wire:model.live="postponeEndMinute">
+                            <option value="">الدقيقة</option>
+                            @foreach(['00','05','10','15','20','25','30','35','40','45','50','55'] as $m)
+                                <option value="{{ $m }}">{{ $m }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <select class="form-select" wire:model.live="postponeEndPeriod">
+                            <option value="">--</option>
+                            <option value="AM">صباحاً</option>
+                            <option value="PM">مساءً</option>
+                        </select>
+                    </div>
+                </div>
+                @error('postponeEndTime') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+
+                <div class="mb-2 mt-3">
+                    <label class="form-label">سبب التأجيل (اختياري — يظهر في إشعار الحاجزين)</label>
+                    <textarea class="form-control" rows="2" wire:model="postponeReason"></textarea>
+                    @error('postponeReason') <div class="text-danger small">{{ $message }}</div> @enderror
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-warning" wire:click="postponeEvent">
+                    <i class="bi bi-calendar2-week"></i>
+                    تأجيل وإشعار الحاجزين
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 </div>

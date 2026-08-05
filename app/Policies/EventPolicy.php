@@ -134,6 +134,19 @@ class EventPolicy
         ], true);
     }
 
+
+    public function postpone(User $user, Event $event): bool
+    {
+        if (!$user->hasPermission(Permission::EVENTS_EDIT)) {
+            return false;
+        }
+
+        return in_array($event->status?->name, [
+            Status::ACTIVE,
+            Status::PUBLISHED,
+        ], true);
+    }
+
     public function pauseBooking(User $user, Event $event): bool
     {
         if (!$user->hasPermission(Permission::EVENTS_PUBLISH)) {
@@ -154,13 +167,14 @@ class EventPolicy
             && $event->isPublished();
     }
 
-    public function manageVipSeats(User $user, Event $event): bool
+   public function manageVipSeats(User $user, Event $event): bool
     {
         if (!$user->hasPermission(Permission::VIP_MANAGE)) {
             return false;
         }
 
         return in_array($event->status?->name, [
+            Status::DRAFT,
             Status::ACTIVE,
             Status::PUBLISHED,
         ], true);

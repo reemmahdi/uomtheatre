@@ -11,8 +11,10 @@ use App\Http\Controllers\Api\SeatMapController;
 use App\Http\Controllers\Api\SeatsApiController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\GoogleAuthController;
 
 Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/auth/google', [GoogleAuthController::class, 'login'])->middleware('throttle:10,1');
     Route::post('/register', [AuthController::class, 'register'])->name('api.register');
     Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 });
@@ -21,7 +23,9 @@ Route::get('/events', [EventController::class, 'publicIndex'])->name('api.events
 Route::get('/events/{id}', [EventController::class, 'show'])->name('api.events.show');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/profile', [GoogleAuthController::class, 'completeProfile']);
     Route::post('/reservations/{id}/confirm-change', [ReservationController::class, 'confirmChange']);
+    Route::post('/reservations/{id}/reject-change', [ReservationController::class, 'rejectChange']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
 

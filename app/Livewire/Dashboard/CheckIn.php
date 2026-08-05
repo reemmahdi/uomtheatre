@@ -72,7 +72,7 @@ class CheckIn extends BaseComponent
         }
 
         $res->checkIn();
-        $this->message = 'تم تسجيل الحضور بنجاح ✅';
+        $this->message = 'تم تسجيل الحضور بنجاح';
         $this->messageType = 'success';
 
         $this->checkInData = [
@@ -89,6 +89,16 @@ class CheckIn extends BaseComponent
     public function render()
     {
         $this->authorizeScan();
-        return view('livewire.dashboard.checkin');
+
+        // آخر التذاكر المفحوصة — يراها موظف الاستقبال مباشرة
+        $recentScans = Reservation::with(['user', 'event', 'seat.section'])
+            ->where('status', 'checked_in')
+            ->latest('updated_at')
+            ->limit(50)
+            ->get();
+
+        return view('livewire.dashboard.checkin', [
+            'recentScans' => $recentScans,
+        ]);
     }
 }

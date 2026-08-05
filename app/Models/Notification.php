@@ -15,6 +15,7 @@ class Notification extends Model
         'type',
         'event_id',
         'is_read',
+        'reservation_id',
     ];
 
     protected $casts = [

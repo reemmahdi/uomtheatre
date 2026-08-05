@@ -10,18 +10,8 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * تأجيل فعالية منشورة عليها حجوزات — بمعاملة واحدة:
- * يوثق التغيير، يحدث الموعد، يمهل كل حاجز 24 ساعة للتأكيد،
- * ويشعر الجميع بالموعد الجديد.
- *
- * القواعد:
- * - المقعد يبقى محجوزاً لصاحبه طول المهلة (لا إلغاء عرضي)
- * - المهلة = 24 ساعة كاملة (قرار اللجنة)
- * - حجوزات ضيوف الشرف (vip_guest) لا تدخل دورة التأكيد —
- *   أصحابها بلا حسابات، وتبقى مثبتة تُدار من اللوحة
- * - تأجيل فوق تأجيل: المهلة تُعاد من جديد ويُشعر الجميع مجدداً
- */
+
+ 
 class EventScheduleChangeService
 {
     /** @return array{change: EventScheduleChange, notified: int} */
@@ -75,7 +65,8 @@ class EventScheduleChangeService
 
                 Notification::create([
                     'user_id'  => $reservation->user_id,
-                    'title'    => '📅 تغيير موعد الفعالية',
+                    'title'    => 'تغيير موعد الفعالية',
+                    'reservation_id' => $reservation->id,
                     'message'  => "تم تغيير موعد فعالية \"{$event->title}\" إلى {$when}.{$reasonText}\n\n"
                         . "مقعدك ({$reservation->seat?->label}) ما زال محجوزاً لك — "
                         . "يرجى تأكيد حجزك خلال 24 ساعة من صفحة تذاكري، "

@@ -12,12 +12,18 @@ use Illuminate\Support\Facades\DB;
 
 class ReservationController extends Controller
 {
-    public function myReservations(Request $request): JsonResponse
+   
+public function myReservations(Request $request): JsonResponse
     {
         $reservations = Reservation::with(['event.status', 'seat.section'])
             ->where('user_id', $request->user()->id)
-            ->orderByDesc('created_at')
             ->get()
+            ->filter(fn($res) =>
+                ($res->event?->end_datetime?->isFuture() ?? false)
+                && $res->status !== 'checked_in'
+                && $res->status !== 'cancelled')
+            ->sortBy(fn($res) => $res->event?->start_datetime)
+            ->values()
             ->map(fn($res) => [
                 'id'             => $res->id,
                 'event'          => $res->event?->title,
@@ -30,10 +36,18 @@ class ReservationController extends Controller
                 'type'           => $res->type,
                 'qr_code'        => $res->qr_code,
                 'created_at'     => $res->created_at?->toIso8601String(),
+                'needs_confirmation' => $res->confirm_until !== null
+                    && $res->change_confirmed_at === null
+                    && $res->status === 'confirmed'
+                    && now()->lessThanOrEqualTo($res->confirm_until),
+                'confirm_until' => $res->confirm_until?->toIso8601String(),
             ]);
 
         return response()->json(['reservations' => $reservations]);
     }
+
+
+
 
     public function store(Request $request): JsonResponse
     {
@@ -49,6 +63,15 @@ class ReservationController extends Controller
 
                 if (!$event->isPublished()) {
                     throw new \RuntimeException('الفعالية غير متاحة للحجز');
+                }
+
+                $blocked = \App\Models\EventSeatAvailability::where('event_id', $event->id)
+                    ->where('seat_id', $seat->id)
+                    ->where('is_public_available', false)
+                    ->exists();
+
+                if ($blocked) {
+                    throw new \RuntimeException('هذا المقعد غير متاح للحجز في هذه الفعالية');
                 }
 
                 if ($event->is_booking_paused) {
@@ -147,11 +170,45 @@ class ReservationController extends Controller
             return response()->json(['message' => 'انتهت مهلة التأكيد وسيُلغى الحجز تلقائياً'], 422);
         }
 
-        $reservation->update(['change_confirmed_at' => now()]);
+        $reservation->update(['change_confirmed_at' => now(7)]);
 
         return response()->json([
             'message' => 'تم تأكيد حجزك على الموعد الجديد — مقعدك مثبت',
             'reservation_id' => $reservation->id,
         ]);
+    }
+
+/**
+     * رفض الموعد الجديد بعد تغيير موعد الفعالية:
+     * إلغاء فوري للحجز وتحرير المقعد — بدل انتظار انتهاء المهلة.
+     */
+    public function rejectChange(Request $request, int $id): JsonResponse
+    {
+        $reservation = Reservation::with(['event', 'seat'])
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        if ($reservation->status !== 'confirmed' || !$reservation->confirm_until) {
+            return response()->json(['message' => 'لا يوجد تغيير موعد بانتظار قرارك لهذا الحجز'], 422);
+        }
+        if ($reservation->change_confirmed_at) {
+            return response()->json(['message' => 'سبق أن أكدت حجزك — لا يمكن رفضه الآن'], 422);
+        }
+
+        $reservation->update(['status' => 'cancelled']);
+
+        \App\Models\Notification::create([
+            'user_id'        => $reservation->user_id,
+            'title'          => 'تم إلغاء حجزك بناءً على رفضك',
+            'message'        => "ألغي حجزك لمقعد {$reservation->seat?->label} في فعالية "
+                . "\"{$reservation->event?->title}\" بناءً على رفضك الموعد الجديد. "
+                . "المقعد أصبح متاحاً — يمكنك الحجز مجدداً متى شئت.",
+            'type'           => 'reservation_cancelled',
+            'event_id'       => $reservation->event_id,
+            'reservation_id' => $reservation->id,
+            'is_read'        => false,
+        ]);
+
+        return response()->json(['message' => 'تم إلغاء حجزك وتحرير المقعد']);
     }
 }

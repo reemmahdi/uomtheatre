@@ -56,6 +56,23 @@ class Events extends BaseComponent
     public string $cancelEventTitle = '';
     public int $cancelReservationsCount = 0;
 
+    public int $postponeEventId = 0;
+    public string $postponeEventTitle = '';
+    public int $postponeReservationsCount = 0;
+    public string $postponeTitle = '';
+    public string $postponeDescription = '';
+    public string $postponeStartDate = '';
+    public string $postponeStartTime = '';
+    public string $postponeEndDate = '';
+    public string $postponeEndTime = '';
+    public string $postponeStartHour = '';
+    public string $postponeStartMinute = '';
+    public string $postponeStartPeriod = '';
+    public string $postponeEndHour = '';
+    public string $postponeEndMinute = '';
+    public string $postponeEndPeriod = '';
+    public string $postponeReason = '';
+
     public array $showEvent = [];
 
     public string $searchTitle = '';
@@ -169,6 +186,22 @@ class Events extends BaseComponent
     private function syncEditEndTime(): void
     {
         $this->editEndTime = $this->buildTime24($this->editEndHour, $this->editEndMinute, $this->editEndPeriod);
+    }
+
+    public function updatedPostponeStartHour(): void   { $this->syncPostponeStartTime(); }
+    public function updatedPostponeStartMinute(): void { $this->syncPostponeStartTime(); }
+    public function updatedPostponeStartPeriod(): void { $this->syncPostponeStartTime(); }
+    public function updatedPostponeEndHour(): void     { $this->syncPostponeEndTime(); }
+    public function updatedPostponeEndMinute(): void   { $this->syncPostponeEndTime(); }
+    public function updatedPostponeEndPeriod(): void   { $this->syncPostponeEndTime(); }
+
+    private function syncPostponeStartTime(): void
+    {
+        $this->postponeStartTime = $this->buildTime24($this->postponeStartHour, $this->postponeStartMinute, $this->postponeStartPeriod);
+    }
+    private function syncPostponeEndTime(): void
+    {
+        $this->postponeEndTime = $this->buildTime24($this->postponeEndHour, $this->postponeEndMinute, $this->postponeEndPeriod);
     }
 
     private function autoEndExpiredEvents(): void
@@ -391,6 +424,15 @@ class Events extends BaseComponent
             return;
         }
 
+        // فعالية منشورة + تغيّر موعدها = مسار "تأجيل" حصراً
+        // (حتى يُشعَر الحاجزون وتُفتح مهلة التأكيد 24 ساعة)
+        $datesChanged = $startDatetime !== $event->start_datetime->format('Y-m-d H:i:s')
+            || $endDatetime !== $event->end_datetime->format('Y-m-d H:i:s');
+        if ($datesChanged && $event->status?->name === 'published') {
+            $this->swalError('الفعالية منشورة وقد تحمل حجوزات — لتغيير موعدها استخدم زر "تأجيل" حتى يُشعَر الحاجزون ويُمهَلوا 24 ساعة للتأكيد');
+            return;
+        }
+
         try {
             Event::findOrFail($this->editId)->update([
                 'title'          => $this->editTitle,
@@ -461,6 +503,122 @@ class Events extends BaseComponent
             $this->dispatch('close-modal');
         } catch (\Exception $e) {
             $this->swalError('فشل الإلغاء: ' . $e->getMessage());
+        }
+    }
+
+    // ================= تأجيل الفعالية (مهلة تأكيد 24 ساعة) =================
+
+    public function openPostpone(int $eventId)
+    {
+        $event = Event::with('status')->findOrFail($eventId);
+        $this->authorize('postpone', $event);
+
+        if (!in_array($event->status?->name, ['active', 'published'], true)) {
+            $this->swalError('يمكن تأجيل الفعاليات النشطة أو المنشورة فقط');
+            return;
+        }
+
+        $this->postponeEventId    = $event->id;
+        $this->postponeEventTitle = $event->title;
+        $this->postponeTitle       = $event->title;
+        $this->postponeDescription = $event->description ?? '';
+
+        // من سيصله الإشعار وتُفتح له المهلة (نفس فلتر خدمة التأجيل)
+        $this->postponeReservationsCount = $event->reservations()
+            ->where('status', '!=', 'cancelled')
+            ->where('type', '!=', 'vip_guest')
+            ->whereNotNull('user_id')
+            ->count();
+
+        // الموعد الحالي كنقطة بداية
+        $this->postponeStartDate = $event->start_datetime->format('Y-m-d');
+        $this->postponeStartTime = $event->start_datetime->format('H:i');
+        $this->postponeEndDate   = $event->end_datetime->format('Y-m-d');
+        $this->postponeEndTime   = $event->end_datetime->format('H:i');
+        $this->splitTime12($event->start_datetime, 'postponeStart');
+        $this->splitTime12($event->end_datetime, 'postponeEnd');
+        $this->postponeReason = '';
+    }
+
+    public function postponeEvent()
+    {
+        $event = Event::with('status')->findOrFail($this->postponeEventId);
+        $this->authorize('postpone', $event);
+
+        $this->validate([
+            'postponeTitle'       => 'required|string|max:255',
+            'postponeDescription' => 'nullable|string|max:250',
+            'postponeStartDate' => 'required|date|after_or_equal:today',
+            'postponeStartTime' => 'required|date_format:H:i',
+            'postponeEndDate'   => 'required|date|after_or_equal:postponeStartDate',
+            'postponeEndTime'   => 'required|date_format:H:i',
+            'postponeReason'    => 'nullable|string|max:500',
+        ], [
+            'postponeTitle.required'           => 'عنوان الفعالية مطلوب',
+            'postponeDescription.max'          => 'يجب ألا يتجاوز الوصف 250 حرف (حوالي 4 أسطر)',
+            'postponeStartDate.required'       => 'تاريخ البدء الجديد مطلوب',
+            'postponeStartDate.after_or_equal' => 'تاريخ البدء يجب أن يكون اليوم أو في المستقبل',
+            'postponeStartTime.required'       => 'وقت البدء الجديد مطلوب',
+            'postponeEndDate.required'         => 'تاريخ الانتهاء الجديد مطلوب',
+            'postponeEndDate.after_or_equal'   => 'تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء',
+            'postponeEndTime.required'         => 'وقت الانتهاء الجديد مطلوب',
+            'postponeReason.max'               => 'سبب التأجيل يجب ألا يتجاوز 500 حرف',
+        ]);
+
+        $startDatetime = $this->combineDateTime($this->postponeStartDate, $this->postponeStartTime);
+        $endDatetime   = $this->combineDateTime($this->postponeEndDate, $this->postponeEndTime);
+
+        $logicError = $this->validateDatetimeLogic($startDatetime, $endDatetime);
+        if ($logicError) {
+            $this->addError('postponeEndTime', $logicError);
+            return;
+        }
+
+        $datesChanged = !($startDatetime === $event->start_datetime->format('Y-m-d H:i:s')
+            && $endDatetime === $event->end_datetime->format('Y-m-d H:i:s'));
+        $textChanged = $this->postponeTitle !== $event->title
+            || $this->postponeDescription !== ($event->description ?? '');
+
+        if (!$datesChanged && !$textChanged) {
+            $this->swalError('لا يوجد أي تغيير — الموعد والبيانات كما هي');
+            return;
+        }
+
+        try {
+            // العنوان والوصف أولاً — حتى يحمل إشعار التأجيل الاسم الجديد
+            $event->update([
+                'title'       => $this->postponeTitle,
+                'description' => $this->postponeDescription !== '' ? $this->postponeDescription : null,
+            ]);
+
+            if ($datesChanged) {
+                $result = app(\App\Services\EventScheduleChangeService::class)->postpone(
+                    $event,
+                    \Carbon\Carbon::parse($startDatetime),
+                    \Carbon\Carbon::parse($endDatetime),
+                    $this->postponeReason !== '' ? $this->postponeReason : null,
+                    Auth::user(),
+                );
+
+                $this->swalSuccess(
+                    'تم تأجيل "' . $event->title . '" وإشعار ' . $result['notified']
+                    . ' حاجزاً — لديهم 24 ساعة لتأكيد حجوزهم'
+                );
+            } else {
+                $this->swalSuccess('تم تحديث بيانات الفعالية — الموعد لم يتغير ولم يُرسل أي إشعار');
+            }
+
+            $this->reset([
+                'postponeEventId', 'postponeEventTitle', 'postponeReservationsCount',
+                'postponeTitle', 'postponeDescription',
+                'postponeStartDate', 'postponeStartTime', 'postponeEndDate', 'postponeEndTime',
+                'postponeStartHour', 'postponeStartMinute', 'postponeStartPeriod',
+                'postponeEndHour', 'postponeEndMinute', 'postponeEndPeriod',
+                'postponeReason',
+            ]);
+            $this->dispatch('close-modal');
+        } catch (\Exception $e) {
+            $this->swalError('فشل التأجيل: ' . $e->getMessage());
         }
     }
 

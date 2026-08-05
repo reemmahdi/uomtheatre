@@ -147,6 +147,51 @@ class VipGuests extends BaseComponent
         }
     }
 
+    /// تفعيل/إيقاف رسائل SMS لهذه الفعالية (الفعالية المدفوعة تُفعَّل)
+    public function toggleSms(): void
+    {
+        $this->authorizeManageVip();
+
+        $event = Event::findOrFail($this->eventId);
+        $event->update(['sms_enabled' => !$event->sms_enabled]);
+
+        $this->swalToast($event->sms_enabled
+            ? 'فُعّلت رسائل SMS لهذه الفعالية'
+            : 'أُوقفت رسائل SMS لهذه الفعالية');
+    }
+
+    /// إرسال دعوة SMS لضيف — يعمل فقط عند تفعيل الفعالية
+    public function sendSms(int $reservationId): void
+    {
+        $this->authorizeManageVip();
+
+        $event = Event::findOrFail($this->eventId);
+        if (!$event->sms_enabled) {
+            $this->swalError('رسائل SMS غير مفعلة لهذه الفعالية');
+            return;
+        }
+
+        $res  = $this->getReservationForThisEvent($reservationId);
+        $seat = $res->seat;
+
+        $invitationUrl = route('invitation.show', $res->qr_code);
+        $start  = $event->start_datetime;
+        $period = $start?->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
+
+        $msg = 'جامعة الموصل: دعوة لحضور "' . $event->title . '" بتاريخ '
+            . ($start?->format('Y-m-d') ?? '') . ' الساعة '
+            . ($start?->format('h:i') ?? '') . ' ' . $period
+            . '. مقعدكم: ' . ($seat?->label ?? '')
+            . ' — الدعوة: ' . $invitationUrl;
+
+        $result = app(\App\Services\SmsService::class)
+            ->send($res->guest_phone ?? '', $msg);
+
+        $result['success']
+            ? $this->swalSuccess($result['message'])
+            : $this->swalError($result['message']);
+    }
+
     private function getNeighbors(int $eventId, $seat): array
     {
         if (!$seat) return [];

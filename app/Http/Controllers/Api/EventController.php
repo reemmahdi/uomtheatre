@@ -70,11 +70,10 @@ public function publicIndex(): JsonResponse
         }
 
         $totalSeats = Seat::count();
-
-        $events = Event::with(['status'])
+$events = Event::with(['status'])
             ->whereIn('status_id', $visibleStatusIds)
-            ->where('end_datetime', '>=', now()->subDays(7)) // المنتهية تبقى أسبوعاً ثم تختفي
-            ->orderByRaw('(end_datetime < NOW()) asc') // المنتهية تنزل آخر القائمة
+            ->where('end_datetime', '>=', now()->subDays(7))
+            ->orderByRaw('(end_datetime < NOW()) asc') // المنتهية آخر القائمة
             ->orderByDesc('created_at') // الأحدث إضافةً أولاً
             ->get()
             ->map(function ($event) use ($totalSeats) {

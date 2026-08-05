@@ -26,9 +26,9 @@ class SeatAvailability extends BaseComponent
             abort(403, 'غير مصرح لك');
         }
 
-        // تحديد مقاعد الجمهور قبل النشر فقط — بعد النشر يُقفل نهائياً
-        if (!in_array($this->event->status->name, ['draft', 'active'])) {
-            abort(403, 'تحديد المقاعد متاح قبل نشر الفعالية فقط');
+        // المسودة مسموحة: تحديد مقاعد الجمهور قبل إرسال الفعالية
+        if (!in_array($this->event->status->name, ['draft', 'active', 'published'])) {
+            abort(403, 'يمكن تحديد المقاعد للمسودات والفعاليات النشطة والمنشورة فقط');
         }
 
         $service = app(EventSeatAvailabilityService::class);
