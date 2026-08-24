@@ -19,8 +19,11 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 });
 
-Route::get('/events', [EventController::class, 'publicIndex'])->name('api.events.public');
-Route::get('/events/{id}', [EventController::class, 'show'])->name('api.events.show');
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/events', [EventController::class, 'publicIndex'])->name('api.events.public');
+    Route::get('/events/{id}', [EventController::class, 'show'])->name('api.events.show');
+    Route::get('/seats/{eventId}', [SeatsApiController::class, 'show'])->name('api.seats.show');
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/profile', [GoogleAuthController::class, 'completeProfile']);
@@ -28,10 +31,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reservations/{id}/reject-change', [ReservationController::class, 'rejectChange']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
-
-    Route::get('/seats/{eventId}', [SeatsApiController::class, 'show'])
-        ->name('api.seats.show');
-
+    Route::post('/device-token', function (\Illuminate\Http\Request $request) {
+        $request->validate(['token' => 'required|string|max:512']);
+        $request->user()->forceFill(['fcm_token' => $request->token])->save();
+        return response()->json(['message' => 'ok']);
+    })->middleware('throttle:10,1');
     Route::get('/events/{eventId}/seat-map', [SeatMapController::class, 'getSeatMap'])
         ->name('api.events.seat-map');
 
