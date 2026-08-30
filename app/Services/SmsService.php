@@ -25,6 +25,57 @@ class SmsService
     }
 
     /** @return array{success: bool, message: string} */
+    public function sendInvitation(string $phone, array $params): array
+    {
+        $key = config('services.arqam.key');
+        $project = config('services.arqam.project');
+        $template = config('services.arqam.template');
+
+        if (!$key || !$project || !$template) {
+            return [
+                'success' => false,
+                'message' => 'خدمة الرسائل غير مهيأة — تحقق من مفاتيح أرقام في إعدادات الخادم',
+            ];
+        }
+
+        $to = $this->normalize($phone);
+        if ($to === null) {
+            return ['success' => false, 'message' => 'رقم الجوال غير صالح'];
+        }
+
+        try {
+            $res = Http::withHeaders(['X-API-Key' => $key])
+                ->timeout(20)
+                ->post(self::BASE . "/projects/{$project}/whatsapp/templates/send", [
+                    'templateId' => $template,
+                    'recipientPhoneNumber' => ltrim($to, '+'),
+                    'bodyParameters' => array_map(
+                        fn($value) => ['type' => 'text', 'text' => (string) $value],
+                        array_values($params),
+                    ),
+                ]);
+
+            $data = $res->json() ?? [];
+
+            if ($res->successful() && ($data['success'] ?? false)) {
+                return [
+                    'success' => true,
+                    'message' => 'أُرسلت الدعوة الرسمية عبر واتساب باسم جامعة الموصل'
+                        . (isset($data['cost']) ? " (الكلفة: {$data['cost']})" : ''),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'فشل الإرسال: '
+                    . ($data['code'] ?? $data['message'] ?? ('HTTP ' . $res->status())),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => 'تعذر الاتصال بمنصة أرقام: ' . $e->getMessage()];
+        }
+    }
+
+    /** @return array{success: bool, message: string} */
     public function sendOtp(string $phone): array
     {
         $key = config('services.arqam.key');

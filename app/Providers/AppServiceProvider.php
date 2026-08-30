@@ -22,5 +22,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Event::class, EventPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Reservation::class, ReservationPolicy::class);
+                if (app()->isProduction()) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 }

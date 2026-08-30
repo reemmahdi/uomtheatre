@@ -4,7 +4,10 @@ return [
 
     'arqam' => [
         'key' => env('ARQAM_API_KEY'),
+        'project' => env('ARQAM_PROJECT'),
+        'template' => env('ARQAM_TEMPLATE'),
     ],
+
 'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
     ],

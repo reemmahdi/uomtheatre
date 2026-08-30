@@ -111,15 +111,27 @@ class VipBooking extends BaseComponent
 
                 $existing = Reservation::where('event_id', $this->eventId)
                     ->where('seat_id', $this->selectedSeatId)
-                    ->where('status', '!=', 'cancelled')
                     ->lockForUpdate()
                     ->first();
 
-                if ($existing) {
+                if ($existing && $existing->status !== 'cancelled') {
                     $msg = $existing->type === 'vip_guest'
                         ? 'هذا المقعد محجوز للوفد ' . ($existing->guest_name ?? 'ضيف')
                         : 'هذا المقعد محجوز من قبل الجمهور';
                     throw new \RuntimeException($msg);
+                }
+
+                if ($existing) {
+                    $existing->forceFill([
+                        'user_id'     => Auth::id(),
+                        'status'      => 'confirmed',
+                        'type'        => 'vip_guest',
+                        'guest_name'  => $this->guestName,
+                        'guest_phone' => $this->guestPhone,
+                        'qr_code'     => 'UOM-' . strtoupper(\Illuminate\Support\Str::random(8)) . '-' . now()->timestamp,
+                    ])->save();
+
+                    return $existing;
                 }
 
                 return Reservation::create([
@@ -140,6 +152,8 @@ class VipBooking extends BaseComponent
             $this->dispatch('close-modal');
         } catch (\RuntimeException $e) {
             $this->swalError($e->getMessage());
+        } catch (\Illuminate\Database\QueryException $e) {
+            $this->swalError('تعذر الحجز — يبدو أن المقعد حُجز للتو. حدّث الصفحة وحاول مجدداً');
         } catch (\Exception $e) {
             $this->swalError('فشل الحجز: ' . $e->getMessage());
         }
