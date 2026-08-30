@@ -179,13 +179,13 @@ class Permissions extends BaseComponent
             ->groupBy('group');
 
         $groupLabels = [
-            'events'     => '📅 إدارة الفعاليات',
-            'approvals'  => '✅ الموافقات',
-            'publishing' => '📢 النشر والإشعارات',
-            'vip'        => '⭐ الوفود والمقاعد',
-            'checkin'    => '📋 تسجيل الحضور',
-            'admin'      => '⚙️ الإدارة',
-            'general'    => '📌 عام',
+            'events'     => 'إدارة الفعاليات',
+            'approvals'  => 'الموافقات',
+            'publishing' => 'النشر والإشعارات',
+            'vip'        => 'الوفود والمقاعد',
+            'checkin'    => 'تسجيل الحضور',
+            'admin'      => 'الإدارة',
+            'general'    => 'عام',
         ];
 
         return view('livewire.dashboard.permissions', [

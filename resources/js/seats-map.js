@@ -47,13 +47,13 @@ const SECTIONS = {
   // ── Orchestra (Section A right · B center · C left) ──
   // Aisles: 4° gap between sections (B↔A, B↔C)
   // angle in degrees, 0° = straight down from FAN center, +° = right
-  C: { angles: [-34, -16], rowSeats: [10,10,11,12,12,13,13,14,15,16,16,16,17,18], floor: "orchestra" },
-  B: { angles: [-12,  12], rowSeats: [10,11,11,12,12,13,13,14,14,15,15,16,16,17], floor: "orchestra" },
-  A: { angles: [ 16,  34], rowSeats: [8,9,10,11,13,14,15,17,18,21,21,22,23], floor: "orchestra" },
+  C: { angles: [-34, -16], rowSeats: [9,10,10,11,11,12,12,13,13,14,14,15,15,16,16], floor: "orchestra" },
+  B: { angles: [-12,  12], rowSeats: [13,14,14,15,15,16,16,17,17,18,18,19,19,20,20], floor: "orchestra" },
+  A: { angles: [ 16,  34], rowSeats: [9,10,10,11,11,12,12,13,13,14,14,15,15,16,16], floor: "orchestra" },
   // ── Balcony — same aisle treatment ──
-  F: { angles: [-32, -16], rowSeats: [13,13,13,13,13,13,13,13,13], floor: "balcony" },
-  E: { angles: [-12,  12], rowSeats: [20,19,19,19,18,18,17,17,16,16], floor: "balcony" },
-  D: { angles: [ 16,  32], rowSeats: [13,13,13,13,13,13,13,13,13], floor: "balcony" },
+  F: { angles: [-32, -16], rowSeats: [12,13,13,14,14,15,15,16], floor: "balcony" },
+  E: { angles: [-12,  12], rowSeats: [16,16,17,17,18,18,19,19], floor: "balcony" },
+  D: { angles: [ 16,  32], rowSeats: [12,13,13,14,14,15,15,16], floor: "balcony" },
 };
 
 const seats = [];
@@ -80,10 +80,7 @@ function buildSection(name, cfg) {
       const y = FAN.cy + Math.cos(angRad) * radius;
 
       const isVip = false;
-      const prob = isVipRow ? { sold: 0.18, reserved: 0.10 }
-                : isBalc    ? { sold: 0.22, reserved: 0.12 }
-                            : { sold: 0.28, reserved: 0.14 };
-      const status = rollStatus(prob);
+      const status = "available";
       const price = isVipRow ? PRICES.vip
                   : isBalc    ? PRICES.balcony
                               : PRICES.orchestra;
@@ -468,7 +465,7 @@ setInterval(loadReservations, 8000);
 
   // ─── Tooltip ────────────────────────────────────────────────────
   function showTooltip(seat, ev) {
-    const statusLabel = { available: "متاح", reserved: "محجوز — من التطبيق", sold: "مشغول — تم الدخول" }[seat.status];
+    const statusLabel = { available: "متاح", reserved: "محجوز", sold: "مشغول" }[seat.status];
     const statusColor = { available: "#22C55E", reserved: "#94A3B8", sold: "#EF4444" }[seat.status];
     const isVip = seat.type === "vip";
     tooltip.innerHTML = `
@@ -512,7 +509,7 @@ setInterval(loadReservations, 8000);
     if (!entry) return;
     const s = entry.data;
     if (s.status === "sold" || s.status === "reserved") {
-      toast(s.status === "sold" ? "هذا المقعد مشغول — تم دخول صاحبه" : "هذا المقعد محجوز من التطبيق", true);
+      toast(s.status === "sold" ? "هذا المقعد مشغول" : "هذا المقعد محجوز", true);
       return;
     }
     toggleSelect(s.id);
@@ -676,9 +673,9 @@ setInterval(loadReservations, 8000);
   seats.forEach(s => {
     const c = document.createElementNS(SVG_NS, "circle");
     c.setAttribute("cx", s.x); c.setAttribute("cy", s.y); c.setAttribute("r", "5");
-    let fill = "#45A0DC";
-    if (s.status === "sold") fill = "#22C55E";
-    else if (s.status === "reserved") fill = "#EF4444";
+    let fill = "#22C55E";
+    if (s.status === "sold") fill = "#EF4444";
+    else if (s.status === "reserved") fill = "#94A3B8";
     else if (s.type === "vip") fill = "#E4C05E";
     c.setAttribute("fill", fill);
     c.setAttribute("opacity", "0.85");

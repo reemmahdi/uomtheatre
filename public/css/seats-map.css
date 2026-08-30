@@ -4,15 +4,15 @@
     --primary-mid:    #075985;
     --primary-light:  #0369A1;
     --primary-soft:   #E0F2FE;
-    --gold:           #E4C05E;
-    --gold-dark:      #C9A445;
+    --gold:           #D9B454;
+    --gold-dark:      #8A6A1B;
     --gold-soft:      #FBF3D6;
-    --available:      #22C55E;
-    --available-dark: #16A34A;
-    --reserved:       #94A3B8;
-    --reserved-dark:  #64748B;
-    --sold:           #EF4444;
-    --sold-dark:      #B91C1C;
+    --available:      #4E9FDD;
+    --available-dark: #2B6FA6;
+    --reserved:       #E24B4A;
+    --reserved-dark:  #B23231;
+    --sold:           #22C55E;
+    --sold-dark:      #16A34A;
     --selected:       #0369A1;
     --selected-glow:  rgba(3,105,161,0.45);
     --bg:             #F8FAFC;
@@ -605,7 +605,7 @@
     60%  { transform: scale(1.32); }
     100% { transform: scale(1.18); }
   }
-  .seat.sold { cursor: not-allowed; opacity: 0.55; }
+  .seat.sold { cursor: not-allowed; opacity: 0.85; }
   .seat.sold:hover { transform: none; filter: none; }
   .seat.reserved { cursor: not-allowed; opacity: 0.7; }
   .seat.reserved:hover { transform: scale(1.05); filter: drop-shadow(0 2px 4px rgba(15,23,42,0.18)); }
@@ -807,3 +807,6 @@
   }
 
 
+
+  aside.side-panel { display: none !important; }
+  .app { grid-template-columns: 1fr !important; grid-template-rows: 64px 1fr !important; }

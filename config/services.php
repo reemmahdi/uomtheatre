@@ -2,6 +2,9 @@
 
 return [
 
+    'arqam' => [
+        'key' => env('ARQAM_API_KEY'),
+    ],
 'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
     ],

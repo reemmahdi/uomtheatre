@@ -26,6 +26,7 @@ class Event extends Model
         'cancelled_at',
         'is_booking_paused',
         'paused_at',
+        'sms_enabled',
     ];
 
     protected $casts = [

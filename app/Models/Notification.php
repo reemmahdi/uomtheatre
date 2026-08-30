@@ -67,4 +67,20 @@ class Notification extends Model
             $this->update(['is_read' => false]);
         }
     }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $notification) {
+            try {
+                $user = \App\Models\User::find($notification->user_id);
+                app(\App\Services\PushService::class)->sendToUser(
+                    $user,
+                    $notification->title,
+                    $notification->message,
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('push hook: ' . $e->getMessage());
+            }
+        });
+    }
 }

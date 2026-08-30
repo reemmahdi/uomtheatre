@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
+use App\Models\Event;
 use App\Models\Reservation;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,9 @@ class CheckIn extends BaseComponent
     public string $message = '';
     public string $messageType = '';
     public array $checkInData = [];
+
+    public string $filterEventId = '';
+    public string $searchScans = '';
 
     protected function authorizeScan(): void
     {
@@ -44,6 +48,19 @@ class CheckIn extends BaseComponent
             ->where('qr_code', $this->qrCode)
             ->first();
 
+        // الماسح على كيبورد عربي يشوه الحروف والأرقام تنجو —
+        // فإن فشل التطابق الحرفي نطابق بآخر سلسلة أرقام في المقروء
+        // (ذيل الرمز بعد آخر شرطة — ينجو من التشويه دائماً)
+        if (!$res && preg_match('/(\d{8,})\D*$/u', $this->qrCode, $m)) {
+            $matches = Reservation::with(['user', 'event', 'seat.section'])
+                ->where('qr_code', 'like', '%-' . $m[1])
+                ->limit(2)
+                ->get();
+            if ($matches->count() === 1) {
+                $res = $matches->first();
+            }
+        }
+
         if (!$res) {
             $this->message = 'رمز QR غير صالح';
             $this->messageType = 'danger';
@@ -60,6 +77,15 @@ class CheckIn extends BaseComponent
 
         if ($res->status === 'checked_in') {
             $this->message = 'تم تسجيل الحضور مسبقاً';
+            $this->messageType = 'warning';
+            $this->checkInData = [];
+            return;
+        }
+
+        $start = $res->event?->start_datetime;
+        if ($start && now()->lt($start->copy()->subHours(2))) {
+            $this->message = 'الفحص يفتح قبل ساعتين من موعد الفعالية — يبدأ '
+                . $start->copy()->subHours(2)->format('Y-m-d h:i A');
             $this->messageType = 'warning';
             $this->checkInData = [];
             return;
@@ -90,15 +116,46 @@ class CheckIn extends BaseComponent
     {
         $this->authorizeScan();
 
-        // آخر التذاكر المفحوصة — يراها موظف الاستقبال مباشرة
-        $recentScans = Reservation::with(['user', 'event', 'seat.section'])
-            ->where('status', 'checked_in')
-            ->latest('updated_at')
-            ->limit(50)
-            ->get();
+        $events = Event::orderByDesc('start_datetime')
+            ->limit(30)
+            ->get(['id', 'title', 'start_datetime']);
+
+        $scansQuery = Reservation::with(['user', 'event', 'seat.section'])
+            ->where('status', 'checked_in');
+
+        $attIn = null;
+        $attTotal = null;
+        if ($this->filterEventId !== '') {
+            $scansQuery->where('event_id', (int) $this->filterEventId);
+
+            $attTotal = Reservation::where('event_id', (int) $this->filterEventId)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+            $attIn = Reservation::where('event_id', (int) $this->filterEventId)
+                ->where('status', 'checked_in')
+                ->count();
+        }
+
+        $recentScans = $scansQuery->latest('updated_at')->limit(100)->get();
+
+        if ($this->searchScans !== '') {
+            $q = mb_strtolower($this->searchScans);
+            $recentScans = $recentScans->filter(function ($r) use ($q) {
+                $hay = mb_strtolower(
+                    ($r->user?->name ?? '') . ' '
+                    . ($r->guest_name ?? '') . ' '
+                    . ($r->seat?->label ?? '') . ' '
+                    . ($r->qr_code ?? '')
+                );
+                return str_contains($hay, $q);
+            })->values();
+        }
 
         return view('livewire.dashboard.checkin', [
             'recentScans' => $recentScans,
+            'events'      => $events,
+            'attIn'       => $attIn,
+            'attTotal'    => $attTotal,
         ]);
     }
 }

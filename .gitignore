@@ -70,3 +70,4 @@ debug.log
 error.log
 
 backups/
+storage/app/firebase/

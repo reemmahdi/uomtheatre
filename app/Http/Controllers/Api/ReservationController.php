@@ -26,6 +26,7 @@ public function myReservations(Request $request): JsonResponse
             ->values()
             ->map(fn($res) => [
                 'id'             => $res->id,
+                'event_id'       => $res->event_id,
                 'event'          => $res->event?->title,
                 'start_datetime' => $res->event?->start_datetime?->toIso8601String(),
                 'event_date'     => $res->event?->start_datetime?->format('Y-m-d'),

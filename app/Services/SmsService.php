@@ -2,47 +2,113 @@
 
 namespace App\Services;
 
-use Twilio\Rest\Client;
+use Illuminate\Support\Facades\Http;
 
-/**
- * إرسال رسائل SMS عبر Twilio.
- * بلا مفاتيح في .env تعيد رسالة "غير مهيأة" بدل أن تفشل —
- * فالنظام يعمل كاملاً ويُفعَّل الإرسال يوم يتوفر حساب مدفوع.
- */
 class SmsService
 {
+    private const BASE = 'https://otp.arqam.tech/api';
+
     /** @return array{success: bool, message: string} */
     public function send(string $phone, string $message): array
     {
-        $sid   = config('services.twilio.sid');
-        $token = config('services.twilio.token');
-        $from  = config('services.twilio.from');
-
-        if (!$sid || !$token || !$from) {
+        if (!config('services.arqam.key')) {
             return [
                 'success' => false,
-                'message' => 'خدمة الرسائل غير مهيأة بعد — تحتاج مفاتيح Twilio في إعدادات الخادم',
+                'message' => 'خدمة الرسائل غير مهيأة — يحتاج مفتاح أرقام في إعدادات الخادم',
             ];
         }
 
-        // توحيد الرقم العراقي للصيغة الدولية: 07x → +9647x
-        $to = preg_replace('/[^0-9]/', '', $phone);
-        if ($to === '' || strlen($to) < 10) {
+        return [
+            'success' => false,
+            'message' => 'رسائل الدعوات تتفعل فور اعتماد قالب الدعوة (Utility) في منصة أرقام',
+        ];
+    }
+
+    /** @return array{success: bool, message: string} */
+    public function sendOtp(string $phone): array
+    {
+        $key = config('services.arqam.key');
+        if (!$key) {
+            return [
+                'success' => false,
+                'message' => 'خدمة الرسائل غير مهيأة — يحتاج مفتاح أرقام في إعدادات الخادم',
+            ];
+        }
+
+        $to = $this->normalize($phone);
+        if ($to === null) {
             return ['success' => false, 'message' => 'رقم الجوال غير صالح'];
         }
-        if (str_starts_with($to, '0')) {
-            $to = '964' . substr($to, 1);
-        }
-        $to = '+' . $to;
 
         try {
-            (new Client($sid, $token))->messages->create($to, [
-                'from' => $from,
-                'body' => $message,
-            ]);
-            return ['success' => true, 'message' => "أُرسلت الرسالة إلى {$to}"];
+            $res = Http::withHeaders(['X-API-Key' => $key])
+                ->timeout(15)
+                ->post(self::BASE . '/sms/otp', [
+                    'phoneNumber' => $to,
+                ]);
+
+            $data = $res->json() ?? [];
+
+            if ($res->successful() && ($data['success'] ?? false)) {
+                $channel = $data['channel'] ?? 'whatsapp';
+                return [
+                    'success' => true,
+                    'message' => "أُرسلت رسالة تحقق إلى {$to} عبر {$channel}"
+                        . (isset($data['cost']) ? " (الكلفة: {$data['cost']})" : ''),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'فشل الإرسال: '
+                    . ($data['code'] ?? $data['message'] ?? ('HTTP ' . $res->status())),
+            ];
         } catch (\Throwable $e) {
-            return ['success' => false, 'message' => 'فشل الإرسال: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'تعذر الاتصال بمنصة أرقام: ' . $e->getMessage()];
         }
+    }
+
+    /** @return array{success: bool, message: string} */
+    public function account(): array
+    {
+        $key = config('services.arqam.key');
+        if (!$key) {
+            return ['success' => false, 'message' => 'خدمة الرسائل غير مهيأة'];
+        }
+
+        try {
+            $res = Http::withHeaders(['X-API-Key' => $key])
+                ->timeout(15)
+                ->get(self::BASE . '/sms/account');
+
+            $data = $res->json() ?? [];
+            if ($res->successful() && ($data['success'] ?? false)) {
+                $balance = $data['balance']['available'] ?? '؟';
+                $currency = $data['balance']['currency'] ?? '';
+                $status = $data['account']['status'] ?? '؟';
+                return [
+                    'success' => true,
+                    'message' => "الحساب: {$status} — الرصيد المتاح: {$balance} {$currency}",
+                ];
+            }
+            return ['success' => false, 'message' => 'HTTP ' . $res->status()];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => 'تعذر الاتصال: ' . $e->getMessage()];
+        }
+    }
+
+    private function normalize(string $phone): ?string
+    {
+        $digits = preg_replace('/[^0-9]/', '', $phone);
+        if ($digits === '' || strlen($digits) < 10) {
+            return null;
+        }
+        if (str_starts_with($digits, '964')) {
+            return '+' . $digits;
+        }
+        if (str_starts_with($digits, '0')) {
+            return '+964' . substr($digits, 1);
+        }
+        return '+964' . $digits;
     }
 }

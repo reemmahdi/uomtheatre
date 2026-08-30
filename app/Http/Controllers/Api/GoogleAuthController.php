@@ -87,7 +87,11 @@ class GoogleAuthController extends Controller
                 'message' => 'حسابك موقوف — يرجى مراجعة إدارة النظام',
             ], 403);
         }
-
+if (!$user->is_active) {
+            return response()->json([
+                'message' => 'حسابك معطل — راجع إدارة القاعة',
+            ], 403);
+        }
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([

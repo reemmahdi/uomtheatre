@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="{{ asset('css/seats-map.css') }}">
+<link rel="stylesheet" href="{{ asset('css/seats-map.css') }}?v={{ filemtime(public_path('css/seats-map.css')) }}">
 
 
 
@@ -169,10 +169,9 @@
     <div class="legend" aria-label="مفتاح الألوان">
       <div class="legend-title">دليل الحالات</div>
       <div class="legend-row"><div class="left"><span class="legend-swatch av"></span><span>متاح</span></div></div>
-      <div class="legend-row"><div class="left"><span class="legend-swatch sl"></span><span>مُحدَّد</span></div></div>
-      <div class="legend-row"><div class="left"><span class="legend-swatch vp"></span><span>VIP / مقاعد الوفود</span></div></div>
-      <div class="legend-row"><div class="left"><span class="legend-swatch rs"></span><span>محجوز</span></div></div>
-      <div class="legend-row"><div class="left"><span class="legend-swatch sd"></span><span>مشغول</span></div></div>
+      <div class="legend-row"><div class="left"><span class="legend-swatch vp"></span><span>مقاعد الوفود / محجوب</span></div></div>
+      <div class="legend-row"><div class="left"><span class="legend-swatch rs"></span><span>محجوز — من التطبيق</span></div></div>
+      <div class="legend-row"><div class="left"><span class="legend-swatch sd"></span><span>مشغول — تم الدخول</span></div></div>
     </div>
 
     <!-- Map canvas -->
@@ -196,7 +195,7 @@
           <linearGradient id="curtainGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#7F1D1D"/>
             <stop offset="35%" stop-color="#B91C1C"/>
-            <stop offset="55%" stop-color="#7F1D1D"/>
+            <stop offset="55%" stop-color="#7F1D1D5C"/>
             <stop offset="80%" stop-color="#B91C1C"/>
             <stop offset="100%" stop-color="#450A0A"/>
           </linearGradient>
@@ -410,35 +409,10 @@
 
 <div class="toast" id="toast"></div>
 
-<!--
-  ──────────────────────────────────────────────────────────────────────
-  SEATING DATA STRUCTURE (for Laravel integration later)
-  ──────────────────────────────────────────────────────────────────────
-
-  Each seat object:
-  {
-    id:        "A-10-5"      // section-row-seat
-    section:   "A"            // A,B,C orchestra · D,E,F balcony
-    row:       10
-    seat:      5
-    floor:     "orchestra" | "balcony"
-    status:    "available" | "reserved" | "sold"
-    type:      "standard" | "vip"
-    price:     25000
-    x, y:      number  // computed coords on the SVG
-  }
-
-  Laravel integration:
-    GET  /api/event/{eventId}/seats   → returns seats[] with current status
-    POST /api/event/{eventId}/hold    → body: {seat_ids: []}  (lock for 10 min)
-    POST /api/event/{eventId}/book    → finalize payment
-    Use Laravel Echo + Pusher to broadcast `seat.updated` events
-    so other users see seats turn red in real-time.
-  ──────────────────────────────────────────────────────────────────────
--->
 
 
-<script src="{{ asset('js/seats-map.js') }}"></script>
+
+<script src="{{ asset('js/seats-map.js') }}?v={{ filemtime(public_path('js/seats-map.js')) }}"></script>
 
 </body>
 </html>

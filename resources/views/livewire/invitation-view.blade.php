@@ -119,6 +119,22 @@
                         <strong>الرقم:</strong> {{ $reservation->seat->seat_number }}
                     </span>
                 </div>
+
+                @if(count($neighbors))
+                <div class="neighbors-box">
+                    <div class="neighbors-title">
+                        <i class="bi bi-people-fill"></i>
+                        الجالسون بجانبكم
+                    </div>
+                    <div class="neighbors-list">
+                        @foreach($neighbors as $n)
+                            <span class="neighbor-chip">
+                                {{ $n['label'] }}: {{ $n['name'] }}
+                            </span>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
 
             
@@ -618,6 +634,31 @@
             font-size: 12px;
             gap: 6px;
         }
+    }
+    .neighbors-box {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px dashed #CBD5E1;
+    }
+    .neighbors-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #0C4A6E;
+        margin-bottom: 8px;
+    }
+    .neighbors-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+    }
+    .neighbor-chip {
+        background: #F1F5F9;
+        border: 1px solid #E2E8F0;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 0.75rem;
+        color: #334155;
     }
 </style>
 

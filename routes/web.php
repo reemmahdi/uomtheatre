@@ -43,7 +43,6 @@ Route::middleware('admin.web')->group(function () {
     });
 
     $uuidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
-
     Route::middleware('role:super_admin,event_manager')->group(function () use ($uuidPattern) {
         Route::get('/dashboard/vip-events', fn() => view('pages.vip-events'))
             ->name('dashboard.vip-events');
@@ -118,8 +117,8 @@ Route::middleware('admin.web')->group(function () {
         })->where('eventUuid', $uuidPattern)->name('dashboard.vip-guests.print-stickers');
     });
 
-    Route::middleware('role:super_admin,event_manager')->prefix('api/events')->group(function () use ($uuidPattern) {
-        Route::get('/{eventUuid}/availability', function (string $eventUuid) {
+    Route::middleware(['role:super_admin,event_manager', 'throttle:60,1'])->prefix('api/events')->group(function () use ($uuidPattern) {
+    Route::get('/{eventUuid}/availability', function (string $eventUuid) {
             $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
 
             if (!\Illuminate\Support\Facades\Auth::user()->can('manageVipSeats', $event)) {

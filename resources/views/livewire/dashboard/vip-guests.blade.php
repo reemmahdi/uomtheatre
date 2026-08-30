@@ -26,14 +26,6 @@
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h6 class="mb-0"><i class="bi bi-people"></i> قائمة الوفود ({{ $bookings->count() }})</h6>
         <div class="d-flex gap-2 align-items-center flex-wrap">
-            <button type="button"
-                    class="btn btn-sm"
-                    style="background:#25D366;color:#fff;font-weight:700;"
-                    data-bs-toggle="modal"
-                    data-bs-target="#sendAllWhatsAppModal">
-                <i class="bi bi-whatsapp"></i> إرسال للكل
-            </button>
-
             
             <a href="{{ route('dashboard.vip-guests.print-list', $event->uuid) }}"
                target="_blank"
@@ -49,17 +41,26 @@
                style="background:#C9A530;color:#fff;font-weight:700;">
                 <i class="bi bi-tags-fill"></i> طباعة الملصقات
             </a>
+
+            <div class="form-check form-switch d-inline-flex align-items-center gap-2 ms-2 mb-0"
+                 title="عند التفعيل يظهر زر إرسال SMS لكل ضيف">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="smsSwitch" wire:click="toggleSms"
+                       @if($event->sms_enabled) checked @endif>
+                <label class="form-check-label small fw-bold" for="smsSwitch"
+                       style="color:#0C4A6E; cursor:pointer;">
+                    رسائل SMS
+                    @if($event->sms_enabled)
+                        <span class="badge bg-success">مفعلة</span>
+                    @else
+                        <span class="badge bg-secondary">غير مفعلة</span>
+                    @endif
+                </label>
+            </div>
         </div>
     </div>
 
     
-    <div class="alert alert-info py-2 mb-3 small">
-        <i class="bi bi-info-circle"></i>
-        <strong>ملاحظة:</strong> تأكد من تسجيل دخولك في
-        <a href="https://web.whatsapp.com" target="_blank" style="color: #075985; text-decoration: underline;">واتساب ويب</a>
-        قبل الإرسال. عند الضغط على زر الإرسال، تفتح نافذة الواتساب مع الرسالة جاهزة — اضغط
-        <kbd>Enter</kbd> أو زر الإرسال داخل الواتساب لإتمام الإرسال.
-    </div>
 
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle vip-guests-table">
@@ -75,8 +76,6 @@
             </thead>
             <tbody>
                 @foreach($bookings as $booking)
-                @php $waLink = $this->getWhatsAppLink($booking->id);
-@endphp
                 <tr>
                     <td class="text-center"><strong style="color: #0C4A6E;">{{ $loop->iteration }}</strong></td>
                     <td><strong>{{ $booking->guest_name }}</strong></td>
@@ -92,15 +91,17 @@
                     <td class="text-center">
                         <div class="d-flex gap-2 justify-content-center">
                             
-                            <a href="{{ $waLink }}"
-                               target="_blank"
-                               rel="noopener"
-                               class="btn-action-small btn-whatsapp-small wa-link"
-                               title="إرسال دعوة واتساب لـ {{ $booking->guest_name }}"
-                               data-link="{{ $waLink }}"
-                               data-name="{{ $booking->guest_name }}">
-                                <i class="bi bi-whatsapp"></i>
-                            </a>
+                            @if($event->sms_enabled)
+                            <button type="button"
+                                    class="btn-action-small"
+                                    style="background:#0C4A6E;color:#fff;"
+                                    wire:click="sendSms({{ $booking->id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="sendSms({{ $booking->id }})"
+                                    title="إرسال دعوة SMS لـ {{ $booking->guest_name }}">
+                                <i class="bi bi-chat-dots-fill"></i>
+                            </button>
+                            @endif
 
                             
                             <button type="button"
@@ -129,251 +130,7 @@
 
 
 
-<div class="modal fade" id="sendAllWhatsAppModal" tabindex="-1" wire:ignore.self>
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-bottom: 2px solid #25D366;">
-                <h5 class="modal-title" style="color: #065f46;">
-                    <i class="bi bi-whatsapp"></i> إرسال دعوات الواتساب
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
 
-            <div class="modal-body p-0">
-                
-                <div class="wa-progress-section p-3 border-bottom">
-                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                        <strong style="color: #065f46;">
-                            <i class="bi bi-check2-circle"></i>
-                            التقدم: <span id="wa-sent-count">0</span> من <span id="wa-total-count">{{ $bookings->count() }}</span>
-                        </strong>
-                        <div class="d-flex gap-2">
-                            <button type="button"
-                                    id="wa-bulk-open-btn"
-                                    class="btn btn-sm"
-                                    style="background:#25D366;color:#fff;font-weight:700;"
-                                    onclick="bulkOpenAllWhatsApp()">
-                                <i class="bi bi-lightning-charge-fill"></i> فتح كل التبويبات تلقائياً
-                            </button>
-                            <button type="button" id="wa-reset-btn" class="btn btn-sm btn-outline-secondary" onclick="resetWhatsAppProgress()">
-                                <i class="bi bi-arrow-counterclockwise"></i> إعادة التعيين
-                            </button>
-                        </div>
-                    </div>
-                    <div class="progress" style="height: 12px; border-radius: 6px;">
-                        <div id="wa-progress-bar"
-                             class="progress-bar"
-                             role="progressbar"
-                             style="width: 0%; background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 6px; transition: width 0.4s ease;">
-                        </div>
-                    </div>
-                    <div id="wa-popup-warning" class="alert alert-warning mt-2 mb-0 py-2 small" style="display:none;">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                        <strong>تنبيه:</strong> المتصفح حجب بعض النوافذ. اضغط على أيقونة
-                        <i class="bi bi-shield-exclamation"></i>
-                        بشريط العنوان (يمين الرابط) واختر "السماح دائماً للنوافذ المنبثقة من هذا الموقع"، ثم أعد المحاولة.
-                        أو استخدم زر "إرسال" الفردي لكل ضيف بالأسفل.
-                    </div>
-                </div>
-
-                
-                <div class="wa-guests-list">
-                    @foreach($bookings as $booking)
-                    @php $waLink = $this->getWhatsAppLink($booking->id);
-@endphp
-                    <div class="wa-guest-item" data-booking-id="{{ $booking->id }}">
-                        <div class="wa-guest-number">{{ $loop->iteration }}</div>
-                        <div class="wa-guest-info">
-                            <div class="wa-guest-name">{{ $booking->guest_name }}</div>
-                            <div class="wa-guest-phone" dir="ltr">{{ $booking->guest_phone }}</div>
-                        </div>
-                        <div class="wa-guest-seat">
-                            <span class="badge" style="background: #0C4A6E; color: #fff;">{{ $booking->seat->label }}</span>
-                        </div>
-                        <div class="wa-guest-action">
-                            <a href="{{ $waLink }}"
-                               target="_blank"
-                               rel="noopener"
-                               class="btn btn-sm wa-send-btn"
-                               data-booking-id="{{ $booking->id }}"
-                               onclick="markAsSent(this, {{ $booking->id }})">
-                                <i class="bi bi-whatsapp"></i> إرسال
-                            </a>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <small class="text-muted me-auto">
-                    <i class="bi bi-info-circle"></i>
-                    اضغط زر "إرسال" بجانب كل ضيف. يفتح الواتساب مع الرسالة جاهزة — اضغط Enter للإرسال.
-                </small>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i> إغلاق
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-(function() {
-    const STORAGE_KEY = 'wa_sent_event_{{ $event->id }}';
-
-    function getSentIds() {
-        try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
-        } catch (e) { return []; }
-    }
-
-    function saveSentIds(ids) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)); } catch (e) {}
-    }
-
-    function updateProgress() {
-        const sentIds = getSentIds();
-        const total = document.querySelectorAll('.wa-guest-item').length;
-        const percent = total > 0 ? Math.round((sentIds.length / total) * 100) : 0;
-        const sentCountEl = document.getElementById('wa-sent-count');
-        const progressBar = document.getElementById('wa-progress-bar');
-        if (sentCountEl) sentCountEl.textContent = sentIds.length;
-        if (progressBar) progressBar.style.width = percent + '%';
-    }
-
-    function applySentState(bookingId) {
-        const item = document.querySelector('.wa-guest-item[data-booking-id="' + bookingId + '"]');
-        if (!item) return;
-        item.classList.add('wa-sent');
-        const btn = item.querySelector('.wa-send-btn');
-        if (btn) {
-            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> تم الإرسال';
-            btn.classList.add('wa-sent-btn');
-        }
-    }
-
-    window.bulkOpenAllWhatsApp = function() {
-        const btn = document.getElementById('wa-bulk-open-btn');
-        const warningEl = document.getElementById('wa-popup-warning');
-        if (warningEl) warningEl.style.display = 'none';
-
-        const sentIds = getSentIds();
-        const items = document.querySelectorAll('.wa-guest-item');
-        const pending = [];
-
-        items.forEach(function(item) {
-            const bookingId = parseInt(item.dataset.bookingId);
-            if (!sentIds.includes(bookingId)) {
-                const link = item.querySelector('.wa-send-btn');
-                if (link) pending.push({ id: bookingId, url: link.href });
-            }
-        });
-
-        if (pending.length === 0) {
-            alert('تم إرسال كل الدعوات بالفعل ✓\n\nلإعادة الإرسال، اضغط "إعادة التعيين" أولاً.');
-            return;
-        }
-
-        if (!confirm('سيتم فتح ' + pending.length + ' تبويب واتساب دفعة واحدة.\n\nملاحظة مهمة: قد يطلب المتصفح "السماح بالنوافذ المنبثقة" أول مرة.\n\nهل تريد المتابعة؟')) {
-            return;
-        }
-
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جارٍ الفتح...';
-        }
-
-        let blockedCount = 0;
-        let openedCount = 0;
-
-        pending.forEach(function(entry, index) {
-            setTimeout(function() {
-                const newWindow = window.open(entry.url, '_blank');
-
-                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                    blockedCount++;
-                } else {
-                    openedCount++;
-                    const updatedSent = getSentIds();
-                    if (!updatedSent.includes(entry.id)) {
-                        updatedSent.push(entry.id);
-                        saveSentIds(updatedSent);
-                    }
-                    applySentState(entry.id);
-                }
-
-                if (index === pending.length - 1) {
-                    setTimeout(function() {
-                        updateProgress();
-                        scrollToNextUnsent();
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> فتح كل التبويبات تلقائياً';
-                        }
-                        if (blockedCount > 0) {
-                            if (warningEl) warningEl.style.display = 'block';
-                            alert('⚠️ المتصفح حجب ' + blockedCount + ' نافذة من أصل ' + pending.length + '.\n\n• تم فتح: ' + openedCount + '\n• محجوب: ' + blockedCount + '\n\nاسمح بالنوافذ المنبثقة من إعدادات الموقع، ثم أعد المحاولة.\nأو استخدم زر "إرسال" الفردي لكل ضيف.');
-                        } else {
-                            alert('✅ تم فتح ' + openedCount + ' تبويب واتساب بنجاح.\n\nاضغط Enter في كل تبويب لإرسال الرسالة.');
-                        }
-                    }, 300);
-                }
-            }, index * 50);
-        });
-    };
-
-    window.markAsSent = function(linkEl, bookingId) {
-        const sentIds = getSentIds();
-        if (!sentIds.includes(bookingId)) {
-            sentIds.push(bookingId);
-            saveSentIds(sentIds);
-        }
-        setTimeout(function() {
-            applySentState(bookingId);
-            updateProgress();
-            scrollToNextUnsent();
-        }, 100);
-        return true;
-    };
-
-    function scrollToNextUnsent() {
-        const items = document.querySelectorAll('.wa-guest-item:not(.wa-sent)');
-        if (items.length > 0) {
-            items[0].classList.add('wa-next');
-            document.querySelectorAll('.wa-guest-item.wa-next').forEach(function(el, i) {
-                if (i > 0) el.classList.remove('wa-next');
-            });
-            items[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
-
-    window.resetWhatsAppProgress = function() {
-        if (!confirm('هل تريد إعادة تعيين التقدم؟ ستُمسح كل علامات "تم الإرسال" لهذه الفعالية.')) return;
-        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-        document.querySelectorAll('.wa-guest-item').forEach(function(item) {
-            item.classList.remove('wa-sent', 'wa-next');
-            const btn = item.querySelector('.wa-send-btn');
-            if (btn) {
-                btn.innerHTML = '<i class="bi bi-whatsapp"></i> إرسال';
-                btn.classList.remove('wa-sent-btn');
-            }
-        });
-        updateProgress();
-        scrollToNextUnsent();
-    };
-
-    document.addEventListener('shown.bs.modal', function(e) {
-        if (e.target.id === 'sendAllWhatsAppModal') {
-            const sentIds = getSentIds();
-            sentIds.forEach(applySentState);
-            updateProgress();
-            scrollToNextUnsent();
-        }
-    });
-})();
-</script>
 
 @else
 
@@ -496,14 +253,6 @@
         text-decoration: none;
     }
 
-    .btn-whatsapp-small {
-        background: #dcfce7;
-        color: #15803d;
-    }
-    .btn-whatsapp-small:hover {
-        background: #25D366;
-        color: #fff;
-    }
 
     .btn-edit-small {
         background: #dbeafe;

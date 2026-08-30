@@ -174,7 +174,6 @@ class EventPolicy
         }
 
         return in_array($event->status?->name, [
-            Status::DRAFT,
             Status::ACTIVE,
             Status::PUBLISHED,
         ], true);

@@ -10,6 +10,21 @@
     </div>
 </div>
 
+<div class="card-custom p-2 px-3 mb-3">
+    <div class="d-flex flex-wrap gap-3 align-items-center small text-muted">
+        <span class="fw-bold" style="color:#0C4A6E;"><i class="bi bi-info-circle"></i> دليل الإجراءات:</span>
+        <span><i class="bi bi-eye"></i> عرض التفاصيل</span>
+        <span><i class="bi bi-pencil"></i> تعديل (المسودة)</span>
+        <span><i class="bi bi-send"></i> إرسال للموافقة</span>
+        <span><i class="bi bi-star-fill"></i> مقاعد الوفود</span>
+        <span><i class="bi bi-grid-3x3-gap-fill"></i> مقاعد الجمهور</span>
+        <span><i class="bi bi-calendar2-week"></i> تأجيل الموعد</span>
+        <span><i class="bi bi-pause-circle-fill"></i> إيقاف الحجز مؤقتاً</span>
+        <span><i class="bi bi-arrow-counterclockwise"></i> استئناف الحجز</span>
+        <span><i class="bi bi-x-octagon-fill"></i> إلغاء الفعالية</span>
+    </div>
+</div>
+
 <div class="card-custom p-3 mb-4 filters-bar">
     <div class="row g-2 align-items-end">
         
@@ -274,7 +289,7 @@
                                 </button>
                                 @endif
 
-                                @if(in_array($sName, ['draft', 'active']))
+                                @if($sName === 'active')
                                 <a href="{{ route('dashboard.seat-availability', $event->uuid) }}"
                                    class="btn-action btn-action-seats"
                                    title="تحديد المقاعد المتاحة للجمهور">

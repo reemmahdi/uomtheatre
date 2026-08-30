@@ -208,7 +208,7 @@
                                placeholder="07XXXXXXXXX"
                                dir="ltr">
                         @error('guestPhone')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        <small class="text-muted">سيُستخدم لإرسال الدعوة عبر واتساب</small>
+                        <small class="text-muted">سيُستخدم لإرسال الدعوة الرسمية عبر خدمة الرسائل</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -254,10 +254,6 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <a href="{{ $this->getWhatsAppLink($viewBooking['id']) }}"
-                   target="_blank" class="btn btn-success">
-                    <i class="bi bi-whatsapp"></i> إرسال الدعوة
-                </a>
                 <button type="button" class="btn btn-warning"
                         data-bs-dismiss="modal"
                         wire:click="openEditBooking({{ $viewBooking['id'] }})">

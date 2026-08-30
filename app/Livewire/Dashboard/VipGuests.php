@@ -178,14 +178,32 @@ class VipGuests extends BaseComponent
         $start  = $event->start_datetime;
         $period = $start?->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
 
-        $msg = 'جامعة الموصل: دعوة لحضور "' . $event->title . '" بتاريخ '
-            . ($start?->format('Y-m-d') ?? '') . ' الساعة '
-            . ($start?->format('h:i') ?? '') . ' ' . $period
-            . '. مقعدكم: ' . ($seat?->label ?? '')
-            . ' — الدعوة: ' . $invitationUrl;
+        $neighbors = $seat ? $this->getNeighbors($this->eventId, $seat) : [];
+        $sides = [];
+        foreach (['right', 'left'] as $side) {
+            if (isset($neighbors[$side])) {
+                $sides[] = $neighbors[$side]['label'] . ': ' . $neighbors[$side]['name'];
+            }
+        }
+        $neighborsText = $sides !== [] ? implode(' - ', $sides) : 'لا يوجد';
 
-        $result = app(\App\Services\SmsService::class)
-            ->send($res->guest_phone ?? '', $msg);
+        $seatText = $seat
+            ? 'القسم ' . ($seat->section?->name ?? '') . ' - الصف ' . $seat->row_number . ' - المقعد ' . $seat->seat_number
+            : '';
+
+        $result = app(\App\Services\SmsService::class)->sendInvitation(
+            $res->guest_phone ?? '',
+            [
+                $res->guest_name ?? 'ضيفنا الكريم',
+                $event->title,
+                $start?->format('Y-m-d') ?? '',
+                ($start?->format('h:i') ?? '') . ' ' . $period,
+                $seatText,
+                $neighborsText,
+                'ورمز الدخول',
+                $invitationUrl,
+            ],
+        );
 
         $result['success']
             ? $this->swalSuccess($result['message'])
@@ -225,64 +243,6 @@ class VipGuests extends BaseComponent
         return $neighbors;
     }
 
-    public function getWhatsAppLink(int $reservationId): string
-    {
-        $this->authorizeManageVip();
-
-        $res   = $this->getReservationForThisEvent($reservationId);
-        $event = $res->event;
-        $seat  = $res->seat;
-
-        if (!$event || !$seat) return '';
-
-        $neighbors = $this->getNeighbors($this->eventId, $seat);
-
-        $invitationUrl = route('invitation.show', $res->qr_code);
-        if (!str_starts_with($invitationUrl, 'http://') && !str_starts_with($invitationUrl, 'https://')) {
-            $invitationUrl = 'https://' . ltrim($invitationUrl, '/');
-        }
-
-        $startTime = $event->start_datetime?->format('h:i') ?? '';
-        $period = $event->start_datetime?->format('A') === 'AM' ? 'صباحاً' : 'مساءً';
-
-        $msg  = "جامعة الموصل - مسرح الجامعة\n";
-        $msg .= "─────────────────────────\n\n";
-        $msg .= "السلام عليكم ورحمة الله وبركاته\n\n";
-        $msg .= "الأستاذ/ة الفاضل/ة: {$res->guest_name}\n\n";
-        $msg .= "تحية طيبة وبعد،\n\n";
-        $msg .= "يسعدنا دعوتكم لحضور الفعالية الموسومة بـ:\n";
-        $msg .= "{$event->title}\n\n";
-        $msg .= "والتي ستقام بتاريخ " . ($event->start_datetime?->format('Y-m-d') ?? '');
-        $msg .= " في تمام الساعة {$startTime} {$period}،\n";
-        $msg .= "على مسرح جامعة الموصل.\n\n";
-        $msg .= "معلومات مقعدكم:\n";
-        $msg .= "- القسم: " . ($seat->section?->name ?? '') . "\n";
-        $msg .= "- الصف: {$seat->row_number}\n";
-        $msg .= "- رقم المقعد: {$seat->seat_number}\n";
-        $msg .= "- الرمز: {$seat->label}\n\n";
-
-        if (!empty($neighbors)) {
-            $msg .= "الجالسون بجانبكم:\n";
-            foreach ($neighbors as $n) {
-                $msg .= "- {$n['label']}: {$n['name']}\n";
-            }
-            $msg .= "\n";
-        }
-
-        $msg .= "للاطلاع على دعوتكم الإلكترونية ورمز الدخول (QR Code):\n";
-        $msg .= $invitationUrl . "\n\n";
-
-        $msg .= "نتشرف بحضوركم الكريم،،،\n\n";
-        $msg .= "تفضلوا بقبول فائق الاحترام والتقدير،،،\n\n";
-        $msg .= "إدارة مسرح جامعة الموصل";
-
-        $phone = preg_replace('/[^0-9]/', '', $res->guest_phone ?? '');
-        if (str_starts_with($phone, '0')) {
-            $phone = '964' . substr($phone, 1);
-        }
-
-        return 'https://wa.me/' . $phone . '?text=' . urlencode($msg);
-    }
 
     public function render()
     {
