@@ -3,7 +3,7 @@
 <div class="card-custom p-3 mb-3">
     <div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
         @if(in_array($roleName, ['super_admin', 'event_manager']))
-        @if(auth()->user()->role->name !== 'viewer')
+        @if(auth()->user()->hasPermission('events.create'))
 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
             <i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة
         </button>
@@ -243,7 +243,6 @@
                     
                     
                     <td class="text-center">
-                        @if(auth()->user()->role->name !== 'viewer')
                         <div class="actions-group">
                             
                             <button type="button"
@@ -257,18 +256,24 @@
                             
                             @if(in_array($roleName, ['super_admin', 'event_manager']))
                                 @if(in_array($sName, ['draft', 'rejected']))
-                                <button type="button"
+                                @if(auth()->user()->hasPermission('events.edit'))
+<button type="button"
                                         class="btn-action btn-action-edit"
                                         wire:click="openEdit({{ $event->id }})"
                                         title="{{ $sName === 'rejected' ? 'تعديل وإعادة إرسال' : 'تعديل' }}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button type="button"
+@endif
+
+                                @if(auth()->user()->hasPermission('events.send_for_approval'))
+<button type="button"
                                         class="btn-action btn-action-send"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'added')"
                                         title="{{ $sName === 'rejected' ? 'إعادة الإرسال للموافقة' : 'إرسال للموافقة' }}">
                                     <i class="bi bi-send"></i>
                                 </button>
+@endif
+
                                 @endif
                             @endif
 
@@ -283,7 +288,8 @@
                                 
 
 
-                                <button type="button"
+                                @if(auth()->user()->hasPermission('events.edit'))
+<button type="button"
                                         class="btn-action btn-action-postpone"
                                         wire:click="openPostpone({{ $event->id }})"
                                         data-bs-toggle="modal"
@@ -291,6 +297,8 @@
                                         title="تأجيل الفعالية">
                                     <i class="bi bi-calendar2-week"></i>
                                 </button>
+@endif
+
                                 @endif
 
                                 @if($sName === 'active')
@@ -302,44 +310,57 @@
                                 @endif
 
                                 @if($sName === 'active')
-                                <button type="button"
+                                @if(auth()->user()->hasPermission('events.publish'))
+<button type="button"
                                         class="btn-action btn-action-publish"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'published')"
                                         title="نشر الفعالية">
                                     <i class="bi bi-megaphone-fill"></i>
                                 </button>
+@endif
+
                                 @endif
 
                                 @if($sName === 'published')
-                                <button type="button"
+                                @if(auth()->user()->hasPermission('events.publish'))
+<button type="button"
                                         class="btn-action btn-action-close"
                                         wire:click="requestChangeStatus({{ $event->id }}, 'closed')"
                                         title="إغلاق الفعالية">
                                     <i class="bi bi-lock-fill"></i>
                                 </button>
+@endif
+
 
                                 
                                 @if(!$isPaused)
-                                <button type="button"
+                                @if(auth()->user()->hasPermission('events.edit'))
+<button type="button"
                                         class="btn-action btn-action-pause"
                                         wire:click="requestPauseBooking({{ $event->id }})"
                                         title="إيقاف الحجز مؤقتاً">
                                     <i class="bi bi-pause-circle-fill"></i>
                                 </button>
+@endif
+
                                 @else
-                                <button type="button"
+                                @if(auth()->user()->hasPermission('events.edit'))
+<button type="button"
                                         class="btn-action btn-action-resume"
                                         wire:click="requestResumeBooking({{ $event->id }})"
                                         title="استئناف الحجز">
                                     <i class="bi bi-play-circle-fill"></i>
                                 </button>
+@endif
+
                                 @endif
                                 @endif
                             @endif
 
                             
                             @if(!in_array($sName, ['cancelled', 'end', 'closed']))
-                            <button type="button"
+                            @if(auth()->user()->hasPermission('events.cancel'))
+<button type="button"
                                     class="btn-action btn-action-cancel"
                                     wire:click="openCancelModal({{ $event->id }})"
                                     data-bs-toggle="modal"
@@ -347,9 +368,10 @@
                                     title="إلغاء الفعالية">
                                 <i class="bi bi-x-circle-fill"></i>
                             </button>
+@endif
+
                             @endif
                         </div>
-                        @endif
                     </td>
                 </tr>
                 @empty
@@ -363,7 +385,6 @@
                         </button>
                         @else
                         <p class="mt-3">لا توجد فعاليات</p>
-                        @endif
                     </td>
                 </tr>
                 @endforelse
@@ -736,7 +757,6 @@
                         <li>سيتم <strong>إرسال إشعار</strong> لكل الحاجزين والوفود بالإلغاء</li>
                         @if($cancelReservationsCount > 0)
                         <li>يوجد حالياً <strong class="text-danger">{{ $cancelReservationsCount }} حجز</strong> سيتم إبلاغه</li>
-                        @endif
                     </ul>
                 </div>
                 @else
