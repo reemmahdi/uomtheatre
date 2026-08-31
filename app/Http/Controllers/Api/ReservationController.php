@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReservationController extends Controller
 {
-   
+
 public function myReservations(Request $request): JsonResponse
     {
         $reservations = Reservation::with(['event.status', 'seat.section'])
@@ -46,9 +46,6 @@ public function myReservations(Request $request): JsonResponse
 
         return response()->json(['reservations' => $reservations]);
     }
-
-
-
 
     public function store(Request $request): JsonResponse
     {
@@ -150,11 +147,6 @@ public function myReservations(Request $request): JsonResponse
         return response()->json(['message' => 'تم إلغاء الحجز بنجاح']);
     }
 
-
-    /**
-     * تأكيد الحجز بعد تغيير موعد الفعالية — المستخدم يثبت قبوله
-     * الموعد الجديد فيبقى مقعده كما هو.
-     */
     public function confirmChange(Request $request, int $id): JsonResponse
     {
         $reservation = Reservation::with(['event', 'seat'])
@@ -179,10 +171,6 @@ public function myReservations(Request $request): JsonResponse
         ]);
     }
 
-/**
-     * رفض الموعد الجديد بعد تغيير موعد الفعالية:
-     * إلغاء فوري للحجز وتحرير المقعد — بدل انتظار انتهاء المهلة.
-     */
     public function rejectChange(Request $request, int $id): JsonResponse
     {
         $reservation = Reservation::with(['event', 'seat'])

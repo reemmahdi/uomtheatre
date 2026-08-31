@@ -147,7 +147,6 @@ class VipGuests extends BaseComponent
         }
     }
 
-    /// تفعيل/إيقاف رسائل SMS لهذه الفعالية (الفعالية المدفوعة تُفعَّل)
     public function toggleSms(): void
     {
         $this->authorizeManageVip();
@@ -160,7 +159,6 @@ class VipGuests extends BaseComponent
             : 'أُوقفت رسائل SMS لهذه الفعالية');
     }
 
-    /// إرسال دعوة SMS لضيف — يعمل فقط عند تفعيل الفعالية
     public function sendSms(int $reservationId): void
     {
         $this->authorizeManageVip();
@@ -242,7 +240,6 @@ class VipGuests extends BaseComponent
 
         return $neighbors;
     }
-
 
     public function render()
     {

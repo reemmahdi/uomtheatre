@@ -7,11 +7,6 @@ use App\Models\Reservation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-/**
- * إلغاء الحجوزات التي انتهت مهلة تأكيدها بعد تغيير الموعد.
- * يعمل بالمجدول كل عشر دقائق. الإلغاء يحرر المقعد تلقائياً لأن
- * حسابات التوفر في كل النظام تستثني status = cancelled.
- */
 class ExpireUnconfirmedReservations extends Command
 {
     protected $signature = 'reservations:expire-unconfirmed';
@@ -32,7 +27,6 @@ class ExpireUnconfirmedReservations extends Command
 
             foreach ($reservations as $reservation) {
                 $reservation->update(['status' => 'cancelled']);
-                // نُبقي confirm_until و schedule_change_id كسجل دائم لسبب الإلغاء
 
                 Notification::create([
                     'user_id'  => $reservation->user_id,

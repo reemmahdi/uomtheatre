@@ -50,7 +50,6 @@ Artisan::command('events:auto-end', function () {
     return 0;
 })->purpose('Auto-end expired events (active/published → end)');
 
-
 Schedule::command('events:auto-end')
     ->everyFifteenMinutes()
     ->withoutOverlapping()
@@ -60,4 +59,3 @@ Schedule::command('reservations:expire-unconfirmed')
     ->everyTenMinutes()
     ->withoutOverlapping()
     ->onOneServer();
-

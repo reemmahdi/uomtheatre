@@ -20,7 +20,7 @@ class Reservation extends Model
         'schedule_change_id',
         'confirm_until',
         'change_confirmed_at',
-        
+
     ];
 
     protected $casts = [

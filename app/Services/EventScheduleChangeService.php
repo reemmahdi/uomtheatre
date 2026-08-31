@@ -10,11 +10,9 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-
- 
 class EventScheduleChangeService
 {
-    /** @return array{change: EventScheduleChange, notified: int} */
+
     public function postpone(
         Event $event,
         Carbon $newStart,
@@ -25,7 +23,6 @@ class EventScheduleChangeService
         return DB::transaction(function () use ($event, $newStart, $newEnd, $reason, $admin) {
             $event = Event::lockForUpdate()->findOrFail($event->id);
 
-            // 1) التوثيق: سجل التغيير
             $change = EventScheduleChange::create([
                 'event_id'           => $event->id,
                 'old_start_datetime' => $event->start_datetime,
@@ -36,13 +33,11 @@ class EventScheduleChangeService
                 'changed_by'         => $admin->id,
             ]);
 
-            // 2) تحديث موعد الفعالية
             $event->update([
                 'start_datetime' => $newStart,
                 'end_datetime'   => $newEnd,
             ]);
 
-            // 3) مهلة التأكيد: 24 ساعة كاملة (قرار اللجنة)
             $deadline = now()->addHours(24);
 
             $reservations = Reservation::with(['user', 'seat'])
@@ -60,7 +55,7 @@ class EventScheduleChangeService
                 $reservation->update([
                     'schedule_change_id'  => $change->id,
                     'confirm_until'       => $deadline,
-                    'change_confirmed_at' => null, // تأجيل جديد = تأكيد جديد
+                    'change_confirmed_at' => null,
                 ]);
 
                 Notification::create([
@@ -81,7 +76,6 @@ class EventScheduleChangeService
         });
     }
 
-    /** صياغة الموعد بالعربية: الأربعاء 30 تموز 2026 — 10:00 صباحاً */
     public static function formatArabic(Carbon $dt): string
     {
         $months = [1 => 'كانون الثاني', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران',

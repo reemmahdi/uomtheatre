@@ -34,8 +34,7 @@
             </div>
             <small class="text-muted mt-2 d-block text-center">امسح الرمز بالماسح أو أدخله يدوياً واضغط Enter</small>
 
-            {{-- ============ المسح بكاميرا الجهاز ============ --}}
-            <div class="text-center mt-3" wire:ignore>
+                        <div class="text-center mt-3" wire:ignore>
                 <button type="button" id="cameraBtn" class="btn btn-outline-primary btn-sm"
                         onclick="uomToggleCamera()">
                     <i class="bi bi-camera-video"></i> تشغيل الكاميرا
@@ -48,8 +47,7 @@
             </div>
         </div>
 
-        {{-- ============ آخر التذاكر المفحوصة ============ --}}
-        <div class="card-custom p-4 mt-4">
+                <div class="card-custom p-4 mt-4">
             <h5 class="mb-3" style="color:#0C4A6E;">
                 <i class="bi bi-list-check"></i>
                 آخر التذاكر المفحوصة

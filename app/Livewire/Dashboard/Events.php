@@ -424,8 +424,6 @@ class Events extends BaseComponent
             return;
         }
 
-        // فعالية منشورة + تغيّر موعدها = مسار "تأجيل" حصراً
-        // (حتى يُشعَر الحاجزون وتُفتح مهلة التأكيد 24 ساعة)
         $datesChanged = $startDatetime !== $event->start_datetime->format('Y-m-d H:i:s')
             || $endDatetime !== $event->end_datetime->format('Y-m-d H:i:s');
         if ($datesChanged && $event->status?->name === 'published') {
@@ -506,8 +504,6 @@ class Events extends BaseComponent
         }
     }
 
-    // ================= تأجيل الفعالية (مهلة تأكيد 24 ساعة) =================
-
     public function openPostpone(int $eventId)
     {
         $event = Event::with('status')->findOrFail($eventId);
@@ -523,14 +519,12 @@ class Events extends BaseComponent
         $this->postponeTitle       = $event->title;
         $this->postponeDescription = $event->description ?? '';
 
-        // من سيصله الإشعار وتُفتح له المهلة (نفس فلتر خدمة التأجيل)
         $this->postponeReservationsCount = $event->reservations()
             ->where('status', '!=', 'cancelled')
             ->where('type', '!=', 'vip_guest')
             ->whereNotNull('user_id')
             ->count();
 
-        // الموعد الحالي كنقطة بداية
         $this->postponeStartDate = $event->start_datetime->format('Y-m-d');
         $this->postponeStartTime = $event->start_datetime->format('H:i');
         $this->postponeEndDate   = $event->end_datetime->format('Y-m-d');
@@ -585,7 +579,7 @@ class Events extends BaseComponent
         }
 
         try {
-            // العنوان والوصف أولاً — حتى يحمل إشعار التأجيل الاسم الجديد
+
             $event->update([
                 'title'       => $this->postponeTitle,
                 'description' => $this->postponeDescription !== '' ? $this->postponeDescription : null,

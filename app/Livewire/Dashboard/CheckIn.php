@@ -48,9 +48,6 @@ class CheckIn extends BaseComponent
             ->where('qr_code', $this->qrCode)
             ->first();
 
-        // الماسح على كيبورد عربي يشوه الحروف والأرقام تنجو —
-        // فإن فشل التطابق الحرفي نطابق بآخر سلسلة أرقام في المقروء
-        // (ذيل الرمز بعد آخر شرطة — ينجو من التشويه دائماً)
         if (!$res && preg_match('/(\d{8,})\D*$/u', $this->qrCode, $m)) {
             $matches = Reservation::with(['user', 'event', 'seat.section'])
                 ->where('qr_code', 'like', '%-' . $m[1])

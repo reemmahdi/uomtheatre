@@ -26,7 +26,6 @@ class SeatAvailability extends BaseComponent
             abort(403, 'غير مصرح لك');
         }
 
-        // تحديد مقاعد الجمهور قبل النشر فقط — بعد النشر يُقفل نهائياً
         if ($this->event->status->name !== 'active') {
             abort(403, 'تحديد المقاعد متاح بعد موافقة الإدارة وقبل النشر فقط');
         }

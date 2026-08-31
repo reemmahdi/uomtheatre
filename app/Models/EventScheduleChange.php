@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/// سجل تغييرات مواعيد الفعاليات — صف لكل تأجيل: القديم والجديد والسبب
 class EventScheduleChange extends Model
 {
     protected $fillable = [

@@ -59,10 +59,9 @@ class EventController extends Controller
         return response()->json(['events' => $events]);
     }
 
-  
 public function publicIndex(): JsonResponse
     {
-        // الظاهر للجمهور: المنشورة + المغلقة + المنتهية — الملغاة والمسودات تُخفى
+
         $visibleStatusIds = Status::whereIn('name', ['published', 'closed', 'end'])
             ->pluck('id');
         if ($visibleStatusIds->isEmpty()) {
@@ -73,8 +72,8 @@ public function publicIndex(): JsonResponse
 $events = Event::with(['status'])
             ->whereIn('status_id', $visibleStatusIds)
             ->where('end_datetime', '>=', now()->subDays(7))
-            ->orderByRaw('(end_datetime < NOW()) asc') // المنتهية آخر القائمة
-            ->orderByDesc('created_at') // الأحدث إضافةً أولاً
+            ->orderByRaw('(end_datetime < NOW()) asc')
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($event) use ($totalSeats) {
                 $vipBooked = Reservation::where('event_id', $event->id)

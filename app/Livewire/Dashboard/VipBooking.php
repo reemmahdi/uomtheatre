@@ -284,7 +284,6 @@ class VipBooking extends BaseComponent
         return $neighbors;
     }
 
-
     public function render()
     {
         $this->authorizeManageVip();

@@ -1498,7 +1498,6 @@ document.addEventListener('livewire:initialized', () => {
 </script>
 
 
-{{-- ===================== نافذة تأجيل الفعالية ===================== --}}
 <div class="modal fade" id="postponeEventModal" tabindex="-1" wire:ignore.self>
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

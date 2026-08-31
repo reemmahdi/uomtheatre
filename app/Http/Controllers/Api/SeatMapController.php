@@ -15,14 +15,12 @@ class SeatMapController extends Controller
     {
         $event = Event::findOrFail($eventId);
 
-        // مقاعد الوفود المحجوزة لهذه الفعالية
         $vipBookedSeatIds = Reservation::where('event_id', $eventId)
             ->where('type', 'vip_guest')
             ->where('status', '!=', 'cancelled')
             ->pluck('seat_id')
             ->toArray();
 
-        // المقاعد المحجوبة عن الجمهور لهذه الفعالية (من صفحة تحديد المقاعد)
         $excludedSeatIds = EventSeatAvailability::where('event_id', $eventId)
             ->where('is_public_available', false)
             ->pluck('seat_id')
@@ -43,19 +41,18 @@ class SeatMapController extends Controller
                         return [
                             'row_number' => $rowNumber,
                             'seats'      => $seats->map(function ($seat) use ($eventId, $vipBookedSeatIds, $excludedSeatIds, $section) {
-                                // وفود: قسم كامل موسوم، أو مقعد موسوم، أو حجز وفد فعلي
+
                                 $isVip = (bool) ($section->is_vip
                                     || $seat->is_vip_reserved
                                     || in_array($seat->id, $vipBookedSeatIds, true));
 
-                                // محجوب عن الجمهور لهذه الفعالية؟
                                 $isExcluded = in_array($seat->id, $excludedSeatIds, true);
 
                                 return [
                                     'id'          => $seat->id,
                                     'seat_number' => $seat->seat_number,
                                     'label'       => $seat->label,
-                                    // المحجوب لا يصل أبداً بحالة "متاح"
+
                                     'status'      => $isExcluded
                                         ? 'unavailable'
                                         : $seat->statusForEvent($eventId),

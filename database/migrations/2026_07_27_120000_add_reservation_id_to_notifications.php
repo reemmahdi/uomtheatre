@@ -4,8 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-// ربط الإشعار بالحجز الذي يخصه — حتى تعمل أزرار
-// (تأكيد / رفض) داخل إشعار تغيير الموعد في التطبيق
 return new class extends Migration
 {
     public function up(): void

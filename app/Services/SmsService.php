@@ -8,7 +8,6 @@ class SmsService
 {
     private const BASE = 'https://otp.arqam.tech/api';
 
-    /** @return array{success: bool, message: string} */
     public function send(string $phone, string $message): array
     {
         if (!config('services.arqam.key')) {
@@ -24,7 +23,6 @@ class SmsService
         ];
     }
 
-    /** @return array{success: bool, message: string} */
     public function sendInvitation(string $phone, array $params): array
     {
         $key = config('services.arqam.key');
@@ -75,7 +73,6 @@ class SmsService
         }
     }
 
-    /** @return array{success: bool, message: string} */
     public function sendOtp(string $phone): array
     {
         $key = config('services.arqam.key');
@@ -119,7 +116,6 @@ class SmsService
         }
     }
 
-    /** @return array{success: bool, message: string} */
     public function account(): array
     {
         $key = config('services.arqam.key');

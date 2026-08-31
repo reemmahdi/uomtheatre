@@ -134,7 +134,6 @@ class EventPolicy
         ], true);
     }
 
-
     public function postpone(User $user, Event $event): bool
     {
         if (!$user->hasPermission(Permission::EVENTS_EDIT)) {

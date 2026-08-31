@@ -143,7 +143,6 @@ Route::middleware('admin.web')->group(function () {
                 ->pluck('label')
                 ->toArray();
 
-            // ✅ كل المقاعد الحقيقية من قاعدة البيانات (عشان يرسمها الجافاسكربت)
             $seats = \App\Models\Seat::with('section')
                 ->orderBy('section_id')
                 ->orderBy('row_number')
@@ -158,7 +157,6 @@ Route::middleware('admin.web')->group(function () {
                 ])
                 ->values();
 
-            // ضيوف الوفود المحجوزون (label => [الاسم، الجوال])
             $guests = \App\Models\Reservation::with('seat')
                 ->where('event_id', $event->id)
                 ->where('type', 'vip_guest')
@@ -221,7 +219,6 @@ Route::middleware('admin.web')->group(function () {
             ]);
         })->where('eventUuid', $uuidPattern);
 
-        // حجز ضيف وفد على مقعد (أو إلغاؤه إذا الاسم فارغ) — مطابق لنظام VipBooking
         Route::post('/{eventUuid}/book-guest', function (string $eventUuid, \Illuminate\Http\Request $request) {
             $event = \App\Models\Event::where('uuid', $eventUuid)->firstOrFail();
 
@@ -238,13 +235,11 @@ Route::middleware('admin.web')->group(function () {
                 return response()->json(['error' => 'مقعد غير موجود'], 404);
             }
 
-            // أي حجز نشط على هذا المقعد بهذه الفعالية
             $existing = \App\Models\Reservation::where('event_id', $event->id)
                 ->where('seat_id', $seat->id)
                 ->where('status', '!=', 'cancelled')
                 ->first();
 
-            // اسم فارغ = إلغاء حجز الوفد
             if ($guestName === '') {
                 if ($existing && $existing->type === 'vip_guest') {
                     $existing->cancel();
@@ -253,7 +248,7 @@ Route::middleware('admin.web')->group(function () {
             }
 
             if ($existing) {
-                // لا نسمح بالكتابة فوق حجز جمهور
+
                 if ($existing->type !== 'vip_guest') {
                     return response()->json(['error' => 'هذا المقعد محجوز من قبل الجمهور'], 409);
                 }
