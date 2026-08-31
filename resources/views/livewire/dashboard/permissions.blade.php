@@ -101,7 +101,6 @@
                         <div>
                             <strong style="color: #0C4A6E;">{{ $permission->display_name }}</strong>
                             <small class="text-muted d-block" style="font-size: 12px; margin-top: 2px;">
-                                <code style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 11px;">{{ $permission->name }}</code>
                             </small>
                             @if($permission->description)
                             <small class="text-muted d-block" style="font-size: 12px; margin-top: 4px;">

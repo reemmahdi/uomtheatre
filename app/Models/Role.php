@@ -14,6 +14,7 @@ class Role extends Model
     const RECEPTIONIST      = 'receptionist';
     const UNIVERSITY_OFFICE = 'university_office';
     const USER              = 'user';
+    const VIEWER            = 'viewer';
 
     public function users()
     {

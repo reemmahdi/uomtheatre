@@ -75,7 +75,7 @@
                             @foreach($recentScans as $i => $scan)
                             <tr>
                                 <td class="text-muted">{{ $i + 1 }}</td>
-                                <td><strong>{{ $scan->user?->name ?? $scan->guest_name ?? 'ضيف' }}</strong></td>
+                                <td><strong>{{ ($scan->type === 'vip_guest' ? ($scan->guest_name ?? 'وفد') : ($scan->user?->name ?? '—')) ?? $scan->guest_name ?? 'ضيف' }}</strong></td>
                                 <td class="small">{{ $scan->event?->title ?? '—' }}</td>
                                 <td>{{ $scan->seat?->label ?? '—' }}</td>
                                 <td>

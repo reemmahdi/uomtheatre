@@ -102,7 +102,7 @@ class CheckIn extends BaseComponent
         $this->messageType = 'success';
 
         $this->checkInData = [
-            'name'    => $res->user?->name ?? $res->guest_name ?? 'ضيف',
+            'name'    => ($res->type === 'vip_guest' ? ($res->guest_name ?? 'وفد') : ($res->user?->name ?? '—')) ?? $res->guest_name ?? 'ضيف',
             'event'   => $res->event?->title ?? '—',
             'section' => $res->seat?->section?->name ?? '—',
             'seat'    => $res->seat?->label ?? '—',
@@ -142,7 +142,7 @@ class CheckIn extends BaseComponent
             $q = mb_strtolower($this->searchScans);
             $recentScans = $recentScans->filter(function ($r) use ($q) {
                 $hay = mb_strtolower(
-                    ($r->user?->name ?? '') . ' '
+                    (($r->type === 'vip_guest' ? ($r->guest_name ?? 'وفد') : ($r->user?->name ?? '—')) ?? '') . ' '
                     . ($r->guest_name ?? '') . ' '
                     . ($r->seat?->label ?? '') . ' '
                     . ($r->qr_code ?? '')

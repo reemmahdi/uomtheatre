@@ -3,9 +3,12 @@
 <div class="card-custom p-3 mb-3">
     <div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
         @if(in_array($roleName, ['super_admin', 'event_manager']))
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
+        @if(auth()->user()->role->name !== 'viewer')
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
             <i class="bi bi-plus-circle"></i> إنشاء فعالية جديدة
         </button>
+@endif
+
         @endif
     </div>
 </div>
@@ -240,6 +243,7 @@
                     
                     
                     <td class="text-center">
+                        @if(auth()->user()->role->name !== 'viewer')
                         <div class="actions-group">
                             
                             <button type="button"
@@ -345,6 +349,7 @@
                             </button>
                             @endif
                         </div>
+                        @endif
                     </td>
                 </tr>
                 @empty
