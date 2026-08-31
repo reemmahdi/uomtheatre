@@ -385,6 +385,7 @@
                         </button>
                         @else
                         <p class="mt-3">لا توجد فعاليات</p>
+                        @endif
                     </td>
                 </tr>
                 @endforelse
@@ -757,6 +758,7 @@
                         <li>سيتم <strong>إرسال إشعار</strong> لكل الحاجزين والوفود بالإلغاء</li>
                         @if($cancelReservationsCount > 0)
                         <li>يوجد حالياً <strong class="text-danger">{{ $cancelReservationsCount }} حجز</strong> سيتم إبلاغه</li>
+                        @endif
                     </ul>
                 </div>
                 @else
