@@ -137,6 +137,10 @@ class User extends Authenticatable
         }
         return true;
     }
+    public function deviceTokens()
+{
+    return $this->hasMany(DeviceToken::class);
+}
 
     public function clearPermissionsCache(): void
     {

@@ -32,8 +32,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
     Route::post('/device-token', function (\Illuminate\Http\Request $request) {
-        $request->validate(['token' => 'required|string|max:512']);
-        $request->user()->forceFill(['fcm_token' => $request->token])->save();
+        $data = $request->validate([
+            'token' => 'required|string|max:512',
+            'device_name' => 'nullable|string|max:120',
+            'platform' => 'nullable|string|in:android,ios',
+            'app_version' => 'nullable|string|max:30',
+        ]);
+        $user = $request->user();
+        \App\Models\DeviceToken::updateOrCreate(
+            ['token' => $data['token']],
+            [
+                'user_id' => $user->id,
+                'device_name' => $data['device_name'] ?? null,
+                'platform' => $data['platform'] ?? null,
+                'app_version' => $data['app_version'] ?? null,
+                'last_used_at' => now(),
+            ]
+        );
+        $user->forceFill(['fcm_token' => $data['token']])->save();
         return response()->json(['message' => 'ok']);
     })->middleware('throttle:10,1');
     Route::get('/events/{eventId}/seat-map', [SeatMapController::class, 'getSeatMap'])
