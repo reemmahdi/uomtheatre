@@ -28,7 +28,7 @@
         <div class="d-flex gap-2 align-items-center flex-wrap">
             
             <a href="{{ route('dashboard.vip-guests.print-list', $event->uuid) }}"
-               target="_blank"
+               target="_blank" rel="noopener noreferrer"
                class="btn btn-sm"
                style="background:#0C4A6E;color:#fff;font-weight:700;">
                 <i class="bi bi-printer-fill"></i> طباعة القائمة
@@ -36,7 +36,7 @@
 
             
             <a href="{{ route('dashboard.vip-guests.print-stickers', $event->uuid) }}"
-               target="_blank"
+               target="_blank" rel="noopener noreferrer"
                class="btn btn-sm"
                style="background:#C9A530;color:#fff;font-weight:700;">
                 <i class="bi bi-tags-fill"></i> طباعة الملصقات

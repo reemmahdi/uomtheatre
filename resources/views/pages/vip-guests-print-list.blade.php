@@ -61,7 +61,7 @@
                         $phone = preg_replace('/[^0-9]/', '', $booking->guest_phone ?? '');
                         if (str_starts_with($phone, '0')) $phone = '964' . substr($phone, 1);
 @endphp
-                    <a href="https://wa.me/{{ $phone }}" target="_blank" class="wa-btn">
+                    <a href="https://wa.me/{{ $phone }}" target="_blank" rel="noopener noreferrer" class="wa-btn">
                         💬 فتح
                     </a>
                 </td>
