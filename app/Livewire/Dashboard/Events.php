@@ -538,11 +538,15 @@ class Events extends BaseComponent
     {
         $event = Event::with('status')->findOrFail($this->postponeEventId);
         $this->authorize('postpone', $event);
+        $startRule = 'required|date';
+        if ($this->postponeStartDate !== $event->start_datetime->format('Y-m-d')) {
+            $startRule .= '|after_or_equal:today';
+        }
 
         $this->validate([
             'postponeTitle'       => 'required|string|max:255',
             'postponeDescription' => 'nullable|string|max:250',
-            'postponeStartDate' => 'required|date|after_or_equal:today',
+            'postponeStartDate' => $startRule,
             'postponeStartTime' => 'required|date_format:H:i',
             'postponeEndDate'   => 'required|date|after_or_equal:postponeStartDate',
             'postponeEndTime'   => 'required|date_format:H:i',
