@@ -747,6 +747,18 @@ class Events extends BaseComponent
         try {
             $event = Event::findOrFail($eventId);
 
+            $abilities = [
+                Status::ADDED     => 'send',
+                Status::ACTIVE    => 'approveAsTheater',
+                Status::PUBLISHED => 'publish',
+                Status::CLOSED    => 'close',
+            ];
+            if (!isset($abilities[$newStatusName])) {
+                $this->swalError('انتقال الحالة غير مسموح');
+                return;
+            }
+            $this->authorize($abilities[$newStatusName], $event);
+
             if ($newStatusName === Status::ADDED) {
                 $service = app(EventApprovalService::class);
                 $service->sendForApproval($event);
