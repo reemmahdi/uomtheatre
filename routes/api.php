@@ -15,7 +15,6 @@ use App\Http\Controllers\Api\GoogleAuthController;
 
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/auth/google', [GoogleAuthController::class, 'login'])->middleware('throttle:10,1');
-    Route::post('/register', [AuthController::class, 'register'])->name('api.register');
     Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 });
 
