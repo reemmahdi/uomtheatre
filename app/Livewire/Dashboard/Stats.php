@@ -14,12 +14,10 @@ use Livewire\Attributes\Title;
 #[Title('الإحصائيات')]
 class Stats extends BaseComponent
 {
+    protected array $allowedRoles = ['super_admin', 'university_office'];
+
     public function render()
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'university_office'], true)) {
-            return redirect()->route('dashboard');
-        }
-
         $pub = Status::where('name', 'published')->first();
 
         $totals = Reservation::selectRaw(

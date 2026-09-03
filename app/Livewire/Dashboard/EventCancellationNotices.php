@@ -13,6 +13,8 @@ use Livewire\Attributes\Title;
 #[Title('إشعارات الإلغاء')]
 class EventCancellationNotices extends BaseComponent
 {
+    protected array $allowedRoles = ['super_admin', 'event_manager'];
+
     public int $eventId;
     public string $eventUuid = '';
 
@@ -30,7 +32,9 @@ class EventCancellationNotices extends BaseComponent
 
     public function getCancellationWhatsAppLink(int $reservationId): string
     {
-        $res = Reservation::with(['event', 'seat.section'])->findOrFail($reservationId);
+        $res = Reservation::with(['event', 'seat.section'])
+            ->where('event_id', $this->eventId)
+            ->findOrFail($reservationId);
         $event = $res->event;
 
         $msg  = "*جامعة الموصل - مسرح الجامعة*\n";
@@ -70,10 +74,6 @@ class EventCancellationNotices extends BaseComponent
 
     public function render()
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            return redirect()->route('dashboard');
-        }
-
         $event = Event::with('status')->findOrFail($this->eventId);
 
         if ($event->status->name !== 'cancelled') {

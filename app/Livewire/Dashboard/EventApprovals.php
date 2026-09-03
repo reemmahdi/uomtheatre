@@ -16,6 +16,8 @@ use Livewire\Attributes\Title;
 #[Title('الفعاليات بانتظار موافقتي')]
 class EventApprovals extends BaseComponent
 {
+    protected array $allowedRoles = [Role::SUPER_ADMIN, Role::UNIVERSITY_OFFICE];
+
     public ?int $rejectingEventId = null;
     public string $rejectionNote = '';
     public string $rejectingEventTitle = '';
@@ -128,11 +130,6 @@ class EventApprovals extends BaseComponent
     {
         $user = Auth::user();
         $roleName = $user->role?->name;
-
-        $allowedRoles = [Role::SUPER_ADMIN, Role::UNIVERSITY_OFFICE];
-        if (!in_array($roleName, $allowedRoles, true)) {
-            return redirect()->route('dashboard');
-        }
 
         $service = app(EventApprovalService::class);
         $events = $service->getPendingApprovals();

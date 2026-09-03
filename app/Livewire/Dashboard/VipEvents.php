@@ -14,14 +14,12 @@ use Livewire\Attributes\Title;
 #[Title('مقاعد الوفود')]
 class VipEvents extends BaseComponent
 {
+    protected array $allowedRoles = ['super_admin', 'event_manager'];
+
     public string $searchTitle = '';
 
     public function render()
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'event_manager'])) {
-            return redirect()->route('dashboard');
-        }
-
         $excludeStatuses = Status::whereIn('name', ['draft', 'cancelled', 'end'])->pluck('id');
 
         $query = Event::with(['status', 'creator'])

@@ -11,12 +11,10 @@ use Livewire\Attributes\Title;
 #[Title('خارطة المقاعد')]
 class SeatsDisplay extends BaseComponent
 {
+    protected array $allowedRoles = ['super_admin', 'receptionist', 'theater_manager'];
+
     public function mount()
     {
-        if (!in_array(Auth::user()->role->name, ['super_admin', 'receptionist', 'theater_manager'])) {
-            return redirect()->route('dashboard');
-        }
-
         return redirect('/seats-map');
     }
 

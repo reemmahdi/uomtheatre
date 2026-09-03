@@ -17,6 +17,8 @@ use Livewire\WithPagination;
 #[Title('الفعاليات')]
 class Events extends BaseComponent
 {
+    protected array $allowedRoles = ['super_admin', 'theater_manager', 'event_manager'];
+
     use WithPagination;
 
     protected $paginationTheme = 'bootstrap';
