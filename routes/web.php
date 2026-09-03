@@ -33,7 +33,7 @@ Route::middleware('admin.web')->group(function () {
             ->name('dashboard.permissions');
     });
 
-    Route::middleware('role:super_admin,theater_manager,event_manager,viewer')->group(function () {
+    Route::middleware('role:super_admin,theater_manager,event_manager')->group(function () {
         Route::get('/dashboard/events', fn() => view('pages.events'))->name('dashboard.events');
     });
 
