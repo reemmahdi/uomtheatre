@@ -38,9 +38,6 @@ class SeatsApiController extends Controller
             $key = "{$seat->section->name}-{$seat->row_number}-{$seat->seat_number}";
 
             $reservationsMap[$key] = [
-                'guest_name' => $reservation->type === 'vip_guest'
-                    ? ($reservation->guest_name ?? 'وفد')
-                    : ($reservation->user?->name ?? 'جمهور'),
                 'status' => $reservation->status === 'checked_in' ? 'checked_in' : 'reserved',
             ];
         }
