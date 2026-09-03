@@ -15,7 +15,7 @@ Route::middleware('throttle:6,1')->group(function () {
     })->name('login');
 });
 
-Route::match(['get', 'post'], '/logout', function () {
+Route::post('/logout', function () {
     Auth::logout();
     session()->invalidate();
     session()->regenerateToken();

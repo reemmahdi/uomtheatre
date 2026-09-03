@@ -50,7 +50,12 @@
                         class="autocomplete-item"
                         wire:click="selectSuggestion(@js($suggestion))">
                     <i class="bi bi-search text-muted"></i>
-                    <span>{!! str_ireplace($searchTitle, '<strong>'.e($searchTitle).'</strong>', e($suggestion)) !!}</span>
+                    @php $hlPos = $searchTitle !== '' ? mb_stripos($suggestion, $searchTitle) : false; @endphp
+                    @if($hlPos !== false)
+                        <span>{{ mb_substr($suggestion, 0, $hlPos) }}<strong>{{ mb_substr($suggestion, $hlPos, mb_strlen($searchTitle)) }}</strong>{{ mb_substr($suggestion, $hlPos + mb_strlen($searchTitle)) }}</span>
+                    @else
+                        <span>{{ $suggestion }}</span>
+                    @endif
                 </button>
                 @endforeach
             </div>

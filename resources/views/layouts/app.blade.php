@@ -169,9 +169,12 @@
 
             <hr style="border-color: rgba(228, 192, 94, 0.25); margin: 15px 20px;">
             
-            <a href="{{ route('dashboard.logout') }}" data-title="تسجيل خروج" class="nav-link mx-3" style="cursor:pointer; color: #ffcdd2;">
-                <i class="bi bi-box-arrow-right"></i><span class="nav-text">تسجيل خروج</span>
-            </a>
+            <form method="POST" action="{{ route('dashboard.logout') }}" class="mx-3">
+                @csrf
+                <button type="submit" data-title="تسجيل خروج" class="nav-link border-0 bg-transparent w-100 text-start p-0" style="cursor:pointer; color: #ffcdd2;">
+                    <i class="bi bi-box-arrow-right"></i><span class="nav-text">تسجيل خروج</span>
+                </button>
+            </form>
         </nav>
     </div>
 
