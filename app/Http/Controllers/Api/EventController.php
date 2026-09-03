@@ -110,9 +110,19 @@ $events = Event::with(['status'])
         return response()->json(['events' => $events]);
     }
 
-    public function show($id): JsonResponse
+    public function show($id, Request $request): JsonResponse
     {
         $event = Event::with(['status', 'creator'])->findOrFail($id);
+        $isStaff = (bool) $request->user('sanctum')?->isAdmin();
+        $isPublic = in_array($event->status?->name, [
+            Status::PUBLISHED,
+            Status::CLOSED,
+            Status::END,
+            Status::CANCELLED,
+        ], true);
+        if (!$isPublic && !$isStaff) {
+            abort(404);
+        }
 
         return response()->json([
             'event' => $this->eventToArray($event, detailed: true),
