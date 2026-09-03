@@ -71,7 +71,15 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        $deviceToken = $request->input('device_token');
+        if (is_string($deviceToken) && $deviceToken !== '') {
+            $user->deviceTokens()->where('token', $deviceToken)->delete();
+            if ($user->fcm_token === $deviceToken) {
+                $user->forceFill(['fcm_token' => null])->save();
+            }
+        }
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'تم تسجيل الخروج بنجاح',

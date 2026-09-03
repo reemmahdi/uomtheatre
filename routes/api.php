@@ -39,6 +39,10 @@ Route::middleware('auth:sanctum')->group(function () {
             'app_version' => 'nullable|string|max:30',
         ]);
         $user = $request->user();
+        $owner = \App\Models\DeviceToken::where('token', $data['token'])->value('user_id');
+        if ($owner !== null && $owner !== $user->id) {
+            return response()->json(['message' => 'هذا الجهاز مسجل لحساب آخر'], 409);
+        }
         \App\Models\DeviceToken::updateOrCreate(
             ['token' => $data['token']],
             [
