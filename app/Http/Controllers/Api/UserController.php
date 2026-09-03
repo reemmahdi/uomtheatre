@@ -20,6 +20,7 @@ class UserController extends Controller
     }
     public function index(): JsonResponse
     {
+        $this->authorize('viewAny', User::class);
                 $userRoleId = Role::where('name', Role::USER)->value('id');
         $users = User::with('role')
             ->where('role_id', '!=', $userRoleId)
@@ -29,6 +30,7 @@ class UserController extends Controller
     }
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', User::class);
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|unique:users',
@@ -53,11 +55,13 @@ class UserController extends Controller
     public function show($id): JsonResponse
     {
         $user = User::with('role')->findOrFail($id);
+        $this->authorize('view', $user);
         return response()->json(['user' => $user]);
     }
     public function update(Request $request, $id): JsonResponse
     {
         $user = User::findOrFail($id);
+        $this->authorize('update', $user);
                 if ($user->isSuperAdmin()) {
             return response()->json([
                 'message' => 'حسابات super_admin لا يمكن تعديلها من API',
@@ -83,6 +87,7 @@ class UserController extends Controller
     public function toggleStatus($id, Request $request): JsonResponse
     {
         $user = User::findOrFail($id);
+        $this->authorize('toggleStatus', $user);
                 if ($user->id === $request->user()->id) {
             return response()->json([
                 'message' => 'لا يمكنك تعطيل حسابك الشخصي',
@@ -102,6 +107,7 @@ class UserController extends Controller
     }
     public function roles(): JsonResponse
     {
+        $this->authorize('viewAny', User::class);
                 $roles = Role::whereNotIn('name', [Role::SUPER_ADMIN])->get();
         return response()->json(['roles' => $roles]);
     }
