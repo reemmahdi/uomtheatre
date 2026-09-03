@@ -15,6 +15,8 @@ class EventApproval extends Model
         'round_number',
         'status',
         'rejection_reason',
+        'user_id',
+        'role_id',
     ];
 
     protected $casts = [

@@ -6,9 +6,11 @@ use App\Models\Event;
 use App\Models\EventApproval;
 use App\Models\EventLog;
 use App\Models\Notification;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Status;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -53,9 +55,18 @@ class EventApprovalService
         return $this->sendForApproval($event);
     }
 
-    public function approve(Event $event): array
+    protected function authorizeApprover(?User $actor): User
     {
-        return DB::transaction(function () use ($event) {
+        if (!$actor || !($actor->isSuperAdmin() || $actor->hasPermission(Permission::EVENTS_APPROVE_OFFICE))) {
+            throw new AuthorizationException('غير مصرح لك بالبت في طلبات الموافقة');
+        }
+        return $actor;
+    }
+
+    public function approve(Event $event, ?User $actor = null): array
+    {
+        $actor = $this->authorizeApprover($actor ?? Auth::user());
+        return DB::transaction(function () use ($event, $actor) {
             $event = Event::lockForUpdate()->findOrFail($event->id);
 
             if ($event->status?->name !== Status::ADDED) {
@@ -72,6 +83,8 @@ class EventApprovalService
                 'round_number'     => $thisRound,
                 'status'           => EventApproval::STATUS_APPROVED,
                 'rejection_reason' => null,
+                'user_id'          => $actor->id,
+                'role_id'          => $actor->role_id,
             ]);
 
             $oldStatusId = $event->status_id;
@@ -94,9 +107,10 @@ class EventApprovalService
         });
     }
 
-    public function reject(Event $event, ?string $reason = null): array
+    public function reject(Event $event, ?string $reason = null, ?User $actor = null): array
     {
-        return DB::transaction(function () use ($event, $reason) {
+        $actor = $this->authorizeApprover($actor ?? Auth::user());
+        return DB::transaction(function () use ($event, $reason, $actor) {
             $event = Event::lockForUpdate()->findOrFail($event->id);
 
             if ($event->status?->name !== Status::ADDED) {
@@ -113,6 +127,8 @@ class EventApprovalService
                 'round_number'     => $thisRound,
                 'status'           => EventApproval::STATUS_REJECTED,
                 'rejection_reason' => $reason,
+                'user_id'          => $actor->id,
+                'role_id'          => $actor->role_id,
             ]);
 
             $oldStatusId = $event->status_id;
