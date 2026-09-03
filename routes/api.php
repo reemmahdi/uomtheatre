@@ -25,7 +25,7 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/seats/{eventId}', [SeatsApiController::class, 'show'])->name('api.seats.show');
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/auth/profile', [GoogleAuthController::class, 'completeProfile']);
     Route::post('/reservations/{id}/confirm-change', [ReservationController::class, 'confirmChange']);
     Route::post('/reservations/{id}/reject-change', [ReservationController::class, 'rejectChange']);

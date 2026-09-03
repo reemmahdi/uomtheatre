@@ -8,6 +8,16 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    protected static function booted(): void
+    {
+        static::updated(function (User $user) {
+            $deactivated = $user->wasChanged('is_active') && !$user->is_active;
+            if ($deactivated || $user->wasChanged('role_id') || $user->wasChanged('password')) {
+                $user->tokens()->delete();
+            }
+        });
+    }
+
     use HasApiTokens, Notifiable;
 
     protected $fillable = [
