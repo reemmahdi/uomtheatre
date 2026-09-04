@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
+use Google\Auth\AccessToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class GoogleAuthController extends Controller
@@ -19,26 +20,22 @@ class GoogleAuthController extends Controller
             'id_token' => ['required', 'string'],
         ]);
 
-        $response = Http::timeout(10)->get(
-            'https://oauth2.googleapis.com/tokeninfo',
-            ['id_token' => $request->id_token]
-        );
-
-        if (!$response->ok()) {
-            return response()->json([
-                'message' => 'تعذر التحقق من حساب كوكل — أعد المحاولة',
-            ], 401);
+        try {
+            $payload = (new AccessToken())->verify($request->id_token, [
+                'audience' => config('services.google.client_id'),
+            ]);
+        } catch (\Throwable $e) {
+            $payload = false;
         }
 
-        $payload = $response->json();
-
-        if (($payload['aud'] ?? null) !== config('services.google.client_id')) {
+        $validIssuer = in_array($payload['iss'] ?? '', ['https://accounts.google.com', 'accounts.google.com'], true);
+        if (!is_array($payload) || !$validIssuer || empty($payload['sub']) || empty($payload['email'])) {
             return response()->json([
                 'message' => 'رمز دخول غير صالح لهذا التطبيق',
             ], 401);
         }
 
-        if (($payload['email_verified'] ?? 'false') !== 'true') {
+        if (($payload['email_verified'] ?? false) !== true) {
             return response()->json([
                 'message' => 'بريد حساب كوكل غير موثق',
             ], 401);
@@ -49,38 +46,42 @@ class GoogleAuthController extends Controller
         $name     = $payload['name'] ?? '';
         $avatar   = $payload['picture'] ?? null;
 
-        $user = User::where('google_id', $googleId)->first()
-            ?? User::where('email', $email)->first();
+        $user = User::where('google_id', $googleId)->first();
 
         if ($user) {
-
-            $user->update([
-                'google_id' => $googleId,
-                'avatar'    => $avatar ?? $user->avatar,
-            ]);
+            $user->update(['avatar' => $avatar ?? $user->avatar]);
         } else {
-            $user = User::create([
-                'name'      => $name,
-                'email'     => $email,
-                'phone'     => '',
-                'google_id' => $googleId,
-                'avatar'    => $avatar,
-
-                'password'  => Hash::make(Str::random(40)),
-                'is_active' => true,
-            ]);
+            $byEmail = User::with('role')->where('email', $email)->first();
+            if ($byEmail) {
+                if ($byEmail->google_id !== null || $byEmail->role?->name !== Role::USER) {
+                    return response()->json([
+                        'message' => 'هذا البريد مرتبط بحساب آخر — راجع إدارة القاعة',
+                    ], 403);
+                }
+                $byEmail->update([
+                    'google_id' => $googleId,
+                    'avatar'    => $avatar ?? $byEmail->avatar,
+                ]);
+                $user = $byEmail;
+            } else {
+                $user = User::create([
+                    'name'      => $name,
+                    'email'     => $email,
+                    'phone'     => '',
+                    'google_id' => $googleId,
+                    'avatar'    => $avatar,
+                    'password'  => Hash::make(Str::random(40)),
+                    'is_active' => true,
+                ]);
+            }
         }
 
         if (!$user->is_active) {
             return response()->json([
-                'message' => 'حسابك موقوف — يرجى مراجعة إدارة النظام',
-            ], 403);
-        }
-if (!$user->is_active) {
-            return response()->json([
                 'message' => 'حسابك معطل — راجع إدارة القاعة',
             ], 403);
         }
+
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([
@@ -93,7 +94,6 @@ if (!$user->is_active) {
                 'phone'  => $user->phone,
                 'avatar' => $user->avatar,
             ],
-
             'needs_profile' => blank($user->phone),
         ]);
     }
