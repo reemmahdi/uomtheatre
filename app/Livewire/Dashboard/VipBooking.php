@@ -128,7 +128,7 @@ class VipBooking extends BaseComponent
                         'type'        => 'vip_guest',
                         'guest_name'  => $this->guestName,
                         'guest_phone' => $this->guestPhone,
-                        'qr_code'     => 'UOM-' . strtoupper(\Illuminate\Support\Str::random(8)) . '-' . now()->timestamp,
+                        'qr_code'     => \App\Models\Reservation::generateQrCode(),
                     ])->save();
 
                     return $existing;

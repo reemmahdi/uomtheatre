@@ -94,7 +94,7 @@ class InvitationView extends Component
                 $neighbors[] = [
                     'label' => $dir['label'],
                     'icon'  => $dir['icon'],
-                    'name'  => $neighbor->guest_name ?? 'ضيف',
+                    'name'  => explode(' ', trim($neighbor->guest_name ?? ''))[0] ?: 'ضيف',
                 ];
             }
         }

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/invitation/{qrCode}', \App\Livewire\InvitationView::class)
+    ->middleware('throttle:20,1')
     ->name('invitation.show');
 
 Route::middleware('throttle:6,1')->group(function () {

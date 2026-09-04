@@ -33,7 +33,7 @@ class Reservation extends Model
     {
         static::creating(function ($reservation) {
             if (!$reservation->qr_code) {
-                $reservation->qr_code = 'UOM-' . strtoupper(Str::random(8)) . '-' . time();
+                $reservation->qr_code = self::generateQrCode();
             }
         });
     }
@@ -86,5 +86,13 @@ class Reservation extends Model
             'type'           => $this->type,
             'user_name'      => $this->user?->name ?? $this->guest_name,
         ];
+    }
+
+    public static function generateQrCode(): string
+    {
+        do {
+            $code = 'UOM-' . strtoupper(Str::random(24));
+        } while (self::where('qr_code', $code)->exists());
+        return $code;
     }
 }
