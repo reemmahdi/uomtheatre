@@ -1,1 +1,5 @@
-
+@import "bootstrap/dist/css/bootstrap.rtl.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.min.css";
+@import "sweetalert2/dist/sweetalert2.min.css";
+@import "flatpickr/dist/flatpickr.min.css";
+@import "flatpickr/dist/themes/material_blue.css";

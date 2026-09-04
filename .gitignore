@@ -25,7 +25,6 @@ yarn-error.log
 /storage/logs/*.log
 /public/storage
 /public/hot
-/public/build
 
 # Laravel Specific
 .phpunit.result.cache
