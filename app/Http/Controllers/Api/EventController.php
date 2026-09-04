@@ -59,7 +59,38 @@ class EventController extends Controller
         return response()->json(['events' => $events]);
     }
 
-public function publicIndex(): JsonResponse
+private function publicEventArray(Event $event, int $totalSeats): array
+    {
+        $vipBooked = Reservation::where('event_id', $event->id)
+            ->where('type', 'vip_guest')
+            ->where('status', '!=', 'cancelled')
+            ->count();
+
+        $publicReserved = Reservation::where('event_id', $event->id)
+            ->where('type', '!=', 'vip_guest')
+            ->where('status', '!=', 'cancelled')
+            ->count();
+
+        return [
+            'id'                => $event->id,
+            'uuid'              => $event->uuid,
+            'title'             => $event->title,
+            'description'       => $event->description,
+            'start_datetime'    => $event->start_datetime?->toIso8601String(),
+            'end_datetime'      => $event->end_datetime?->toIso8601String(),
+            'event_date'        => $event->start_datetime?->format('Y-m-d'),
+            'event_time'        => $event->start_datetime?->format('H:i'),
+            'total_seats'       => $totalSeats,
+            'vip_seats'         => $vipBooked,
+            'public_reserved'   => $publicReserved,
+            'available'         => $totalSeats - $vipBooked - $publicReserved,
+            'is_booking_paused' => (bool) $event->is_booking_paused,
+            'has_ended'         => $event->end_datetime < now(),
+            'status_name'       => $event->status?->name,
+        ];
+    }
+
+    public function publicIndex(): JsonResponse
     {
 
         $visibleStatusIds = Status::whereIn('name', ['published', 'closed', 'end'])
@@ -75,37 +106,7 @@ $events = Event::with(['status'])
             ->orderByRaw('(end_datetime < NOW()) asc')
             ->orderByDesc('created_at')
             ->get()
-            ->map(function ($event) use ($totalSeats) {
-                $vipBooked = Reservation::where('event_id', $event->id)
-                    ->where('type', 'vip_guest')
-                    ->where('status', '!=', 'cancelled')
-                    ->count();
-
-                $publicReserved = Reservation::where('event_id', $event->id)
-                    ->where('type', '!=', 'vip_guest')
-                    ->where('status', '!=', 'cancelled')
-                    ->count();
-
-                $availableForPublic = $totalSeats - $vipBooked - $publicReserved;
-
-                return [
-                    'id'              => $event->id,
-                    'uuid'            => $event->uuid,
-                    'title'           => $event->title,
-                    'description'     => $event->description,
-                    'start_datetime'  => $event->start_datetime?->toIso8601String(),
-                    'end_datetime'    => $event->end_datetime?->toIso8601String(),
-                    'event_date'      => $event->start_datetime?->format('Y-m-d'),
-                    'event_time'      => $event->start_datetime?->format('H:i'),
-                    'total_seats'     => $totalSeats,
-                    'vip_seats'       => $vipBooked,
-                    'public_reserved' => $publicReserved,
-                    'available'       => $availableForPublic,
-                    'is_booking_paused' => (bool) $event->is_booking_paused,
-                    'has_ended'       => $event->end_datetime < now(),
-                    'status_name'     => $event->status?->name,
-                ];
-            });
+            ->map(fn ($event) => $this->publicEventArray($event, $totalSeats));
 
         return response()->json(['events' => $events]);
     }
@@ -118,14 +119,16 @@ $events = Event::with(['status'])
             Status::PUBLISHED,
             Status::CLOSED,
             Status::END,
-            Status::CANCELLED,
         ], true);
-        if (!$isPublic && !$isStaff) {
+        if ($isStaff) {
+            return response()->json(['event' => $this->eventToArray($event, detailed: true)]);
+        }
+        if (!$isPublic) {
             abort(404);
         }
 
         return response()->json([
-            'event' => $this->eventToArray($event, detailed: true),
+            'event' => $this->publicEventArray($event, Seat::count()),
         ]);
     }
 

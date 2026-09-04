@@ -15,7 +15,7 @@ class SeatsApiController extends Controller
     {
         $event = Event::with('status')->find($eventId);
 
-        if (!$event) {
+        if (!$event || !in_array($event->status?->name, ['published', 'closed', 'end'], true)) {
             return response()->json([
                 'error' => 'الفعالية غير موجودة',
                 'reservations' => [],
