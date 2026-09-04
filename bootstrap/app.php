@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.web' => \App\Http\Middleware\AdminWebMiddleware::class,
             'role'      => \App\Http\Middleware\CheckRole::class,
             'active'    => \App\Http\Middleware\EnsureActiveAccount::class,
+            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -32,7 +32,8 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $abilities = $user->isAdmin() ? ['staff'] : ['mobile'];
+        $token = $user->createToken('auth_token', $abilities)->plainTextToken;
 
         return response()->json([
             'message' => 'تم تسجيل الدخول بنجاح',

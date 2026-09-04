@@ -91,7 +91,7 @@ class GoogleAuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken('mobile')->plainTextToken;
+        $token = $user->createToken('mobile', ['mobile'])->plainTextToken;
 
         return response()->json([
             'message' => 'تم تسجيل الدخول بنجاح',

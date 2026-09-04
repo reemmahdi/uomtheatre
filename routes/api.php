@@ -73,7 +73,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
         ->name('api.notifications.read-all');
 
-    Route::middleware('admin')->prefix('admin')->group(function () {
+    Route::middleware(['admin', 'abilities:staff'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('api.admin.users.index');
         Route::post('/users', [UserController::class, 'store'])->name('api.admin.users.store');
         Route::get('/users/{id}', [UserController::class, 'show'])->name('api.admin.users.show');
