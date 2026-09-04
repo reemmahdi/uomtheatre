@@ -107,7 +107,6 @@
         const btn = document.getElementById('cameraBtn');
         const note = document.getElementById('cameraNote');
 
-        // إيقاف إن كانت شغالة
         if (uomScanner) {
             try { await uomScanner.stop(); uomScanner.clear(); } catch (e) {}
             uomScanner = null;
@@ -115,7 +114,6 @@
             return;
         }
 
-        // الكاميرا تتطلب سياقاً آمناً (https أو localhost)
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             note.style.display = 'block';
             return;
@@ -127,7 +125,6 @@
                 { facingMode: 'environment' },
                 { fps: 10, qrbox: 220 },
                 (decodedText) => {
-                    // منع التكرار: مهلة ثانيتين ونصف بين مسحة وأخرى
                     const now = Date.now();
                     if (now - uomLastScan < 2500) return;
                     uomLastScan = now;

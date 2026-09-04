@@ -26,10 +26,10 @@ return new class extends Migration
             ]);
 
         if ($backfilled > 0) {
-            echo "  ✅ تم backfill {$backfilled} فعالية منشورة سابقاً\n";
+            echo "  تم backfill {$backfilled} فعالية منشورة سابقاً\n";
         }
 
-        echo "  ✅ تم إضافة عمود published_by لجدول events\n";
+        echo "  تم إضافة عمود published_by لجدول events\n";
     }
 
     public function down(): void

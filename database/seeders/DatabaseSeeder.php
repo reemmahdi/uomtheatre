@@ -47,7 +47,7 @@ class DatabaseSeeder extends Seeder
                 ]
             );
         }
-        $this->command->info('✅ 6 أدوار');
+        $this->command->info('6 أدوار');
     }
 
     protected function seedStatuses(): void
@@ -74,7 +74,7 @@ class DatabaseSeeder extends Seeder
                 ]
             );
         }
-        $this->command->info('✅ 7 حالات');
+        $this->command->info('7 حالات');
     }
 
     protected function seedSuperAdmin(): void
@@ -97,7 +97,7 @@ class DatabaseSeeder extends Seeder
                 'created_at' => now(),
             ]
         );
-        $this->command->info("✅ super_admin: {$email}");
+        $this->command->info("super_admin: {$email}");
     }
 
     protected function seedSections(): void
@@ -125,7 +125,7 @@ class DatabaseSeeder extends Seeder
                 ]
             );
         }
-        $this->command->info('✅ 6 أقسام (is_vip محايد)');
+        $this->command->info('6 أقسام (is_vip محايد)');
     }
 
     protected function seedSeats(): void
@@ -172,6 +172,6 @@ class DatabaseSeeder extends Seeder
             DB::table('seats')->insert($seats);
         }
 
-        $this->command->info("✅ {$totalSeats} مقعد (is_vip_reserved محايد)");
+        $this->command->info("{$totalSeats} مقعد (is_vip_reserved محايد)");
     }
 }

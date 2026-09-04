@@ -231,7 +231,6 @@
                 return window.innerWidth <= 768;
             }
 
-            // ═══ سلوك الكمبيوتر ═══
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
             if (isCollapsed && !isMobile()) {
                 sidebar.classList.add('collapsed');
@@ -246,7 +245,6 @@
                 localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
             }
 
-            // ═══ سلوك الجوال ═══
             function openMobileSidebar() {
                 sidebar.classList.add('mobile-open');
                 mobileOverlay.classList.add('active');
@@ -259,7 +257,6 @@
                 document.body.style.overflow = '';
             }
 
-            // ═══ Event Listeners ═══
             if (topbarToggle) {
                 topbarToggle.addEventListener('click', () => {
                     if (isMobile()) {

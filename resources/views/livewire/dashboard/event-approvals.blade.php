@@ -283,9 +283,7 @@
 <script>
 document.addEventListener('livewire:initialized', () => {
 
-    // ✨ فتح modal عند استلام حدث 'open-modal' من Livewire
     Livewire.on('open-modal', (event) => {
-        // Livewire 3 يرسل البيانات كـ array أحياناً
         const modalId = event?.id || event?.[0]?.id || event?.[0];
         if (!modalId) return;
 
@@ -299,7 +297,6 @@ document.addEventListener('livewire:initialized', () => {
         modal.show();
     });
 
-    // ✨ إغلاق كل المودالات المفتوحة عند 'close-modal'
     Livewire.on('close-modal', () => {
         document.querySelectorAll('.modal.show').forEach(el => {
             const modal = bootstrap.Modal.getInstance(el);

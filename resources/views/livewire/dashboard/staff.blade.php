@@ -212,7 +212,6 @@
 
 @script
 <script>
-    // إغلاق المودال بعد حفظ ناجح
     $wire.on('close-modal', () => {
         document.querySelectorAll('.modal').forEach(m => bootstrap.Modal.getInstance(m)?.hide());
     });
@@ -220,7 +219,6 @@
 @endscript
 
 <script>
-// ==================== Password Strength Meter Logic ====================
 function checkPasswordStrength(password) {
     const checks = {
         length:    password.length >= 12,
@@ -241,7 +239,6 @@ function updatePasswordUI(inputEl) {
     const password = inputEl.value;
     const { checks, score } = checkPasswordStrength(password);
 
-    // تحديث شروط كلمة المرور (الإطار الأخضر عند التحقق)
     const reqItems = wrapper.querySelectorAll('.req-item');
     reqItems.forEach(item => {
         const reqKey = item.dataset.req;
@@ -255,7 +252,6 @@ function updatePasswordUI(inputEl) {
         }
     });
 
-    // تحديث الـ Strength Bars
     const bars = wrapper.querySelectorAll('.strength-bar');
     const label = wrapper.querySelector('.strength-label');
     const labels = ['', 'ضعيفة جداً', 'ضعيفة', 'متوسطة', 'جيدة', 'ممتازة'];
@@ -274,14 +270,12 @@ function updatePasswordUI(inputEl) {
     }
 }
 
-// الاستماع لتغيّر حقول كلمة المرور (Event Delegation)
 document.addEventListener('input', function(e) {
     if (e.target && (e.target.id === 'createPassword' || e.target.id === 'editPassword')) {
         updatePasswordUI(e.target);
     }
 });
 
-// زر إظهار/إخفاء كلمة المرور
 function togglePasswordVisibility(inputId, btn) {
     const input = document.getElementById(inputId);
     if (!input) return;

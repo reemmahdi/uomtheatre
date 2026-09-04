@@ -189,14 +189,12 @@
 
     const EVENT_UUID = @json($event->uuid);
 
-    // ✅ الرابط الصحيح: مسار الويب (جلسة المتصفّح) — بدون admin
     const API_GET  = `/api/events/${EVENT_UUID}/availability`;
     const API_SAVE = `/api/events/${EVENT_UUID}/availability/save`;
     const API_BOOK = `/api/events/${EVENT_UUID}/book-guest`;
 
     const SVG_NS = "http://www.w3.org/2000/svg";
 
-    // إعدادات المروحة (المواقع) — نفس الخريطة المعتمدة
     const FAN = {
         cx: 850,
         cy: -800,
@@ -206,7 +204,6 @@
         balcRowGap: 38,
     };
 
-    // ✅ فقط زوايا كل قسم — أعداد المقاعد تجي من قاعدة البيانات
     const SECTION_CONFIG = {
         C: { angles: [-34, -16], floor: "orchestra" },
         B: { angles: [-12,  12], floor: "orchestra" },
@@ -233,16 +230,13 @@
     const seatsGroup = document.getElementById('seatsGroup');
     const labelsGroup = document.getElementById('labelsGroup');
 
-    // ✅ يبني المقاعد من البيانات الحقيقية القادمة من قاعدة البيانات
     function buildSeats(dbSeats) {
-        // (1) احسب عدد المقاعد الحقيقي لكل صف في كل قسم
         const layout = {};
         dbSeats.forEach(s => {
             if (!layout[s.section]) layout[s.section] = {};
             layout[s.section][s.row] = Math.max(layout[s.section][s.row] || 0, s.num);
         });
 
-        // (2) ارسم كل مقعد حقيقي في مكانه (نفس رياضيات المروحة)
         dbSeats.forEach(s => {
             const cfg = SECTION_CONFIG[s.section];
             if (!cfg) return;
@@ -260,7 +254,6 @@
             const x = FAN.cx + Math.sin(angRad) * radius;
             const y = FAN.cy + Math.cos(angRad) * radius;
 
-            // VIP = من عمود is_vip_reserved في قاعدة البيانات (المصدر الوحيد للحقيقة)
             const isVip = s.vip;
 
             const key = s.label; // نستعمل label من قاعدة البيانات مباشرة
@@ -308,13 +301,11 @@
 
         totalNonVip = Object.keys(seats).length - vipCount;
 
-        // (3) ارسم أسماء الأقسام
         drawSectionLabels(layout);
 
         console.log(`✓ Built ${Object.keys(seats).length} seats from DB. VIP=${vipCount}, totalNonVip=${totalNonVip}`);
     }
 
-    // يرسم دائرة + حرف لكل قسم
     function drawSectionLabels(layout) {
         Object.keys(SECTION_CONFIG).forEach(name => {
             if (!layout[name]) return;
@@ -375,7 +366,6 @@
         `;
     }
 
-    // يحدّث عنوان المقعد (الهوفر): يعرض الاسم إن كان محجوزاً
     function updateSeatTitle(circle, label) {
         let title = circle.querySelector('title');
         if (!title) { title = document.createElementNS(SVG_NS, 'title'); circle.appendChild(title); }
@@ -383,14 +373,12 @@
         title.textContent = (g && g.name) ? `${label} — ${g.name}` : `${label} (وفد)`;
     }
 
-    // يميّز المقعد المحجوز بصرياً (حدّ أغمق)
     function markBooked(circle, isBooked) {
         if (!circle) return;
         circle.style.stroke = isBooked ? '#7A5C12' : COLORS.vip.stroke;
         circle.style.strokeWidth = isBooked ? '2.5' : '1.5';
     }
 
-    // يفتح نافذة الحجز لمقعد وفد
     function openBookingModal(label) {
         bgCurrentLabel = label;
         const g = guests[label] || {};
@@ -402,7 +390,6 @@
         bootstrap.Modal.getOrCreateInstance(document.getElementById('bookGuestModal')).show();
     }
 
-    // يحجز ضيفاً على مقعد وفد (أو يلغي الحجز إذا الاسم فارغ)
     async function bookGuest(label, name, phone) {
         const res = await fetch(API_BOOK, {
             method: 'POST',
@@ -430,7 +417,6 @@
         }
     }
 
-    // أزرار نافذة الحجز
     document.getElementById('bgSaveBtn').addEventListener('click', async () => {
         const name  = document.getElementById('bgGuestName').value.trim();
         const phone = document.getElementById('bgGuestPhone').value.trim();
@@ -525,7 +511,6 @@
         return true;
     }
 
-    // ✅ يجيب البيانات أولاً، ثم يبني المقاعد منها، ثم يطبّق المستبعد
     async function loadData() {
         try {
             const res = await fetch(API_GET, {
@@ -535,10 +520,8 @@
             if (!res.ok) throw new Error('فشل التحميل: ' + res.status);
             const data = await res.json();
 
-            // ابنِ المقاعد من البيانات الحقيقية
             buildSeats(data.seats || []);
 
-            // طبّق المقاعد المستبعدة المحفوظة
             (data.excluded_seat_keys || []).forEach(key => {
                 if (seats[key] && seats[key].dataset.vip !== 'true') {
                     excludedKeys.add(key);
@@ -548,7 +531,6 @@
                 }
             });
 
-            // طبّق حجوزات الوفود على الخريطة (الاسم في الهوفر + تمييز المحجوز)
             Object.assign(guests, data.guests || {});
             Object.keys(guests).forEach(label => {
                 const circle = seats[label];
@@ -583,7 +565,6 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrf,
                 },
-                // ✅ اسم الحقل الصحيح الذي يتوقّعه مسار الحفظ
                 body: JSON.stringify({ excluded_seat_keys: [...excludedKeys] })
             });
 
@@ -652,7 +633,6 @@
         updateSaveButton();
     }
 
-    // ربط الأحداث
     document.getElementById('btnSave').addEventListener('click', saveChanges);
     document.getElementById('btnResetAll').addEventListener('click', resetAll);
     document.getElementById('btnIncludeAll').addEventListener('click', includeAll);
@@ -661,7 +641,6 @@
         btn.addEventListener('click', () => toggleSection(btn.dataset.section));
     });
 
-    // ✅ البداية: نجيب البيانات أولاً (loadData يستدعي buildSeats داخلياً)
     loadData();
 })();
 </script>

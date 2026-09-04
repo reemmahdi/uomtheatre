@@ -490,7 +490,6 @@
 <script>
 document.addEventListener('livewire:initialized', () => {
 
-    // ✨ فتح modal عند استلام 'open-modal'
     Livewire.on('open-modal', (event) => {
         const modalId = event?.id || event?.[0]?.id || event?.[0];
         if (!modalId) return;
@@ -499,14 +498,12 @@ document.addEventListener('livewire:initialized', () => {
             console.warn('Modal not found:', modalId);
             return;
         }
-        // ✨ مهم: ننتظر قليلاً لو في modal آخر يُغلق بنفس الوقت
         setTimeout(() => {
             const modal = bootstrap.Modal.getOrCreateInstance(el);
             modal.show();
         }, 200);
     });
 
-    // ✨ إغلاق كل المودالات المفتوحة
     Livewire.on('close-modal', () => {
         document.querySelectorAll('.modal.show').forEach(el => {
             const modal = bootstrap.Modal.getInstance(el);

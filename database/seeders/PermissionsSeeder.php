@@ -15,7 +15,7 @@ class PermissionsSeeder extends Seeder
             $this->cleanupObsoletePermissions();
         });
 
-        $this->command->info('✅ Seeding صلاحيات اكتمل بنجاح');
+        $this->command->info('Seeding صلاحيات اكتمل بنجاح');
     }
 
     protected function seedPermissions(): void
@@ -58,7 +58,7 @@ class PermissionsSeeder extends Seeder
             );
         }
 
-        $this->command->info('✅ ' . count($permissions) . ' صلاحية تم إعدادها (insert/update)');
+        $this->command->info('' . count($permissions) . ' صلاحية تم إعدادها (insert/update)');
     }
 
     protected function seedRolePermissions(): void
@@ -110,7 +110,7 @@ class PermissionsSeeder extends Seeder
         foreach ($rolePermissions as $roleName => $permNames) {
             $roleId = $roles[$roleName] ?? null;
             if (!$roleId) {
-                $this->command->warn("⚠️ الدور غير موجود: {$roleName}");
+                $this->command->warn("الدور غير موجود: {$roleName}");
                 continue;
             }
 
@@ -119,7 +119,7 @@ class PermissionsSeeder extends Seeder
             foreach ($permNames as $permName) {
                 $permId = $perms[$permName] ?? null;
                 if (!$permId) {
-                    $this->command->warn("⚠️ الصلاحية غير موجودة: {$permName}");
+                    $this->command->warn("الصلاحية غير موجودة: {$permName}");
                     continue;
                 }
 
@@ -133,7 +133,7 @@ class PermissionsSeeder extends Seeder
             }
         }
 
-        $this->command->info("✅ {$totalLinks} ربط أدوار-صلاحيات تم إعداده");
+        $this->command->info("{$totalLinks} ربط أدوار-صلاحيات تم إعداده");
     }
 
     protected function cleanupObsoletePermissions(): void

@@ -1,9 +1,4 @@
-/**
- * SweetAlert2 Helper - UOMTheatre Dashboard
- * Midnight Ocean Theme
- */
 
-// Default configuration
 const SwalDefaults = {
     customClass: {
         popup: 'swal-rtl',
@@ -15,7 +10,6 @@ const SwalDefaults = {
     reverseButtons: false,
 };
 
-// Midnight Ocean color palette
 const Colors = {
     primary: '#0C4A6E',
     primaryMid: '#075985',
@@ -28,7 +22,6 @@ const Colors = {
     info: '#0369A1',
 };
 
-// Arabic labels (Unicode escapes to avoid encoding issues)
 const Labels = {
     ok: '\u062D\u0633\u0646\u0627\u064B',
     yes: '\u0646\u0639\u0645\u060C \u0645\u062A\u0623\u0643\u062F',
@@ -42,7 +35,6 @@ const Labels = {
     errorDefault: '\u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639',
 };
 
-// Toast configuration
 const Toast = Swal.mixin({
     toast: true,
     position: 'top-end',
@@ -58,7 +50,6 @@ const Toast = Swal.mixin({
     }
 });
 
-// Helper functions
 
 function showSuccess(message, title) {
     return Swal.fire({
@@ -136,7 +127,6 @@ function showConfirm(message, action, params, title) {
     });
 }
 
-// Livewire Event Listeners
 document.addEventListener('livewire:initialized', () => {
 
     Livewire.on('swal:success', (event) => {
@@ -177,7 +167,6 @@ document.addEventListener('livewire:initialized', () => {
     console.log('SweetAlert Helper Loaded - Midnight Ocean Theme');
 });
 
-// Export for manual use
 window.SwalHelper = {
     success: showSuccess,
     error: showError,

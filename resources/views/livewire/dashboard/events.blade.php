@@ -1304,7 +1304,6 @@
 
 <script>
 document.addEventListener('livewire:initialized', () => {
-    // عند إطلاق حدث close-modal، أغلق كل الـ modals
     Livewire.on('close-modal', () => {
         document.querySelectorAll('.modal').forEach(m => {
             const inst = bootstrap.Modal.getInstance(m);
@@ -1312,7 +1311,6 @@ document.addEventListener('livewire:initialized', () => {
         });
     });
 
-    // ✨ عند إطلاق حدث open-view-modal، افتح modal التفاصيل
     Livewire.on('open-view-modal', () => {
         const modalEl = document.getElementById('viewEventModal');
         if (modalEl) {
@@ -1321,7 +1319,6 @@ document.addEventListener('livewire:initialized', () => {
         }
     });
 
-    // ✨ عند إطلاق حدث open-edit-modal، افتح modal التعديل (بعد ما البيانات جاهزة)
     Livewire.on('open-edit-modal', () => {
         const modalEl = document.getElementById('editEventModal');
         if (modalEl) {
@@ -1331,9 +1328,6 @@ document.addEventListener('livewire:initialized', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════
-// ✨ تهيئة Flatpickr
-// ═══════════════════════════════════════════════════
 let flatpickrInstances = {};
 
 function destroyFlatpickr() {
@@ -1345,11 +1339,6 @@ function destroyFlatpickr() {
     flatpickrInstances = {};
 }
 
-/**
- * ✨ يقرأ القيمة الحالية من Livewire مباشرة (وليس من DOM)
- * 🔧 إصلاح: يستخدم closest('[wire:id]') من العنصر نفسه
- *    لتجنب التضارب مع notifications-bell أو أي Livewire component آخر
- */
 function getLivewireValue(el, propName) {
     try {
         if (!el) return null;
@@ -1364,9 +1353,6 @@ function getLivewireValue(el, propName) {
     }
 }
 
-/**
- * ✨ helper: يجد الـ Livewire component الصحيح من element
- */
 function getWireFromElement(el) {
     if (!el) return null;
     const wireEl = el.closest('[wire\\:id]');
@@ -1393,12 +1379,10 @@ function initFlatpickr() {
         { id: 'edit_end_time_input', wireProp: 'editEndTime' }
     ];
 
-    // ✨ تهيئة حقول التاريخ
     dateFields.forEach(field => {
         const el = document.getElementById(field.id);
         if (!el || flatpickrInstances[field.id]) return;
 
-        // ✅ نقرأ من Livewire أولاً، ثم من DOM كـ fallback
         let initialValue = getLivewireValue(el, field.wireProp);
         if (!initialValue && el.value && el.value.trim() !== '') {
             initialValue = el.value;
@@ -1426,12 +1410,10 @@ function initFlatpickr() {
         });
     });
 
-    // ✨ تهيئة حقول الوقت (12 ساعة - بدون وقت افتراضي 00:00)
     timeFields.forEach(field => {
         const el = document.getElementById(field.id);
         if (!el || flatpickrInstances[field.id]) return;
 
-        // ✅ نقرأ من Livewire أولاً، ثم من DOM كـ fallback
         let initialValue = getLivewireValue(el, field.wireProp);
         if (!initialValue) {
             const rawValue = el.value ? el.value.trim() : '';
@@ -1466,13 +1448,10 @@ function initFlatpickr() {
     });
 }
 
-// ✨ تهيئة Flatpickr عند فتح modal الإنشاء أو التعديل
-// مع تأخير أكبر لـ editEventModal لضمان أن Livewire حدّث القيم
 document.addEventListener('shown.bs.modal', function(e) {
     if (e.target.id === 'createEventModal') {
         setTimeout(initFlatpickr, 50);
     } else if (e.target.id === 'editEventModal') {
-        // ✅ تأخير أطول للتعديل + إعادة تهيئة بعد التأكد من تحديث القيم
         setTimeout(() => {
             destroyFlatpickr(); // نهدم القديم قبل التهيئة الجديدة
             initFlatpickr();
@@ -1480,17 +1459,14 @@ document.addEventListener('shown.bs.modal', function(e) {
     }
 });
 
-// ✨ تنظيف Flatpickr عند إغلاق الـ modal
 document.addEventListener('hidden.bs.modal', function(e) {
     if (e.target.id === 'createEventModal' || e.target.id === 'editEventModal') {
         destroyFlatpickr();
     }
 });
 
-// ✨ إعادة تهيئة Flatpickr بعد كل تحديث Livewire (للنافذة المفتوحة)
 document.addEventListener('livewire:initialized', () => {
     Livewire.hook('morph.updated', ({ el, component }) => {
-        // إذا كانت نافذة التعديل مفتوحة، أعد تهيئة Flatpickr
         const editModal = document.getElementById('editEventModal');
         if (editModal && editModal.classList.contains('show')) {
             setTimeout(() => {

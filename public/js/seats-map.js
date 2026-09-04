@@ -1,7 +1,3 @@
-/* =====================================================================
-   SEATING DATA — University of Mosul Theater · 997 seats
-   seat.io-style fan layout: rows arc concentrically around the stage.
-   ===================================================================== */
 
 const PRICES = {
   vip:       75000,
@@ -22,35 +18,21 @@ function rollStatus(prob) {
   return "available";
 }
 
-/* ─── Fan-arc geometry ─────────────────────────────────────────────
-   Stage is at top. Rows curve around a virtual focal point well above
-   the stage. Each section occupies an angular wedge of the fan.
-
-   FAN_CENTER: focal point of all arcs (above stage).
-   Sections defined by [angleStart, angleEnd] (degrees from vertical).
-*/
 const FAN = {
   cx: 850,           // canvas-x of fan center
   cy: -800,          // canvas-y (above the stage, negative)
-  // Orchestra rows arc from radius 1320 → ~1820 (front row pushed below stage)
   orchRadiusStart: 1320,
   orchRowGap:      36,
   orchRows:        15,
-  // Balcony arcs from 2000 → 2266
   balcRadiusStart: 2000,
   balcRowGap:      38,
   balcRows:        8,
 };
 
-// Total seats per row in each section (sums to 997)
 const SECTIONS = {
-  // ── Orchestra (Section A right · B center · C left) ──
-  // Aisles: 4° gap between sections (B↔A, B↔C)
-  // angle in degrees, 0° = straight down from FAN center, +° = right
   C: { angles: [-34, -16], rowSeats: [10,10,11,12,12,13,13,14,15,16,16,16,17,18], floor: "orchestra" },
   B: { angles: [-12,  12], rowSeats: [10,11,11,12,12,13,13,14,14,15,15,16,16,17], floor: "orchestra" },
   A: { angles: [ 16,  34], rowSeats: [8,9,10,11,13,14,15,17,18,21,21,22,23], floor: "orchestra" },
-  // ── Balcony — same aisle treatment ──
   F: { angles: [-32, -16], rowSeats: [13,13,13,13,13,13,13,13,13], floor: "balcony" },
   E: { angles: [-12,  12], rowSeats: [20,19,19,19,18,18,17,17,16,16], floor: "balcony" },
   D: { angles: [ 16,  32], rowSeats: [13,13,13,13,13,13,13,13,13], floor: "balcony" },
@@ -71,7 +53,6 @@ function buildSection(name, cfg) {
     const radius = radiusStart + rIdx * rowGap;
     const isVipRow = !isBalc && r === 10;
 
-    // Seat positions: evenly spaced angularly within section wedge
     for (let i = 0; i < seatCount; i++) {
       const t = seatCount === 1 ? 0.5 : i / (seatCount - 1);
       const angDeg = aStart + t * (aEnd - aStart);
@@ -103,7 +84,6 @@ function buildSection(name, cfg) {
     }
   });
 
-  // Section label position: centered, above outermost row
   const aMid = (cfg.angles[0] + cfg.angles[1]) / 2;
   const aRad = (aMid * Math.PI) / 180;
   const labelRadius = radiusStart - 60;
@@ -164,9 +144,6 @@ setInterval(loadReservations, 8000);
 
 
 
-/* =====================================================================
-   SEATING APP — fan-arc layout, pan/zoom, selection, checkout
-   ===================================================================== */
 (function() {
   const { seats, total, sectionMeta, fan } = window.SEATING_DATA;
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -179,15 +156,12 @@ setInterval(loadReservations, 8000);
   const seatById = new Map();
   function toAR(n) { return String(n).replace(/[0-9]/g, d => "٠١٢٣٤٥٦٧٨٩"[d]); }
 
-  // ─── Section labels — badge style: letter + seat count ─────────
-  // Labels positioned BEHIND the rear-most row, in the section's angular center.
   const sectionCounts = {};
   seats.forEach(s => sectionCounts[s.section] = (sectionCounts[s.section] || 0) + 1);
 
   sectionMeta.forEach(meta => {
     const cnt = sectionCounts[meta.id] || 0;
     const isPremium = meta.id === "B" || meta.id === "E"; // center sections
-    // Badge: rounded rect with section letter and count
     const w = 68, h = 52;
     const bg = document.createElementNS(SVG_NS, "rect");
     bg.setAttribute("x", meta.cx - w/2);
@@ -218,8 +192,6 @@ setInterval(loadReservations, 8000);
     labelsGroup.appendChild(sub);
   });
 
-  // ─── Aisle lines: dashed radial lines between sections ─────────
-  // Aisle angles for orchestra: -14, +14 ; balcony: -14, +14
   const aisleSpec = [
     { angle: -14, floor: "orchestra" },
     { angle:  14, floor: "orchestra" },
@@ -241,7 +213,6 @@ setInterval(loadReservations, 8000);
     labelsGroup.appendChild(line);
   });
 
-  // ─── Balcony divider: arc between orchestra and balcony ─────────
   const dividerR = (fan.orchRadiusStart + 14 * fan.orchRowGap + fan.balcRadiusStart) / 2;
   const aL = -38 * Math.PI / 180, aR = 38 * Math.PI / 180;
   const dx1 = fan.cx + Math.sin(aL) * dividerR, dy1 = fan.cy + Math.cos(aL) * dividerR;
@@ -250,7 +221,6 @@ setInterval(loadReservations, 8000);
   divArc.setAttribute("d", `M ${dx1} ${dy1} A ${dividerR} ${dividerR} 0 0 1 ${dx2} ${dy2}`);
   divArc.setAttribute("class", "balcony-divider-arc");
   labelsGroup.appendChild(divArc);
-  // Balcony label sits on top of the arc, centered
   const dividerMidR = dividerR;
   const dividerLabelX = fan.cx;
   const dividerLabelY = fan.cy + dividerMidR + 4;
@@ -271,7 +241,6 @@ setInterval(loadReservations, 8000);
   divText.textContent = "الشُّرفة · BALCONY";
   labelsGroup.appendChild(divText);
 
-  // ─── Row numbers (placed at right edge of each row, outside section) ─
   const rowsBySection = {};
   seats.forEach(s => {
     const k = `${s.section}-${s.row}`;
@@ -279,10 +248,8 @@ setInterval(loadReservations, 8000);
     rowsBySection[k].seats.push(s);
   });
   Object.values(rowsBySection).forEach(row => {
-    // Use the seat with largest absolute angle as the outer-edge anchor
     row.seats.sort((a, b) => Math.abs(b.angle) - Math.abs(a.angle));
     const edge = row.seats[0];
-    // Push outward along the radial vector by ~28
     const a = edge.angle * Math.PI / 180;
     const radial = { x: Math.sin(a), y: Math.cos(a) };
     const r = Math.hypot(edge.x - fan.cx, edge.y - fan.cy);
@@ -300,24 +267,19 @@ setInterval(loadReservations, 8000);
     labelsGroup.appendChild(t);
   });
 
-  // ─── Build seats ────────────────────────────────────────────────
-  // Each seat is rotated to face the fan center (i.e. the stage).
   let i = 0;
   seats.forEach(s => {
-    // Rotate seat so its "back" points away from the stage.
     const wrap = document.createElementNS(SVG_NS, "g");
     wrap.setAttribute("transform", `translate(${s.x},${s.y}) rotate(${s.angle})`);
 
     const g = document.createElementNS(SVG_NS, "g");
     g.setAttribute("class", `seat ${s.status} ${s.type}`);
     g.setAttribute("data-id", s.id);
-    // Stagger entry: seats further from stage come in slightly later, with section variation
     const baseDelay = 1.1; // after stage curtain settles
     const rowDelay = (s.row - 1) * 0.025;
     const sectionOffset = s.floor === "balcony" ? 0.4 : 0;
     g.style.animationDelay = `${baseDelay + rowDelay + sectionOffset}s`;
 
-    // Single rounded square - clean, seat.io style
     const body = document.createElementNS(SVG_NS, "rect");
     body.setAttribute("x", "-9");
     body.setAttribute("y", "-9");
@@ -327,7 +289,6 @@ setInterval(loadReservations, 8000);
     body.setAttribute("class", "seat-body");
     g.appendChild(body);
 
-    // Subtle top highlight (1px stripe at the seat-back top)
     const hl = document.createElementNS(SVG_NS, "rect");
     hl.setAttribute("x", "-9");
     hl.setAttribute("y", "-9");
@@ -337,7 +298,6 @@ setInterval(loadReservations, 8000);
     hl.setAttribute("class", "seat-highlight");
     g.appendChild(hl);
 
-    // Seat number (revealed at high zoom) — counter-rotated
     const numWrap = document.createElementNS(SVG_NS, "g");
     numWrap.setAttribute("transform", `rotate(${-s.angle})`);
     const num = document.createElementNS(SVG_NS, "text");
@@ -378,7 +338,6 @@ setInterval(loadReservations, 8000);
     });
   }
 
-  // ─── Pan / zoom ────────────────────────────────────────────────
   const VB = { x: -450, y: 50, w: 2600, h: 1500 };
   let scale = 1, tx = 0, ty = 0;
   const MIN_SCALE = 0.6, MAX_SCALE = 5;
@@ -423,7 +382,6 @@ setInterval(loadReservations, 8000);
     setZoom(scale * factor, e.clientX, e.clientY);
   }, { passive: false });
 
-  // Drag pan
   let isDragging = false, didDrag = false, dragStart = null, panStart = null;
   mapCanvas.addEventListener("pointerdown", e => {
     if (e.target.closest(".floor-toggle, .legend, .zoom-controls, .minimap")) return;
@@ -449,7 +407,6 @@ setInterval(loadReservations, 8000);
     mapCanvas.classList.remove("dragging");
   });
 
-  // Pinch zoom
   const pointers = new Map();
   let pinchStartDist = 0, pinchStartScale = 1;
   mapCanvas.addEventListener("pointerdown", e => pointers.set(e.pointerId, e));
@@ -466,7 +423,6 @@ setInterval(loadReservations, 8000);
   mapCanvas.addEventListener("pointerup", e => { pointers.delete(e.pointerId); pinchStartDist = 0; });
   mapCanvas.addEventListener("pointercancel", e => { pointers.delete(e.pointerId); pinchStartDist = 0; });
 
-  // ─── Tooltip ────────────────────────────────────────────────────
   function showTooltip(seat, ev) {
     const statusLabel = { available: "متاح", reserved: "محجوز — من التطبيق", sold: "مشغول — تم الدخول" }[seat.status];
     const statusColor = { available: "#22C55E", reserved: "#94A3B8", sold: "#EF4444" }[seat.status];
@@ -501,7 +457,6 @@ setInterval(loadReservations, 8000);
     if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest(".seat")) hideTooltip();
   });
 
-  // ─── Selection ─────────────────────────────────────────────────
   const selected = new Set();
 
   seatsGroup.addEventListener("click", e => {
@@ -577,7 +532,6 @@ setInterval(loadReservations, 8000);
     toast(`تم تأكيد ${toAR(selected.size)} مقعد · سيتم تحويلك إلى الدفع...`);
   };
 
-  // ─── Best available ─────────────────────────────────────────────
   let baCount = 2;
   function updateBA() {
     document.getElementById("baCount").innerHTML = `<small>عدد المقاعد:</small>${toAR(baCount)}`;
@@ -629,7 +583,6 @@ setInterval(loadReservations, 8000);
     toast(`تم اختيار ${toAR(best.length)} مقعد متجاور في القسم ${best[0].section} - صف ${toAR(best[0].row)}`);
   };
 
-  // ─── Floor toggle ───────────────────────────────────────────────
   const floorButtons = document.querySelectorAll(".floor-toggle button");
   floorButtons.forEach(btn => {
     btn.onclick = () => {
@@ -640,7 +593,6 @@ setInterval(loadReservations, 8000);
         const s = seatById.get(g.getAttribute("data-id")).data;
         g.style.display = (floor === "all" || s.floor === floor) ? "" : "none";
       });
-      // Computed scales fit each floor's full width inside the viewBox
       if (floor === "orchestra") { scale = 1.18; tx = 0; ty = 141; }
       else if (floor === "balcony") { scale = 1.0; tx = 0; ty = -381; }
       else { scale = 1; tx = 0; ty = 0; }
@@ -653,7 +605,6 @@ setInterval(loadReservations, 8000);
     else document.exitFullscreen?.();
   };
 
-  // ─── Toast ──────────────────────────────────────────────────────
   let toastTimeout;
   function toast(msg, isErr) {
     const t = document.getElementById("toast");
@@ -663,16 +614,13 @@ setInterval(loadReservations, 8000);
     toastTimeout = setTimeout(() => t.classList.remove("visible"), 2400);
   }
 
-  // ─── Minimap ────────────────────────────────────────────────────
   const minimapSvg = document.querySelector("#minimap svg");
   minimapSvg.innerHTML = "";
-  // Stage hint on minimap
   const stageHint = document.createElementNS(SVG_NS, "path");
   stageHint.setAttribute("d", "M 380 230 Q 850 100 1320 230 L 1320 270 Q 850 140 380 270 Z");
   stageHint.setAttribute("fill", "#0C4A6E");
   stageHint.setAttribute("opacity", "0.5");
   minimapSvg.appendChild(stageHint);
-  // Tiny dots
   seats.forEach(s => {
     const c = document.createElementNS(SVG_NS, "circle");
     c.setAttribute("cx", s.x); c.setAttribute("cy", s.y); c.setAttribute("r", "5");
@@ -709,10 +657,8 @@ setInterval(loadReservations, 8000);
   applyTransform();
   setTimeout(() => toast(`تم تحميل ${toAR(total)} مقعد · انقر على المقاعد الخضراء لاختيار مقاعدك`), 1100);
 
-  // ─── Minimap collapse toggle ────────────────────────────────────
   const minimap = document.getElementById("minimap");
   const minimapToggle = document.getElementById("minimapToggle");
-  // Start collapsed so it doesn't obstruct the view
   minimap.classList.add("collapsed");
   function toggleMinimap() {
     minimap.classList.toggle("collapsed");
@@ -721,7 +667,6 @@ setInterval(loadReservations, 8000);
     e.stopPropagation();
     toggleMinimap();
   });
-  // Click anywhere on collapsed minimap to expand
   minimap.addEventListener("click", e => {
     if (minimap.classList.contains("collapsed") && e.target !== minimapToggle && !minimapToggle.contains(e.target)) {
       toggleMinimap();
