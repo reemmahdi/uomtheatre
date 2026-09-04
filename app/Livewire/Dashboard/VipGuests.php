@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
+use Livewire\Attributes\Locked;
 use App\Models\Event;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,10 @@ use Livewire\Attributes\Title;
 #[Title('قائمة ضيوف الوفود')]
 class VipGuests extends BaseComponent
 {
+    #[Locked]
     public int $eventId;
+
+    #[Locked]
     public string $eventUuid = '';
 
     public ?int $editBookingId = null;

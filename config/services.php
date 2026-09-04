@@ -10,6 +10,7 @@ return [
 
 'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
+        'allowed_client_ids' => array_values(array_filter(array_map('trim', explode(',', (string) env('GOOGLE_ALLOWED_CLIENT_IDS', ''))))),
     ],
     
     'postmark' => [

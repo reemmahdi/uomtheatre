@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
+use Livewire\Attributes\Locked;
 use App\Models\Event;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,10 @@ class EventCancellationNotices extends BaseComponent
 {
     protected array $allowedRoles = ['super_admin', 'event_manager'];
 
+    #[Locked]
     public int $eventId;
+
+    #[Locked]
     public string $eventUuid = '';
 
     public function mount(string $eventUuid)

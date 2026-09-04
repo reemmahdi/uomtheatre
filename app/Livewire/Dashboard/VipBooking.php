@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
+use Livewire\Attributes\Locked;
 use App\Models\Event;
 use App\Models\Reservation;
 use App\Models\Seat;
@@ -17,7 +18,10 @@ use Livewire\Attributes\Title;
 #[Title('حجز مقاعد الوفود')]
 class VipBooking extends BaseComponent
 {
+    #[Locked]
     public int $eventId;
+
+    #[Locked]
     public string $eventUuid = '';
 
     public string $guestName = '';

@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Livewire\BaseComponent;
+use Livewire\Attributes\Locked;
 use App\Models\Event;
 use App\Models\Seat;
 use App\Services\EventSeatAvailabilityService;
@@ -15,6 +16,7 @@ use Livewire\Attributes\Title;
 class SeatAvailability extends BaseComponent
 {
     public Event $event;
+    #[Locked]
     public string $eventUuid;
 
     public function mount(string $eventUuid)

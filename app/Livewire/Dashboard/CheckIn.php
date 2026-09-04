@@ -48,15 +48,6 @@ class CheckIn extends BaseComponent
             ->where('qr_code', $this->qrCode)
             ->first();
 
-        if (!$res && preg_match('/(\d{8,})\D*$/u', $this->qrCode, $m)) {
-            $matches = Reservation::with(['user', 'event', 'seat.section'])
-                ->where('qr_code', 'like', '%-' . $m[1])
-                ->limit(2)
-                ->get();
-            if ($matches->count() === 1) {
-                $res = $matches->first();
-            }
-        }
 
         if (!$res) {
             $this->message = 'رمز QR غير صالح';
@@ -94,7 +85,12 @@ class CheckIn extends BaseComponent
             return;
         }
 
-        $res->checkIn();
+        if (!$res->checkIn(Auth::id())) {
+            $this->message = 'تعذر تسجيل الحضور — الحجز ليس بحالة مؤكدة';
+            $this->messageType = 'warning';
+            $this->checkInData = [];
+            return;
+        }
         $this->message = 'تم تسجيل الحضور بنجاح';
         $this->messageType = 'success';
 

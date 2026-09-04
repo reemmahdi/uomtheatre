@@ -15,6 +15,7 @@ class Reservation extends Model
         'type',
         'qr_code',
         'checked_in_at',
+        'checked_in_by',
         'guest_name',
         'guest_phone',
         'schedule_change_id',
@@ -53,12 +54,19 @@ class Reservation extends Model
         return $this->belongsTo(Seat::class);
     }
 
-    public function checkIn(): void
+    public function checkIn(?int $byUserId = null): bool
     {
-        $this->update([
-            'status'        => 'checked_in',
-            'checked_in_at' => now(),
-        ]);
+        $updated = static::whereKey($this->id)
+            ->where('status', 'confirmed')
+            ->update([
+                'status'        => 'checked_in',
+                'checked_in_at' => now(),
+                'checked_in_by' => $byUserId,
+            ]);
+        if ($updated === 1) {
+            $this->refresh();
+        }
+        return $updated === 1;
     }
 
     public function cancel(): void

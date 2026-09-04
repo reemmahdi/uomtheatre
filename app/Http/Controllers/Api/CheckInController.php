@@ -36,7 +36,9 @@ class CheckInController extends Controller
             ], 422);
         }
 
-        $reservation->checkIn();
+        if (!$reservation->checkIn($request->user()->id)) {
+            return response()->json(['message' => 'تعذر تسجيل الحضور — الحجز ليس بحالة مؤكدة'], 409);
+        }
 
         return response()->json([
             'message' => 'تم تسجيل الحضور بنجاح',

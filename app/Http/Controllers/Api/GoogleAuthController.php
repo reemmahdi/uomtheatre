@@ -35,6 +35,14 @@ class GoogleAuthController extends Controller
             ], 401);
         }
 
+        $allowedClients = config('services.google.allowed_client_ids', []);
+        $azp = $payload['azp'] ?? null;
+        if ($allowedClients !== [] && ($azp === null || !in_array($azp, $allowedClients, true))) {
+            return response()->json([
+                'message' => 'رمز دخول غير صالح لهذا التطبيق',
+            ], 401);
+        }
+
         if (($payload['email_verified'] ?? false) !== true) {
             return response()->json([
                 'message' => 'بريد حساب كوكل غير موثق',
@@ -72,6 +80,7 @@ class GoogleAuthController extends Controller
                     'avatar'    => $avatar,
                     'password'  => Hash::make(Str::random(40)),
                     'is_active' => true,
+                    'role_id'   => Role::where('name', Role::USER)->value('id'),
                 ]);
             }
         }
