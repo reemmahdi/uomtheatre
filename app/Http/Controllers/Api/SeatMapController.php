@@ -7,13 +7,17 @@ use App\Models\Event;
 use App\Models\EventSeatAvailability;
 use App\Models\Reservation;
 use App\Models\Section;
+use App\Models\Status;
 use Illuminate\Http\JsonResponse;
 
 class SeatMapController extends Controller
 {
     public function getSeatMap($eventId): JsonResponse
     {
-        $event = Event::findOrFail($eventId);
+        $event = Event::with('status')->findOrFail($eventId);
+        if ($event->status?->name !== Status::PUBLISHED) {
+            abort(404);
+        }
 
         $vipBookedSeatIds = Reservation::where('event_id', $eventId)
             ->where('type', 'vip_guest')

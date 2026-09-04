@@ -805,6 +805,8 @@ class Events extends BaseComponent
             ];
 
             $this->swalToast('تم تغيير الحالة إلى: ' . ($names[$newStatusName] ?? $newStatusName));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             $this->swalError('فشل تغيير الحالة: ' . $e->getMessage());
         }

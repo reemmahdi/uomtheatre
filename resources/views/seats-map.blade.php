@@ -66,11 +66,7 @@
   @endif
 </div>
 
-@if($selectedEventId)
-  <script>window.SELECTED_EVENT_ID = {{ $selectedEventId }};</script>
-@else
-  <script>window.SELECTED_EVENT_ID = null;</script>
-@endif
+<script>window.SELECTED_EVENT_ID = @json($selectedEventId ? (int) $selectedEventId : null);</script>
 
 <div class="app">
 

@@ -79,12 +79,11 @@ class DatabaseSeeder extends Seeder
 
     protected function seedSuperAdmin(): void
     {
-        $email = env('SEEDER_ADMIN_EMAIL', 'reem@uomosul.edu.iq');
-        $password = env('SEEDER_ADMIN_PASSWORD', null);
+        $email = env('SEEDER_ADMIN_EMAIL');
+        $password = env('SEEDER_ADMIN_PASSWORD');
 
-        if (!$password) {
-            $this->command->warn('⚠️ SEEDER_ADMIN_PASSWORD غير مضبوطة - استخدام كلمة مرور افتراضية');
-            $password = '123456';
+        if (!$email || !$password || strlen($password) < 12) {
+            throw new \RuntimeException('SEEDER_ADMIN_EMAIL and SEEDER_ADMIN_PASSWORD (12+ chars) must be set before seeding');
         }
 
         DB::table('users')->updateOrInsert(

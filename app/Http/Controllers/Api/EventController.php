@@ -208,12 +208,16 @@ $events = Event::with(['status'])
 
         $newStatusName = $request->status;
         $abilityMap = [
+            Status::ADDED     => 'send',
+            Status::ACTIVE    => 'approveAsTheater',
             Status::PUBLISHED => 'publish',
             Status::CLOSED    => 'close',
             Status::CANCELLED => 'cancel',
         ];
-        $ability = $abilityMap[$newStatusName] ?? 'update';
-        $this->authorize($ability, $event);
+        if (!isset($abilityMap[$newStatusName])) {
+            return response()->json(['message' => 'انتقال الحالة غير مسموح'], 422);
+        }
+        $this->authorize($abilityMap[$newStatusName], $event);
 
         $newStatus = Status::where('name', $newStatusName)->first();
         if (!$newStatus) {
