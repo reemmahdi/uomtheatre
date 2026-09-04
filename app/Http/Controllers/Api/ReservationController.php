@@ -135,18 +135,6 @@ public function myReservations(Request $request): JsonResponse
         return response()->json(['ticket' => $reservation->ticketData()]);
     }
 
-    public function cancel($id, Request $request): JsonResponse
-    {
-        $reservation = Reservation::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', 'confirmed')
-            ->firstOrFail();
-
-        $reservation->cancel();
-
-        return response()->json(['message' => 'تم إلغاء الحجز بنجاح']);
-    }
-
     public function confirmChange(Request $request, int $id): JsonResponse
     {
         $reservation = Reservation::with(['event', 'seat'])

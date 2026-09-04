@@ -65,8 +65,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         ->name('api.reservations.store');
     Route::get('/reservations/{id}/ticket', [ReservationController::class, 'ticket'])
         ->name('api.reservations.ticket');
-    Route::patch('/reservations/{id}/cancel', [ReservationController::class, 'cancel'])
-        ->name('api.reservations.cancel');
 
     Route::get('/notifications', [NotificationController::class, 'index'])
         ->name('api.notifications.index');
