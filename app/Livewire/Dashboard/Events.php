@@ -290,6 +290,11 @@ class Events extends BaseComponent
             return;
         }
 
+        if (strtotime($startDatetime) <= now()->timestamp) {
+            $this->addError('start_time', 'وقت البدء قد مضى — اختر وقتاً في المستقبل');
+            return;
+        }
+
         try {
             $draftStatus = Status::where('name', 'draft')->first();
             $event = Event::create([
@@ -423,6 +428,11 @@ class Events extends BaseComponent
         $logicError = $this->validateDatetimeLogic($startDatetime, $endDatetime);
         if ($logicError) {
             $this->addError('editEndTime', $logicError);
+            return;
+        }
+
+        if ($startDatetime !== $event->start_datetime->format('Y-m-d H:i:s') && strtotime($startDatetime) <= now()->timestamp) {
+            $this->addError('editStartTime', 'وقت البدء قد مضى — اختر وقتاً في المستقبل');
             return;
         }
 
@@ -571,6 +581,11 @@ class Events extends BaseComponent
         $logicError = $this->validateDatetimeLogic($startDatetime, $endDatetime);
         if ($logicError) {
             $this->addError('postponeEndTime', $logicError);
+            return;
+        }
+
+        if ($startDatetime !== $event->start_datetime->format('Y-m-d H:i:s') && strtotime($startDatetime) <= now()->timestamp) {
+            $this->addError('postponeStartTime', 'وقت البدء قد مضى — اختر وقتاً في المستقبل');
             return;
         }
 
